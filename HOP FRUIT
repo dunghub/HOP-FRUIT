@@ -23,6 +23,7 @@ pcall(function()
 end)
 
 local isRunning = true
+local storedFruitsCache = {} -- Lưu trữ danh sách trái cây đã cất để chống spam thông báo trùng
 
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = Factions[math.random(1, #Factions)]
@@ -43,9 +44,11 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Hàm gửi Discord Webhook khi cất trái cây thành công
-local function sendDiscordWebhook(fruitName)
+-- Hàm gửi Discord webhook đã gắn sẵn link ảnh của bạn vào thumbnail
+local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
+    if storedFruitsCache[uniqueId] then return end
+    storedFruitsCache[uniqueId] = true
     
     local maskedName = "||" .. player.Name .. "||"
     
@@ -56,6 +59,9 @@ local function sendDiscordWebhook(fruitName)
             ["color"] = 3447003,
             ["author"] = {
                 ["name"] = "Dubo Hop Fruit"
+            },
+            ["thumbnail"] = {
+                ["url"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543254714672484352/IMG_1008.png?ex=6a943374&is=6a92e1f4&hm=0af95e77a5eb0c9a62391eaef43ecd068a0a22ad02904ebdbedb37ddd4027a13&"
             },
             ["fields"] = {
                 {
@@ -327,13 +333,16 @@ local function storeFruit(item)
             local rawName = item.Name:gsub(" Fruit", "")
             
             if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
-                if item.Parent == player.Backpack and humanoid then
-                    humanoid:EquipTool(item)
-                    task.wait(0.2)
-                end
-                if remoteComm then
-                    remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
-                    sendDiscordWebhook(item.Name)
+                local uniqueId = item:GetDebugId()
+                if not storedFruitsCache[uniqueId] then
+                    if item.Parent == player.Backpack and humanoid then
+                        humanoid:EquipTool(item)
+                        task.wait(0.2)
+                    end
+                    if remoteComm then
+                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
+                        sendDiscordWebhook(item.Name, uniqueId)
+                    end
                 end
             end
         end
