@@ -117,7 +117,7 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Khung tổng thể thiết kế cực kỳ sang trọng, rộng rãi, cân đối (290 x 350)
+-- Khung tổng thể rộng rãi, đẹp mắt (290 x 350)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 290, 0, 350)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
@@ -180,22 +180,22 @@ task.spawn(function()
     end
 end)
 
--- Chữ "DUBO HUB" cực to, tràn sát gần 2 bên lề khung cầu vồng, tạo điểm nhấn đỉnh cao
+-- Chữ "DUBO HUB" cực lớn, tràn sát gần 2 bên lề khung cầu vồng, khẳng định thương hiệu
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -16, 0, 36)
-DuboHubTitle.Position = UDim2.new(0, 8, 0, 14)
+DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
+DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
 DuboHubTitle.BackgroundTransparency = 1
 DuboHubTitle.Text = "DUBO HUB"
 DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 26
+DuboHubTitle.TextSize = 28
 DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung Avatar to rõ, cách khoảng cách rất thoáng và đẹp so với tiêu đề phía trên
+-- Khung Avatar to rõ, nằm cách đều khoảng trống thoáng đãng phía dưới DUBO HUB
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
-CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 60)
+CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
+CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -211,8 +211,8 @@ CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 90, 0, 90)
-AvatarImg.Position = UDim2.new(0.5, -45, 0.5, -45)
+AvatarImg.Size = UDim2.new(0, 84, 0, 84)
+AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -224,22 +224,22 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
--- Khoảng cách profile acc cách xa tuyệt đẹp, dòng tên hiển thị tinh tế
+-- Dòng tên phụ "DUBO KAITUN FRUIT" nhỏ hơn nằm phía dưới profile, tạo phân cấp hoàn hảo
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 30)
-TitleLabel.Position = UDim2.new(0, 0, 0, 172)
+TitleLabel.Size = UDim2.new(1, 0, 0, 26)
+TitleLabel.Position = UDim2.new(0, 0, 0, 160)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "DUBO KAITUN FRUIT"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamMedium
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
--- Khung trạng thái (Status Box) bo góc mềm mại, rộng rãi
+-- Khung trạng thái (Status Box) rộng rãi, bo góc mượt mà
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 250, 0, 50)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 216)
+StatusBox.Size = UDim2.new(0, 250, 0, 48)
+StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
 StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
