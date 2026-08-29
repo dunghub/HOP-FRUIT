@@ -57,12 +57,12 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local data = {
         ["content"] = "@everyone",
-        ["username"] = "DUBO KAITUN FRUIT",
+        ["username"] = "DUBO HUB",
         ["avatar_url"] = sharedImage,
         ["embeds"] = {{
             ["color"] = 3447003,
             ["author"] = {
-                ["name"] = "DUBO KAITUN FRUIT Notification",
+                ["name"] = "DUBO HUB Notification",
                 ["icon_url"] = sharedImage
             },
             ["thumbnail"] = {
@@ -86,7 +86,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 }
             },
             ["footer"] = {
-                ["text"] = "DUBO KAITUN FRUIT • " .. os.date("%H:%M - %d/%m/%Y"),
+                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
                 ["icon_url"] = sharedImage
             }
         }}
@@ -117,11 +117,11 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Phóng to khung giao diện to đều, vừa vặn, đẹp mắt (250 x 315)
+-- Khung tổng thể thiết kế cực kỳ sang trọng, rộng rãi, cân đối (290 x 350)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 250, 0, 315)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Size = UDim2.new(0, 290, 0, 350)
+MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Active = true
@@ -129,11 +129,11 @@ MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.CornerRadius = UDim.new(0, 18)
 MainCorner.Parent = MainFrame
 
 local RainbowStroke = Instance.new("UIStroke")
-RainbowStroke.Thickness = 3
+RainbowStroke.Thickness = 4
 RainbowStroke.Parent = MainFrame
 
 task.spawn(function()
@@ -155,7 +155,7 @@ task.spawn(function()
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 230), 0, -20)
+            snowflake.Position = UDim2.new(0, math.random(10, 270), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -165,7 +165,7 @@ task.spawn(function()
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 335)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 370)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -180,23 +180,23 @@ task.spawn(function()
     end
 end)
 
--- Chữ "𝓓𝓤𝓑𝓞 𝓗𝓤𝓑" (viết hoa nét bút mực tréo nghệ thuật) cân đối phía trên avatar
+-- Chữ "DUBO HUB" cực to, tràn sát gần 2 bên lề khung cầu vồng, tạo điểm nhấn đỉnh cao
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, 0, 0, 28)
-DuboHubTitle.Position = UDim2.new(0, 0, 0, 10)
+DuboHubTitle.Size = UDim2.new(1, -16, 0, 36)
+DuboHubTitle.Position = UDim2.new(0, 8, 0, 14)
 DuboHubTitle.BackgroundTransparency = 1
-DuboHubTitle.Text = "𝓓𝓤𝓑𝓞 𝓗𝓤𝓑"
+DuboHubTitle.Text = "DUBO HUB"
 DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 19
+DuboHubTitle.TextSize = 26
 DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung Avatar to rõ, đẹp mắt ngay dưới tiêu đề DUBO HUB
+-- Khung Avatar to rõ, cách khoảng cách rất thoáng và đẹp so với tiêu đề phía trên
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 88, 0, 88)
-CircleAvatarBg.Position = UDim2.new(0.5, -44, 0, 42)
-CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
+CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 60)
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
 CircleAvatarBg.Parent = MainFrame
@@ -206,13 +206,13 @@ CircleBgCorner.CornerRadius = UDim.new(1, 0)
 CircleBgCorner.Parent = CircleAvatarBg
 
 local CircleAvatarStroke = Instance.new("UIStroke")
-CircleAvatarStroke.Thickness = 2
-CircleAvatarStroke.Color = Color3.fromRGB(60, 60, 80)
+CircleAvatarStroke.Thickness = 3
+CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 78, 0, 78)
-AvatarImg.Position = UDim2.new(0.5, -39, 0.5, -39)
+AvatarImg.Size = UDim2.new(0, 90, 0, 90)
+AvatarImg.Position = UDim2.new(0.5, -45, 0.5, -45)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -224,27 +224,29 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
+-- Khoảng cách profile acc cách xa tuyệt đẹp, dòng tên hiển thị tinh tế
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
-TitleLabel.Position = UDim2.new(0, 0, 0, 136)
+TitleLabel.Position = UDim2.new(0, 0, 0, 172)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "DUBO KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 15
+TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
+-- Khung trạng thái (Status Box) bo góc mềm mại, rộng rãi
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 218, 0, 44)
-StatusBox.Position = UDim2.new(0.5, -109, 0, 180)
-StatusBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+StatusBox.Size = UDim2.new(0, 250, 0, 50)
+StatusBox.Position = UDim2.new(0.5, -125, 0, 216)
+StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
 
 local StatusBoxCorner = Instance.new("UICorner")
-StatusBoxCorner.CornerRadius = UDim.new(0, 8)
+StatusBoxCorner.CornerRadius = UDim.new(0, 12)
 StatusBoxCorner.Parent = StatusBox
 
 local StatusLabel = Instance.new("TextLabel")
@@ -252,7 +254,7 @@ StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-StatusLabel.TextSize = 13
+StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
