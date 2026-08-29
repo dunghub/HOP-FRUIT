@@ -58,7 +58,7 @@ local AllBloxFruits = {
     ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Animated Rainbow RGB Border & Clean Server Hopper Indicator
+-- Modern GUI with Animated Rainbow RGB Border & Clean Hopper Indicator
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
@@ -212,7 +212,7 @@ end)
 -- Fully Randomized Infinite Server Hopper Loop
 local function hopServer()
     isRunning = false
-    StatusLabel.Text = "Hop Server..."
+    StatusLabel.Text = "Hopping..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
     local success, servers = pcall(function()
