@@ -44,14 +44,13 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Hàm gửi Discord webhook dùng chung một link ảnh duy nhất
+-- Hàm gửi Discord webhook chuẩn khung xám trang trí (không bật tính năng click-to-copy)
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
     storedFruitsCache[uniqueId] = true
     
     local maskedName = "||" .. player.Name .. "||"
-    -- Dùng chung một link ảnh duy nhất cho cả avatar bot, icon góc trên và thumbnail góc phải
     local sharedImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
     
     local cleanFruitName = fruitName:gsub(" Fruit", "")
@@ -77,12 +76,12 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 },
                 {
                     ["name"] = "Status",
-                    ["value"] = "`STORE FRUIT`",
+                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
                     ["inline"] = false
                 },
                 {
                     ["name"] = "Fruit",
-                    ["value"] = "`" .. cleanFruitName .. "`",
+                    ["value"] = "🍎 ```fix\n" .. cleanFruitName .. "\n```",
                     ["inline"] = false
                 }
             },
