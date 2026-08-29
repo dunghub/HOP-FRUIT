@@ -6,6 +6,7 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -58,7 +59,7 @@ local AllBloxFruits = {
     ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Animated Rainbow RGB Border & Falling Snow Effect
+-- Modern GUI with Animated Rainbow RGB Border & Rotating Falling Snow Effect
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
@@ -92,27 +93,33 @@ task.spawn(function()
     end
 end)
 
--- Falling Snow Effect Generator inside MainFrame
+-- Dedicated Snow Container inside MainFrame
+local SnowContainer = Instance.new("Folder")
+SnowContainer.Name = "SnowContainer"
+SnowContainer.Parent = MainFrame
+
+-- Falling & Slowly Rotating Snow Effect Generator
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         pcall(function()
             local snowflake = Instance.new("TextLabel")
-            snowflake.Size = UDim2.new(0, 15, 0, 15)
-            snowflake.Position = UDim2.new(math.random(0, 190) / 200, 0, -0.1, 0)
+            snowflake.Size = UDim2.new(0, 20, 0, 20)
+            snowflake.Position = UDim2.new(0, math.random(10, 205), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = math.random(20, 60) / 100
-            snowflake.TextSize = math.random(10, 18)
-            snowflake.Parent = MainFrame
+            snowflake.TextTransparency = math.random(15, 45) / 100
+            snowflake.TextSize = math.random(12, 18)
+            snowflake.ZIndex = 5
+            snowflake.Parent = SnowContainer
 
-            local fallDuration = math.random(30, 60) / 10
-            local targetY = UDim2.new(snowflake.Position.X.Scale, 0, 1.1, 0)
+            local fallDuration = math.random(35, 60) / 10
+            local targetX = snowflake.Position.X.Offset + math.random(-30, 30)
+            local targetPos = UDim2.new(0, targetX, 0, 280)
             
-            local tweenService = game:GetService("TweenService")
             local info = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear)
-            local tween = tweenService:Create(snowflake, info, {Position = targetY})
+            local tween = TweenService:Create(snowflake, info, {Position = targetPos, Rotation = math.random(-180, 180), TextTransparency = 0.85})
             tween:Play()
             
             tween.Completed:Connect(function()
@@ -127,6 +134,7 @@ GreenBox.Size = UDim2.new(0, 110, 0, 110)
 GreenBox.Position = UDim2.new(0.5, -55, 0, 20)
 GreenBox.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
 GreenBox.BorderSizePixel = 0
+GreenBox.ZIndex = 2
 GreenBox.Parent = MainFrame
 
 local GreenBoxCorner = Instance.new("UICorner")
@@ -137,11 +145,13 @@ local CircleContainer = Instance.new("Frame")
 CircleContainer.Size = UDim2.new(0, 94, 0, 94)
 CircleContainer.Position = UDim2.new(0.5, -47, 0.5, -47)
 CircleContainer.BackgroundTransparency = 1
+CircleContainer.ZIndex = 2
 CircleContainer.Parent = GreenBox
 
 local AvatarImg = Instance.new("ImageLabel")
 AvatarImg.Size = UDim2.new(1, 0, 1, 0)
 AvatarImg.BackgroundTransparency = 1
+AvatarImg.ZIndex = 2
 local success, thumb = pcall(function()
     return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 end)
@@ -160,6 +170,7 @@ TitleLabel.Text = "KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
@@ -167,6 +178,7 @@ StatusBox.Size = UDim2.new(0, 190, 0, 40)
 StatusBox.Position = UDim2.new(0.5, -95, 0, 190)
 StatusBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 StatusBox.BorderSizePixel = 0
+StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
 
 local StatusBoxCorner = Instance.new("UICorner")
@@ -180,6 +192,7 @@ StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 StatusLabel.TextSize = 13
 StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
 local ESPFolder = Instance.new("Folder")
