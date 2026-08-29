@@ -1,3 +1,9 @@
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+
+-- Khởi tạo cấu hình cấu trúc Webhook
+DuboCFG = DuboCFG or {}
+DuboCFG.WebhookURL = DuboCFG.WebhookURL or ""
+
 -- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,6 +42,56 @@ local AllBloxFruits = {
     ["Gas"] = "Gas-Gas", ["T-Rex"] = "T-Rex-T-Rex", ["Mammoth"] = "Mammoth-Mammoth",
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
+
+-- Hàm gửi Discord Webhook khi cất trái cây thành công
+local function sendDiscordWebhook(fruitName)
+    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
+    
+    local maskedName = "||" .. player.Name .. "||"
+    
+    local data = {
+        ["content"] = "@everyone",
+        ["embeds"] = {{
+            ["title"] = "Dubo Hop Fruit Notification",
+            ["color"] = 3447003,
+            ["author"] = {
+                ["name"] = "Dubo Hop Fruit"
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "Main Status",
+                    ["value"] = "Username : " .. maskedName,
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Status",
+                    ["value"] = "Fruit",
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Stored Fruit Successfully!",
+                    ["value"] = "🍎 **" .. fruitName .. "**",
+                    ["inline"] = false
+                }
+            },
+            ["footer"] = {
+                ["text"] = "Dubo Hop Fruit • " .. os.date("%H:%M - %d/%m/%Y")
+            }
+        }}
+    }
+    
+    local encodedData = HttpService:JSONEncode(data)
+    local headers = {["Content-Type"] = "application/json"}
+    
+    pcall(function()
+        local req = request or http_request or syn.request or fluxus.request
+        if req then
+            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
+        else
+            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
+        end
+    end)
+end
 
 -- Clear old GUI if exists
 pcall(function()
@@ -277,6 +333,7 @@ local function storeFruit(item)
                 end
                 if remoteComm then
                     remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
+                    sendDiscordWebhook(item.Name)
                 end
             end
         end
