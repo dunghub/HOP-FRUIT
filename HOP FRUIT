@@ -44,7 +44,7 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Hàm gửi Discord webhook chuẩn khung xám trang trí (không bật tính năng click-to-copy)
+-- Hàm gửi Discord webhook chuẩn khung xám trang trí
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
@@ -117,8 +117,9 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- Phóng to khung giao diện to đều, vừa vặn, đẹp mắt (250 x 315)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 260)
+MainFrame.Size = UDim2.new(0, 250, 0, 315)
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
@@ -128,7 +129,7 @@ MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 14)
 MainCorner.Parent = MainFrame
 
 local RainbowStroke = Instance.new("UIStroke")
@@ -154,7 +155,7 @@ task.spawn(function()
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 200), 0, -20)
+            snowflake.Position = UDim2.new(0, math.random(10, 230), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -164,7 +165,7 @@ task.spawn(function()
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 280)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 335)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -179,9 +180,22 @@ task.spawn(function()
     end
 end)
 
+-- Chữ "𝓓𝓤𝓑𝓞 𝓗𝓤𝓑" (viết hoa nét bút mực tréo nghệ thuật) cân đối phía trên avatar
+local DuboHubTitle = Instance.new("TextLabel")
+DuboHubTitle.Size = UDim2.new(1, 0, 0, 28)
+DuboHubTitle.Position = UDim2.new(0, 0, 0, 10)
+DuboHubTitle.BackgroundTransparency = 1
+DuboHubTitle.Text = "𝓓𝓤𝓑𝓞 𝓗𝓤𝓑"
+DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+DuboHubTitle.TextSize = 19
+DuboHubTitle.Font = Enum.Font.GothamBold
+DuboHubTitle.ZIndex = 2
+DuboHubTitle.Parent = MainFrame
+
+-- Khung Avatar to rõ, đẹp mắt ngay dưới tiêu đề DUBO HUB
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
-CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 25)
+CircleAvatarBg.Size = UDim2.new(0, 88, 0, 88)
+CircleAvatarBg.Position = UDim2.new(0.5, -44, 0, 42)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -197,8 +211,8 @@ CircleAvatarStroke.Color = Color3.fromRGB(60, 60, 80)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 88, 0, 88)
-AvatarImg.Position = UDim2.new(0.5, -44, 0.5, -44)
+AvatarImg.Size = UDim2.new(0, 78, 0, 78)
+AvatarImg.Position = UDim2.new(0.5, -39, 0.5, -39)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -212,7 +226,7 @@ AvatarCircle.Parent = AvatarImg
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
-TitleLabel.Position = UDim2.new(0, 0, 0, 140)
+TitleLabel.Position = UDim2.new(0, 0, 0, 136)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "DUBO KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -222,8 +236,8 @@ TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 190, 0, 40)
-StatusBox.Position = UDim2.new(0.5, -95, 0, 190)
+StatusBox.Size = UDim2.new(0, 218, 0, 44)
+StatusBox.Position = UDim2.new(0.5, -109, 0, 180)
 StatusBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
