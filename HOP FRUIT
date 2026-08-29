@@ -58,7 +58,7 @@ local AllBloxFruits = {
     ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Animated Rainbow RGB Border & Clean Hopper Indicator
+-- Modern GUI with Animated Rainbow RGB Border & Falling Snow Effect
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
@@ -69,6 +69,7 @@ MainFrame.Size = UDim2.new(0, 220, 0, 260)
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -88,6 +89,36 @@ task.spawn(function()
             RainbowStroke.Color = Color3.fromHSV(i, 1, 1)
             task.wait(0.02)
         end
+    end
+end)
+
+-- Falling Snow Effect Generator inside MainFrame
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        pcall(function()
+            local snowflake = Instance.new("TextLabel")
+            snowflake.Size = UDim2.new(0, 15, 0, 15)
+            snowflake.Position = UDim2.new(math.random(0, 190) / 200, 0, -0.1, 0)
+            snowflake.BackgroundTransparency = 1
+            snowflake.Text = "❄"
+            snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
+            snowflake.TextTransparency = math.random(20, 60) / 100
+            snowflake.TextSize = math.random(10, 18)
+            snowflake.Parent = MainFrame
+
+            local fallDuration = math.random(30, 60) / 10
+            local targetY = UDim2.new(snowflake.Position.X.Scale, 0, 1.1, 0)
+            
+            local tweenService = game:GetService("TweenService")
+            local info = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear)
+            local tween = tweenService:Create(snowflake, info, {Position = targetY})
+            tween:Play()
+            
+            tween.Completed:Connect(function()
+                snowflake:Destroy()
+            end)
+        end)
     end
 end)
 
@@ -125,7 +156,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
 TitleLabel.Position = UDim2.new(0, 0, 0, 140)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "KAITUN HOP"
+TitleLabel.Text = "KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
