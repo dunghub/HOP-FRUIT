@@ -23,7 +23,7 @@ pcall(function()
 end)
 
 local isRunning = true
-local storedFruitsCache = {} -- Lưu trữ danh sách trái cây đã cất để chống spam thông báo trùng
+local storedFruitsCache = {}
 
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = Factions[math.random(1, #Factions)]
@@ -44,24 +44,30 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Hàm gửi Discord webhook DUBO HOP FRUIT kèm link ảnh của bạn
+-- Hàm gửi Discord webhook dùng chung một link ảnh duy nhất
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
     storedFruitsCache[uniqueId] = true
     
     local maskedName = "||" .. player.Name .. "||"
+    -- Dùng chung một link ảnh duy nhất cho cả avatar bot, icon góc trên và thumbnail góc phải
+    local sharedImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+    
+    local cleanFruitName = fruitName:gsub(" Fruit", "")
     
     local data = {
         ["content"] = "@everyone",
+        ["username"] = "DUBO KAITUN FRUIT",
+        ["avatar_url"] = sharedImage,
         ["embeds"] = {{
-            ["title"] = "DUBO HOP FRUIT",
             ["color"] = 3447003,
             ["author"] = {
-                ["name"] = "DUBO HOP FRUIT"
+                ["name"] = "DUBO KAITUN FRUIT Notification",
+                ["icon_url"] = sharedImage
             },
             ["thumbnail"] = {
-                ["url"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543254714672484352/IMG_1008.png?ex=6a943374&is=6a92e1f4&hm=0af95e77a5eb0c9a62391eaef43ecd068a0a22ad02904ebdbedb37ddd4027a13&"
+                ["url"] = sharedImage
             },
             ["fields"] = {
                 {
@@ -71,17 +77,18 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 },
                 {
                     ["name"] = "Status",
-                    ["value"] = "Fruit",
+                    ["value"] = "`STORE FRUIT`",
                     ["inline"] = false
                 },
                 {
-                    ["name"] = "Stored Fruit Successfully!",
-                    ["value"] = "🍎 **" .. fruitName .. "**",
+                    ["name"] = "Fruit",
+                    ["value"] = "`" .. cleanFruitName .. "`",
                     ["inline"] = false
                 }
             },
             ["footer"] = {
-                ["text"] = "DUBO HOP FRUIT • " .. os.date("%H:%M - %d/%m/%Y")
+                ["text"] = "DUBO KAITUN FRUIT • " .. os.date("%H:%M - %d/%m/%Y"),
+                ["icon_url"] = sharedImage
             }
         }}
     }
@@ -208,9 +215,9 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
 TitleLabel.Position = UDim2.new(0, 0, 0, 140)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "DUBO HOP FRUIT"
+TitleLabel.Text = "DUBO KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
+TitleLabel.TextSize = 15
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
@@ -296,7 +303,6 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Hàm auto đổi server liên tục bằng vòng lặp cho đến khi thành công tránh lỗi Error 773
 local function hopServer()
     isRunning = false
     StatusLabel.Text = "Hopping Server..."
@@ -330,11 +336,10 @@ local function hopServer()
             end)
             
             if teleSuccess then
-                task.wait(5) -- Đợi xử lý lệnh chuyển server
+                task.wait(5)
             end
         end
         
-        -- Nếu lệnh teleport lỗi hoặc server đầy, đợi 2 giây rồi quét và thử lại server khác ngay lập tức
         task.wait(2)
     end
 end
