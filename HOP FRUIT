@@ -32,41 +32,84 @@ local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marine
 local AllBloxFruits = {
     ["Rocket"] = "Rocket-Rocket", ["Spin"] = "Spin-Spin", ["Blade"] = "Blade-Blade",
     ["Spring"] = "Spring-Spring", ["Bomb"] = "Bomb-Bomb", ["Smoke"] = "Smoke-Smoke",
-    ["Spike"] = "Spike-Spike", ["Flame"] = "Flame-Flame", ["Falcon"] = "Falcon-Falcon",
+    ["Spike"] = "Spike-Spike", ["Flame"] = "Flame-Flame", ["Eagle"] = "Eagle-Eagle",
     ["Ice"] = "Ice-Ice", ["Sand"] = "Sand-Sand", ["Dark"] = "Dark-Dark",
     ["Diamond"] = "Diamond-Diamond", ["Light"] = "Light-Light", ["Rubber"] = "Rubber-Rubber",
-    ["Barrier"] = "Barrier-Barrier", ["Ghost"] = "Ghost-Ghost", ["Magma"] = "Magma-Magma",
+    ["Creation"] = "Creation-Creation", ["Ghost"] = "Ghost-Ghost", ["Magma"] = "Magma-Magma",
     ["Quake"] = "Quake-Quake", ["Buddha"] = "Buddha-Buddha", ["Sound"] = "Sound-Sound",
     ["Phoenix"] = "Phoenix-Phoenix", ["Portal"] = "Portal-Portal", ["Pain"] = "Pain-Pain",
     ["Rumble"] = "Rumble-Rumble", ["Blizzard"] = "Blizzard-Blizzard", ["Dough"] = "Dough-Dough",
     ["Shadow"] = "Shadow-Shadow", ["Venom"] = "Venom-Venom", ["Control"] = "Control-Control",
     ["Gas"] = "Gas-Gas", ["T-Rex"] = "T-Rex-T-Rex", ["Mammoth"] = "Mammoth-Mammoth",
-    ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
+    ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti",
+    ["Creative"] = "Creative-Creative"
 }
 
--- Hàm gửi Discord webhook chuẩn khung xám trang trí
+-- Kho lưu trữ link ảnh cho toàn bộ các trái
+local FruitImages = {
+    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a945da5&is=6a930c25&hm=737553e0a602adb85b77d206a4b9d79c76b6492d326ab7354ba9970f2a766412&",
+    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a946089&is=6a930f09&hm=d1670069b01844c4f87b70e20386032bb30a7db19556811c5d85442ac48856e8&",
+    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a94616b&is=6a930feb&hm=7283a6200343e3be2084b08a54340da6b7fa62b503c749950c8dbb7d17efbaab&",
+    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a94619d&is=6a93101d&hm=9b96abdaf46a5f72db86f2e9e5dae2e368b1ddc21f82555975296a793daec0a1&",
+    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9461ca&is=6a93104a&hm=2dfb4a911ff9ef6bdaf58ea9914a7381506adb4d61c31e1269f10a4fa0444b88&",
+    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a946219&is=6a931099&hm=99a11acec600be0304947264a96c3f396496eb49982b0841dc2054302dc6eecc&",
+    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a946253&is=6a9310d3&hm=a2f6c89c2256f38c949c7e4470e684d677a4eff3060488c93acc208df26c0ed4&",
+    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a946273&is=6a9310f3&hm=7de3f57fd3780f667069a8786e9872d4ff98ef4973250246d2cafb287610f4e7&",
+    ["Eagle"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg?ex=6a946298&is=6a931118&hm=ade219ace6c2ee2f9c6429dc17dac0c4d48f9581450d04bcca9b7d1a64e1b770&",
+    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9462b5&is=6a931135&hm=a2eca1ab5262a2d31a2f8636f210f296a12ef62a83e0cb94622b95310683d29d&",
+    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a946304&is=6a931184&hm=3728d94ede0769625be520d7200148d1cf05ed7c272fe3d8bb7ec5faa6e304f7&",
+    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a946317&is=6a931197&hm=a3f4ab0ffbadadd6e36673969d777fcc27715abde6278c4db1ee443f7826e753&",
+    ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9463bd&is=6a93123d&hm=0abcffccccb33555dac2b0bf78b61207c22eea6bedccaf09ca5e27aacc299474&",
+    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9463d2&is=6a931252&hm=e828876218af8fd98393c3e39c091f21a3aa8dd49a69cdc3a95da88a52f030c6&",
+    ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a94640d&is=6a93128d&hm=98e417d81d43990278c81b08d4c05f1f9de0a80dd7e29a3c8f0a910aa9c149b3&",
+    ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a946448&is=6a9312c8&hm=5c7f68b3e580bbb287f69c4c3fdaa7e591eadb9ff1b108281226f676712fde33&",
+    ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9464d9&is=6a931359&hm=a0725fdd6df76ccce3c1f1e17c9e4488fe11fe2964f8644035f7df5cc8098ab0&",
+    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&",
+    ["Quake"] = "",
+    ["Buddha"] = "",
+    ["Sound"] = "",
+    ["Phoenix"] = "",
+    ["Portal"] = "",
+    ["Pain"] = "",
+    ["Rumble"] = "",
+    ["Blizzard"] = "",
+    ["Dough"] = "",
+    ["Shadow"] = "",
+    ["Venom"] = "",
+    ["Control"] = "",
+    ["Gas"] = "",
+    ["T-Rex"] = "",
+    ["Mammoth"] = "",
+    ["Kitsune"] = "",
+    ["Dragon"] = "",
+    ["Yeti"] = "",
+    ["Creative"] = ""
+}
+
+-- Hàm gửi Discord webhook hiển thị ảnh vuông nhỏ xinh bên cạnh tên trái
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
     storedFruitsCache[uniqueId] = true
     
     local maskedName = "||" .. player.Name .. "||"
-    local sharedImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    
     local cleanFruitName = fruitName:gsub(" Fruit", "")
+    
+    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
         ["username"] = "DUBO HUB",
-        ["avatar_url"] = sharedImage,
+        ["avatar_url"] = defaultImage,
         ["embeds"] = {{
             ["color"] = 3447003,
             ["author"] = {
                 ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = sharedImage
+                ["icon_url"] = defaultImage
             },
             ["thumbnail"] = {
-                ["url"] = sharedImage
+                ["url"] = fruitImage -- Dùng thumbnail để ảnh hiện dạng ô nhỏ gọn bên cạnh chữ
             },
             ["fields"] = {
                 {
@@ -87,7 +130,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
             },
             ["footer"] = {
                 ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = sharedImage
+                ["icon_url"] = defaultImage
             }
         }}
     }
@@ -117,7 +160,7 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Khung tổng thể rộng rãi, đẹp mắt (290 x 350)
+-- Khung tổng thể (290 x 350)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 290, 0, 350)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
@@ -180,7 +223,7 @@ task.spawn(function()
     end
 end)
 
--- Chữ "DUBO HUB" cực lớn, tràn sát gần 2 bên lề khung cầu vồng, khẳng định thương hiệu
+-- Tiêu đề "DUBO HUB" to rõ
 local DuboHubTitle = Instance.new("TextLabel")
 DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
 DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
@@ -192,7 +235,7 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung Avatar to rõ, nằm cách đều khoảng trống thoáng đãng phía dưới DUBO HUB
+-- Khung Avatar
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
 CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
@@ -224,7 +267,7 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
--- Dòng tên phụ "DUBO KAITUN FRUIT" nhỏ hơn nằm phía dưới profile, tạo phân cấp hoàn hảo
+-- Dòng tên phụ "DUBO KAITUN FRUIT"
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 26)
 TitleLabel.Position = UDim2.new(0, 0, 0, 160)
@@ -236,7 +279,7 @@ TitleLabel.Font = Enum.Font.GothamMedium
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
--- Khung trạng thái (Status Box) rộng rãi, bo góc mượt mà
+-- Khung trạng thái (Status Box)
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
 StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
