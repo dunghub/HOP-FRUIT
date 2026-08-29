@@ -133,7 +133,7 @@ task.spawn(function()
     end
 end)
 
--- Đổi khung xanh thành hình tròn nền đen cho avatar
+-- Khung tròn nền đen cho avatar
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
 CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 25)
@@ -143,7 +143,7 @@ CircleAvatarBg.ZIndex = 2
 CircleAvatarBg.Parent = MainFrame
 
 local CircleBgCorner = Instance.new("UICorner")
-CircleBgCorner.CornerRadius = UDim.new(1, 0) -- Bo tròn hoàn toàn thành hình tròn
+CircleBgCorner.CornerRadius = UDim.new(1, 0)
 CircleBgCorner.Parent = CircleAvatarBg
 
 local CircleAvatarStroke = Instance.new("UIStroke")
@@ -362,7 +362,7 @@ end
 
 -- Scan Owned Inventory & Backpack
 local function storeAllOwnedFruits()
-    let character = player.Character
+    local character = player.Character
     local currentBackpack = player:FindFirstChild("Backpack")
     
     if character then
