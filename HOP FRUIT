@@ -44,7 +44,7 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Hàm gửi Discord webhook đã gắn sẵn link ảnh của bạn vào thumbnail
+-- Hàm gửi Discord webhook DUBO HOP FRUIT kèm link ảnh của bạn
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
@@ -55,10 +55,10 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     local data = {
         ["content"] = "@everyone",
         ["embeds"] = {{
-            ["title"] = "Dubo Hop Fruit Notification",
+            ["title"] = "DUBO HOP FRUIT",
             ["color"] = 3447003,
             ["author"] = {
-                ["name"] = "Dubo Hop Fruit"
+                ["name"] = "DUBO HOP FRUIT"
             },
             ["thumbnail"] = {
                 ["url"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543254714672484352/IMG_1008.png?ex=6a943374&is=6a92e1f4&hm=0af95e77a5eb0c9a62391eaef43ecd068a0a22ad02904ebdbedb37ddd4027a13&"
@@ -81,7 +81,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 }
             },
             ["footer"] = {
-                ["text"] = "Dubo Hop Fruit • " .. os.date("%H:%M - %d/%m/%Y")
+                ["text"] = "DUBO HOP FRUIT • " .. os.date("%H:%M - %d/%m/%Y")
             }
         }}
     }
@@ -208,7 +208,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
 TitleLabel.Position = UDim2.new(0, 0, 0, 140)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "KAITUN FRUIT"
+TitleLabel.Text = "DUBO HOP FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
@@ -296,32 +296,46 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- Hàm auto đổi server liên tục bằng vòng lặp cho đến khi thành công tránh lỗi Error 773
 local function hopServer()
     isRunning = false
-    StatusLabel.Text = "Hopping..."
+    StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
-    local success, servers = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-    end)
-    
-    local availableServers = {}
-    if success and servers and servers.data then
-        for _, s in ipairs(servers.data) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                table.insert(availableServers, s.id)
+    while true do
+        local servers = {}
+        local success = pcall(function()
+            local cursor = ""
+            repeat
+                local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+                if cursor ~= "" then
+                    url = url .. "&cursor=" .. cursor
+                end
+                local response = HttpService:JSONDecode(game:HttpGet(url))
+                cursor = response.nextCursor or ""
+                for _, s in ipairs(response.data) do
+                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                        table.insert(servers, s.id)
+                    end
+                end
+            until #servers >= 30 or cursor == ""
+        end)
+
+        if success and #servers > 0 then
+            local randomServerId = servers[math.random(1, #servers)]
+            StatusLabel.Text = "Connecting..."
+            
+            local teleSuccess = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
+            end)
+            
+            if teleSuccess then
+                task.wait(5) -- Đợi xử lý lệnh chuyển server
             end
         end
-    end
-    
-    if #availableServers > 0 then
-        pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, availableServers[math.random(1, #availableServers)], player)
-        end)
-    else
-        pcall(function()
-            TeleportService:Teleport(game.PlaceId, player)
-        end)
+        
+        -- Nếu lệnh teleport lỗi hoặc server đầy, đợi 2 giây rồi quét và thử lại server khác ngay lập tức
+        task.wait(2)
     end
 end
 
@@ -425,7 +439,7 @@ task.spawn(function()
             end
             
             if not collected and (tick() - scanStart > 3) then
-                StatusLabel.Text = "Not found (Hop in 3s)"
+                StatusLabel.Text = "Not found (Hopping...)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                 task.wait(0.5)
                 break
@@ -437,6 +451,6 @@ task.spawn(function()
 
         if not isRunning then break end
         hopServer()
-        task.wait(5)
+        task.wait(3)
     end
 end)
