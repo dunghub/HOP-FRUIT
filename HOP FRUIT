@@ -10,7 +10,12 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
-local remoteComm = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+
+-- Safe Remote Connection
+local remoteComm = nil
+pcall(function()
+    remoteComm = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("CommF_", 5)
+end)
 
 local isRunning = true
 
@@ -62,7 +67,14 @@ local AllBloxFruits = {
 -- Modern GUI with Rainbow RGB Border & Properly Contained Snow Effect
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
-ScreenGui.Parent = CoreGui
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = CoreGui
+end
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
@@ -101,7 +113,7 @@ SnowContainer.Parent = MainFrame
 -- Falling & Slowly Rotating Snow Effect Generator
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.3)
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
@@ -109,13 +121,13 @@ task.spawn(function()
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = math.random(20, 50) / 100
+            snowflake.TextTransparency = math.random(30, 60) / 100
             snowflake.TextSize = math.random(12, 18)
             snowflake.ZIndex = 5
             snowflake.Parent = SnowContainer
 
-            local fallDuration = math.random(40, 70) / 10
-            local targetX = snowflake.Position.X.Offset + math.random(-25, 25)
+            local fallDuration = math.random(50, 80) / 10
+            local targetX = snowflake.Position.X.Offset + math.random(-20, 20)
             local targetPos = UDim2.new(0, targetX, 0, 280)
             
             local info = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear)
@@ -300,43 +312,6 @@ local function hopServer()
     end
 end
 
--- Auto Click Store GUI Elements
-task.spawn(function()
-    local vim = game:GetService("VirtualInputManager")
-    
-    while true do
-        task.wait(0.2)
-        
-        pcall(function()
-            local playerGui = player:FindFirstChild("PlayerGui")
-            if playerGui then
-                for _, gui in pairs(playerGui:GetDescendants()) do
-                    if gui:IsA("TextButton") and gui.Visible then
-                        local text = string.lower(gui.Text or "")
-                        if text == "store" or text == "cất" then
-                            if gui.AbsoluteSize.X > 0 and gui.AbsolutePosition.X > 0 then
-                                local pos = gui.AbsolutePosition + (gui.AbsoluteSize / 2)
-                                
-                                if vim then
-                                    vim:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 1)
-                                    task.wait(0.05)
-                                    vim:SendMouseButtonEvent(pos.X, pos.Y, 0, false, game, 1)
-                                end
-                                
-                                if firesignal then
-                                    firesignal(gui.MouseButton1Click)
-                                end
-                                
-                                task.wait(1)
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
 -- Store Fruit Utility Function
 local function storeFruit(item)
     if item and item:IsA("Tool") then
@@ -349,12 +324,13 @@ local function storeFruit(item)
             if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
                 if item.Parent == player:FindFirstChild("Backpack") and humanoid then
                     humanoid:EquipTool(item)
-                    task.wait(0.25)
+                    task.wait(0.2)
                 end
                 
                 local formattedName = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
-                
-                remoteComm:InvokeServer("StoreFruit", formattedName, item)
+                if remoteComm then
+                    remoteComm:InvokeServer("StoreFruit", formattedName, item)
+                end
             end
         end)
     end
