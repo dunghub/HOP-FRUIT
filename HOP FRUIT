@@ -58,7 +58,7 @@ local AllBloxFruits = {
     ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Animated Rainbow RGB Border
+-- Modern GUI with Animated Rainbow RGB Border & Random Server Hopper Indicator
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
@@ -125,7 +125,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 30)
 TitleLabel.Position = UDim2.new(0, 0, 0, 140)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "KAITUN FRUIT"
+TitleLabel.Text = "KAITUN RANDOM HOP"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
@@ -209,27 +209,34 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Server Hopper Function
+-- Fully Randomized Infinite Server Hopper Loop
 local function hopServer()
     isRunning = false
-    StatusLabel.Text = "Hop Server..."
+    StatusLabel.Text = "Random Hopping..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
     local success, servers = pcall(function()
         return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
     end)
     
-    local targetJobId = nil
+    local availableServers = {}
     if success and servers and servers.data then
         for _, s in ipairs(servers.data) do
             if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                targetJobId = s.id
-                break
+                table.insert(availableServers, s.id)
             end
         end
     end
     
-    if targetJobId then
+    if #availableServers > 0 then
+        -- Shuffle / Randomize available servers array completely
+        math.randomseed(tick())
+        for i = #availableServers, 2, -1 do
+            local j = math.random(i)
+            availableServers[i], availableServers[j] = availableServers[j], availableServers[i]
+        end
+        
+        local targetJobId = availableServers[1]
         pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, targetJobId, player)
         end)
@@ -318,7 +325,7 @@ local function storeAllOwnedFruits()
     end
 end
 
--- Auto Pickup & Store Function
+-- Ultra-Fast Teleport & Instant Pickup Function
 local function autoPickAndStore()
     storeAllOwnedFruits()
 
@@ -329,11 +336,11 @@ local function autoPickAndStore()
             local character = player.Character
             
             if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                StatusLabel.Text = "Picking: " .. obj.Name
+                StatusLabel.Text = "Fast TP: " .. obj.Name
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                 
-                character.HumanoidRootPart.CFrame = handle.CFrame
-                task.wait(0.5)
+                character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
+                task.wait(0.15)
                 storeAllOwnedFruits()
                 return true
             end
@@ -342,7 +349,7 @@ local function autoPickAndStore()
     return false
 end
 
--- Main Execution Thread (Configured with 3-second timeout before switching servers)
+-- Main Execution Thread with Continuous Infinite Random Hopping
 task.spawn(function()
     while true do
         isRunning = true
@@ -364,7 +371,7 @@ task.spawn(function()
         if not isRunning then break end
 
         StatusLabel.Text = "Ready!"
-        task.wait(1)
+        task.wait(0.5)
 
         local scanStartTime = tick()
 
@@ -382,19 +389,19 @@ task.spawn(function()
             end
             
             if not collected and (tick() - scanStartTime > 3) then
-                StatusLabel.Text = "Not found (Hop in 3s)"
+                StatusLabel.Text = "Not found (Random Hop)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                task.wait(1)
+                task.wait(0.5)
                 break
             end
             
             if not isRunning then break end
-            task.wait(0.5)
+            task.wait(0.2)
         end
 
         if not isRunning then break end
 
         hopServer()
-        task.wait(8)
+        task.wait(5)
     end
 end)
