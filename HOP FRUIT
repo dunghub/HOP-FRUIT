@@ -70,7 +70,7 @@ MainFrame.Size = UDim2.new(0, 220, 0, 260)
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true -- Chặn tuyệt đối ko cho lòi ra ngoài viền cầu vồng
+MainFrame.ClipsDescendants = true
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -133,24 +133,30 @@ task.spawn(function()
     end
 end)
 
-local GreenBox = Instance.new("Frame")
-GreenBox.Size = UDim2.new(0, 110, 0, 110)
-GreenBox.Position = UDim2.new(0.5, -55, 0, 20)
-GreenBox.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
-GreenBox.BorderSizePixel = 0
-GreenBox.ZIndex = 2
-GreenBox.Parent = MainFrame
+-- Đổi khung xanh thành hình tròn nền đen cho avatar
+local CircleAvatarBg = Instance.new("Frame")
+CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
+CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 25)
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+CircleAvatarBg.BorderSizePixel = 0
+CircleAvatarBg.ZIndex = 2
+CircleAvatarBg.Parent = MainFrame
 
-local GreenBoxCorner = Instance.new("UICorner")
-GreenBoxCorner.CornerRadius = UDim.new(0, 12)
-GreenBoxCorner.Parent = GreenBox
+local CircleBgCorner = Instance.new("UICorner")
+CircleBgCorner.CornerRadius = UDim.new(1, 0) -- Bo tròn hoàn toàn thành hình tròn
+CircleBgCorner.Parent = CircleAvatarBg
+
+local CircleAvatarStroke = Instance.new("UIStroke")
+CircleAvatarStroke.Thickness = 2
+CircleAvatarStroke.Color = Color3.fromRGB(60, 60, 80)
+CircleAvatarStroke.Parent = CircleAvatarBg
 
 local CircleContainer = Instance.new("Frame")
-CircleContainer.Size = UDim2.new(0, 94, 0, 94)
-CircleContainer.Position = UDim2.new(0.5, -47, 0.5, -47)
+CircleContainer.Size = UDim2.new(0, 88, 0, 88)
+CircleContainer.Position = UDim2.new(0.5, -44, 0.5, -44)
 CircleContainer.BackgroundTransparency = 1
 CircleContainer.ZIndex = 2
-CircleContainer.Parent = GreenBox
+CircleContainer.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
 AvatarImg.Size = UDim2.new(1, 0, 1, 0)
@@ -356,7 +362,7 @@ end
 
 -- Scan Owned Inventory & Backpack
 local function storeAllOwnedFruits()
-    local character = player.Character
+    let character = player.Character
     local currentBackpack = player:FindFirstChild("Backpack")
     
     if character then
