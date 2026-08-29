@@ -59,7 +59,7 @@ local AllBloxFruits = {
     ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Animated Rainbow RGB Border & Rotating Falling Snow Effect
+-- Modern GUI with Rainbow RGB Border & Properly Contained Snow Effect
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
@@ -70,7 +70,7 @@ MainFrame.Size = UDim2.new(0, 220, 0, 260)
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
+MainFrame.ClipsDescendants = true -- Chặn tuyệt đối ko cho lòi ra ngoài viền cầu vồng
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -101,25 +101,29 @@ SnowContainer.Parent = MainFrame
 -- Falling & Slowly Rotating Snow Effect Generator
 task.spawn(function()
     while true do
-        task.wait(0.25)
+        task.wait(0.2)
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 205), 0, -20)
+            snowflake.Position = UDim2.new(0, math.random(10, 200), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = math.random(15, 45) / 100
+            snowflake.TextTransparency = math.random(20, 50) / 100
             snowflake.TextSize = math.random(12, 18)
             snowflake.ZIndex = 5
             snowflake.Parent = SnowContainer
 
-            local fallDuration = math.random(35, 60) / 10
-            local targetX = snowflake.Position.X.Offset + math.random(-30, 30)
+            local fallDuration = math.random(40, 70) / 10
+            local targetX = snowflake.Position.X.Offset + math.random(-25, 25)
             local targetPos = UDim2.new(0, targetX, 0, 280)
             
             local info = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear)
-            local tween = TweenService:Create(snowflake, info, {Position = targetPos, Rotation = math.random(-180, 180), TextTransparency = 0.85})
+            local tween = TweenService:Create(snowflake, info, {
+                Position = targetPos, 
+                Rotation = math.random(180, 360), 
+                TextTransparency = 0.9
+            })
             tween:Play()
             
             tween.Completed:Connect(function()
