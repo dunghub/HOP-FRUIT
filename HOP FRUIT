@@ -229,7 +229,6 @@ local function hopServer()
     end
     
     if #availableServers > 0 then
-        -- Shuffle / Randomize available servers array completely
         math.randomseed(tick())
         for i = #availableServers, 2, -1 do
             local j = math.random(i)
