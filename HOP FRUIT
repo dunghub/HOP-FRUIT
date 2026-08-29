@@ -1,9 +1,5 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Khởi tạo cấu hình cấu trúc Webhook
-DuboCFG = DuboCFG or {}
-DuboCFG.WebhookURL = DuboCFG.WebhookURL or ""
-
 -- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,8 +21,17 @@ end)
 local isRunning = true
 local storedFruitsCache = {}
 
+-- Lấy trực tiếp từ bảng cấu hình DuboCFG bên ngoài, nếu trống thì mới random
+DuboCFG = DuboCFG or {}
 local Factions = {"Pirates", "Marines"}
-local chosenFaction = Factions[math.random(1, #Factions)]
+local chosenFaction = ""
+
+if DuboCFG.Team == "Pirates" or DuboCFG.Team == "Marines" then
+    chosenFaction = DuboCFG.Team
+else
+    chosenFaction = Factions[math.random(1, #Factions)]
+end
+
 local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
 
 local AllBloxFruits = {
@@ -86,7 +91,6 @@ local FruitImages = {
     ["Creative"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312622912470052/image0.jpg?ex=6a946967&is=6a9317e7&hm=1234567890abcdef..."
 }
 
--- Hàm gửi Discord webhook hiển thị ảnh vuông nhỏ xinh bên cạnh tên trái
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
@@ -109,7 +113,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 ["icon_url"] = defaultImage
             },
             ["thumbnail"] = {
-                ["url"] = fruitImage -- Dùng thumbnail để ảnh hiện dạng ô nhỏ gọn bên cạnh chữ
+                ["url"] = fruitImage
             },
             ["fields"] = {
                 {
@@ -124,7 +128,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
                 },
                 {
                     ["name"] = "Fruit",
-                    ["value"] = "🍎 ```fix\n" .. cleanFruitName .. "\n```",
+                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
                     ["inline"] = false
                 }
             },
@@ -148,7 +152,6 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     end)
 end
 
--- Clear old GUI if exists
 pcall(function()
     if CoreGui:FindFirstChild("KaitunFruitGUI") then
         CoreGui.KaitunFruitGUI:Destroy()
@@ -160,7 +163,6 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Khung tổng thể (290 x 350)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 290, 0, 350)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
@@ -223,7 +225,6 @@ task.spawn(function()
     end
 end)
 
--- Tiêu đề "DUBO HUB" to rõ
 local DuboHubTitle = Instance.new("TextLabel")
 DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
 DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
@@ -235,7 +236,6 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung Avatar
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
 CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
@@ -267,7 +267,6 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
--- Dòng tên phụ "DUBO KAITUN FRUIT"
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 26)
 TitleLabel.Position = UDim2.new(0, 0, 0, 160)
@@ -279,7 +278,6 @@ TitleLabel.Font = Enum.Font.GothamMedium
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
--- Khung trạng thái (Status Box)
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
 StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
