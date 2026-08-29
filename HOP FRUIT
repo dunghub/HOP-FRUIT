@@ -11,70 +11,42 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Safe Remote Connection
 local remoteComm = nil
 pcall(function()
-    remoteComm = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("CommF_", 5)
+    remoteComm = ReplicatedStorage.Remotes.CommF_
 end)
 
 local isRunning = true
 
--- Random Faction Selection
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = Factions[math.random(1, #Factions)]
 local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
 
--- Full Blox Fruits Database
 local AllBloxFruits = {
-    ["Rocket"] = "Rocket-Rocket",
-    ["Spin"] = "Spin-Spin",
-    ["Blade"] = "Blade-Blade",
-    ["Spring"] = "Spring-Spring",
-    ["Bomb"] = "Bomb-Bomb",
-    ["Smoke"] = "Smoke-Smoke",
-    ["Spike"] = "Spike-Spike",
-    ["Flame"] = "Flame-Flame",
-    ["Falcon"] = "Falcon-Falcon",
-    ["Ice"] = "Ice-Ice",
-    ["Sand"] = "Sand-Sand",
-    ["Dark"] = "Dark-Dark",
-    ["Diamond"] = "Diamond-Diamond",
-    ["Light"] = "Light-Light",
-    ["Rubber"] = "Rubber-Rubber",
-    ["Barrier"] = "Barrier-Barrier",
-    ["Ghost"] = "Ghost-Ghost",
-    ["Magma"] = "Magma-Magma",
-    ["Quake"] = "Quake-Quake",
-    ["Buddha"] = "Buddha-Buddha",
-    ["Sound"] = "Sound-Sound",
-    ["Phoenix"] = "Phoenix-Phoenix",
-    ["Portal"] = "Portal-Portal",
-    ["Pain"] = "Pain-Pain",
-    ["Rumble"] = "Rumble-Rumble",
-    ["Blizzard"] = "Blizzard-Blizzard",
-    ["Dough"] = "Dough-Dough",
-    ["Shadow"] = "Shadow-Shadow",
-    ["Venom"] = "Venom-Venom",
-    ["Control"] = "Control-Control",
-    ["Gas"] = "Gas-Gas",
-    ["T-Rex"] = "T-Rex-T-Rex",
-    ["Mammoth"] = "Mammoth-Mammoth",
-    ["Kitsune"] = "Kitsune-Kitsune",
-    ["Dragon"] = "Dragon-Dragon",
-    ["Yeti"] = "Yeti-Yeti"
+    ["Rocket"] = "Rocket-Rocket", ["Spin"] = "Spin-Spin", ["Blade"] = "Blade-Blade",
+    ["Spring"] = "Spring-Spring", ["Bomb"] = "Bomb-Bomb", ["Smoke"] = "Smoke-Smoke",
+    ["Spike"] = "Spike-Spike", ["Flame"] = "Flame-Flame", ["Falcon"] = "Falcon-Falcon",
+    ["Ice"] = "Ice-Ice", ["Sand"] = "Sand-Sand", ["Dark"] = "Dark-Dark",
+    ["Diamond"] = "Diamond-Diamond", ["Light"] = "Light-Light", ["Rubber"] = "Rubber-Rubber",
+    ["Barrier"] = "Barrier-Barrier", ["Ghost"] = "Ghost-Ghost", ["Magma"] = "Magma-Magma",
+    ["Quake"] = "Quake-Quake", ["Buddha"] = "Buddha-Buddha", ["Sound"] = "Sound-Sound",
+    ["Phoenix"] = "Phoenix-Phoenix", ["Portal"] = "Portal-Portal", ["Pain"] = "Pain-Pain",
+    ["Rumble"] = "Rumble-Rumble", ["Blizzard"] = "Blizzard-Blizzard", ["Dough"] = "Dough-Dough",
+    ["Shadow"] = "Shadow-Shadow", ["Venom"] = "Venom-Venom", ["Control"] = "Control-Control",
+    ["Gas"] = "Gas-Gas", ["T-Rex"] = "T-Rex-T-Rex", ["Mammoth"] = "Mammoth-Mammoth",
+    ["Kitsune"] = "Kitsune-Kitsune", ["Dragon"] = "Dragon-Dragon", ["Yeti"] = "Yeti-Yeti"
 }
 
--- Modern GUI with Rainbow RGB Border & Properly Contained Snow Effect
+-- Clear old GUI if exists
+pcall(function()
+    if CoreGui:FindFirstChild("KaitunFruitGUI") then
+        CoreGui.KaitunFruitGUI:Destroy()
+    end
+end)
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-elseif gethui then
-    ScreenGui.Parent = gethui()
-else
-    ScreenGui.Parent = CoreGui
-end
+ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
@@ -95,7 +67,6 @@ local RainbowStroke = Instance.new("UIStroke")
 RainbowStroke.Thickness = 3
 RainbowStroke.Parent = MainFrame
 
--- RGB Animation Loop
 task.spawn(function()
     while true do
         for i = 0, 1, 0.005 do
@@ -105,12 +76,10 @@ task.spawn(function()
     end
 end)
 
--- Dedicated Snow Container inside MainFrame
 local SnowContainer = Instance.new("Folder")
 SnowContainer.Name = "SnowContainer"
 SnowContainer.Parent = MainFrame
 
--- Falling & Slowly Rotating Snow Effect Generator
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -121,23 +90,20 @@ task.spawn(function()
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = math.random(30, 60) / 100
+            snowflake.TextTransparency = 0.4
             snowflake.TextSize = math.random(12, 18)
             snowflake.ZIndex = 5
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(50, 80) / 10
-            local targetX = snowflake.Position.X.Offset + math.random(-20, 20)
-            local targetPos = UDim2.new(0, targetX, 0, 280)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 280)
             
-            local info = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear)
-            local tween = TweenService:Create(snowflake, info, {
+            local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
                 Rotation = math.random(180, 360), 
                 TextTransparency = 0.9
             })
             tween:Play()
-            
             tween.Completed:Connect(function()
                 snowflake:Destroy()
             end)
@@ -145,7 +111,6 @@ task.spawn(function()
     end
 end)
 
--- Khung tròn nền đen cho avatar
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 100, 0, 100)
 CircleAvatarBg.Position = UDim2.new(0.5, -50, 0, 25)
@@ -163,22 +128,15 @@ CircleAvatarStroke.Thickness = 2
 CircleAvatarStroke.Color = Color3.fromRGB(60, 60, 80)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
-local CircleContainer = Instance.new("Frame")
-CircleContainer.Size = UDim2.new(0, 88, 0, 88)
-CircleContainer.Position = UDim2.new(0.5, -44, 0.5, -44)
-CircleContainer.BackgroundTransparency = 1
-CircleContainer.ZIndex = 2
-CircleContainer.Parent = CircleAvatarBg
-
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(1, 0, 1, 0)
+AvatarImg.Size = UDim2.new(0, 88, 0, 88)
+AvatarImg.Position = UDim2.new(0.5, -44, 0.5, -44)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
-local success, thumb = pcall(function()
-    return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+pcall(function()
+    AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 end)
-AvatarImg.Image = success and thumb or ""
-AvatarImg.Parent = CircleContainer
+AvatarImg.Parent = CircleAvatarBg
 
 local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
@@ -221,20 +179,20 @@ local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = ScreenGui
 
--- Noclip Anti-Collision
 RunService.Stepped:Connect(function()
     if not isRunning then return end
-    local character = player.Character
-    if character then
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+    pcall(function()
+        local character = player.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
         end
-    end
+    end)
 end)
 
--- ESP Render Loop
 RunService.RenderStepped:Connect(function()
     if not isRunning then 
         ESPFolder:ClearAllChildren()
@@ -242,40 +200,40 @@ RunService.RenderStepped:Connect(function()
     end
 
     ESPFolder:ClearAllChildren()
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle")
+                if handle then
+                    local vector, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                    if onScreen then
+                        local character = player.Character
+                        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                        local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
 
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        local rawName = obj.Name:gsub(" Fruit", "")
-        if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-            local handle = obj:FindFirstChild("Handle")
-            if handle then
-                local vector, onScreen = Camera:WorldToViewportPoint(handle.Position)
-                if onScreen then
-                    local character = player.Character
-                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                    local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
-
-                    local ESPText = Instance.new("TextLabel")
-                    ESPText.Size = UDim2.new(0, 150, 0, 30)
-                    ESPText.Position = UDim2.new(0, vector.X - 75, 0, vector.Y - 20)
-                    ESPText.BackgroundTransparency = 0.5
-                    ESPText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                    ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                    ESPText.TextSize = 13
-                    ESPText.Font = Enum.Font.GothamBold
-                    ESPText.Text = "🍎 " .. obj.Name .. " (" .. distance .. "m)"
-                    
-                    local corner = Instance.new("UICorner")
-                    corner.CornerRadius = UDim.new(0, 4)
-                    corner.Parent = ESPText
-                    
-                    ESPText.Parent = ESPFolder
+                        local ESPText = Instance.new("TextLabel")
+                        ESPText.Size = UDim2.new(0, 150, 0, 30)
+                        ESPText.Position = UDim2.new(0, vector.X - 75, 0, vector.Y - 20)
+                        ESPText.BackgroundTransparency = 0.5
+                        ESPText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                        ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        ESPText.TextSize = 13
+                        ESPText.Font = Enum.Font.GothamBold
+                        ESPText.Text = "🍎 " .. obj.Name .. " (" .. distance .. "m)"
+                        
+                        local corner = Instance.new("UICorner")
+                        corner.CornerRadius = UDim.new(0, 4)
+                        corner.Parent = ESPText
+                        
+                        ESPText.Parent = ESPFolder
+                    end
                 end
             end
         end
-    end
+    end)
 end)
 
--- Fully Randomized Infinite Server Hopper Loop
 local function hopServer()
     isRunning = false
     StatusLabel.Text = "Hopping..."
@@ -295,15 +253,8 @@ local function hopServer()
     end
     
     if #availableServers > 0 then
-        math.randomseed(tick())
-        for i = #availableServers, 2, -1 do
-            local j = math.random(i)
-            availableServers[i], availableServers[j] = availableServers[j], availableServers[i]
-        end
-        
-        local targetJobId = availableServers[1]
         pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetJobId, player)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, availableServers[math.random(1, #availableServers)], player)
         end)
     else
         pcall(function()
@@ -312,81 +263,72 @@ local function hopServer()
     end
 end
 
--- Store Fruit Utility Function
 local function storeFruit(item)
-    if item and item:IsA("Tool") then
-        pcall(function()
+    pcall(function()
+        if item and item:IsA("Tool") then
             local character = player.Character
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            
             local rawName = item.Name:gsub(" Fruit", "")
             
             if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
-                if item.Parent == player:FindFirstChild("Backpack") and humanoid then
+                if item.Parent == player.Backpack and humanoid then
                     humanoid:EquipTool(item)
                     task.wait(0.2)
                 end
-                
-                local formattedName = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
                 if remoteComm then
-                    remoteComm:InvokeServer("StoreFruit", formattedName, item)
+                    remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
                 end
             end
-        end)
-    end
+        end
+    end)
 end
 
--- Scan Owned Inventory & Backpack
 local function storeAllOwnedFruits()
-    local character = player.Character
-    local currentBackpack = player:FindFirstChild("Backpack")
-    
-    if character then
-        for _, item in ipairs(character:GetChildren()) do
-            storeFruit(item)
-        end
-    end
-    
-    if currentBackpack then
-        for _, item in ipairs(currentBackpack:GetChildren()) do
-            storeFruit(item)
-        end
-    end
-end
-
--- Ultra-Fast Teleport & Instant Pickup Function
-local function autoPickAndStore()
-    storeAllOwnedFruits()
-
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        local rawName = obj.Name:gsub(" Fruit", "")
-        if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-            local handle = obj:FindFirstChild("Handle")
-            local character = player.Character
-            
-            if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                StatusLabel.Text = "Fast TP: " .. obj.Name
-                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                
-                character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
-                task.wait(0.15)
-                storeAllOwnedFruits()
-                return true
+    pcall(function()
+        if player.Character then
+            for _, item in ipairs(player.Character:GetChildren()) do
+                storeFruit(item)
             end
         end
-    end
-    return false
+        if player:FindFirstChild("Backpack") then
+            for _, item in ipairs(player.Backpack:GetChildren()) do
+                storeFruit(item)
+            end
+        end
+    end)
 end
 
--- Main Execution Thread with Continuous Infinite Random Hopping
+local function autoPickAndStore()
+    storeAllOwnedFruits()
+    local found = false
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle")
+                local character = player.Character
+                if handle and character and character:FindFirstChild("HumanoidRootPart") then
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
+                    task.wait(0.15)
+                    storeAllOwnedFruits()
+                    found = true
+                    break
+                end
+            end
+        end
+    end)
+    return found
+end
+
 task.spawn(function()
     while true do
         isRunning = true
-
         StatusLabel.Text = "Team: " .. factionDisplayName
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         
-        local maxSpawnAttempts = 0
+        local attempts = 0
         repeat
             pcall(function()
                 if remoteComm then
@@ -394,16 +336,15 @@ task.spawn(function()
                 end
             end)
             task.wait(1)
-            maxSpawnAttempts = maxSpawnAttempts + 1
-        until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or maxSpawnAttempts > 15 or not isRunning
+            attempts = attempts + 1
+        until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
 
         if not isRunning then break end
 
         StatusLabel.Text = "Ready!"
         task.wait(0.5)
 
-        local scanStartTime = tick()
-
+        local scanStart = tick()
         while isRunning do
             StatusLabel.Text = "Scanning..."
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -414,10 +355,10 @@ task.spawn(function()
             end)
             
             if collected then
-                scanStartTime = tick()
+                scanStart = tick()
             end
             
-            if not collected and (tick() - scanStartTime > 3) then
+            if not collected and (tick() - scanStart > 3) then
                 StatusLabel.Text = "Not found (Hop in 3s)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                 task.wait(0.5)
@@ -429,7 +370,6 @@ task.spawn(function()
         end
 
         if not isRunning then break end
-
         hopServer()
         task.wait(5)
     end
