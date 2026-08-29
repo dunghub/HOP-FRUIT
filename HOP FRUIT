@@ -21,7 +21,6 @@ end)
 local isRunning = true
 local storedFruitsCache = {}
 
--- Lấy trực tiếp từ bảng cấu hình DuboCFG bên ngoài, nếu trống thì mới random
 DuboCFG = DuboCFG or {}
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = ""
@@ -50,7 +49,6 @@ local AllBloxFruits = {
     ["Creative"] = "Creative-Creative"
 }
 
--- Kho lưu trữ link ảnh cho toàn bộ các trái
 local FruitImages = {
     ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a945da5&is=6a930c25&hm=737553e0a602adb85b77d206a4b9d79c76b6492d326ab7354ba9970f2a766412&",
     ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a946089&is=6a930f09&hm=d1670069b01844c4f87b70e20386032bb30a7db19556811c5d85442ac48856e8&",
@@ -345,7 +343,8 @@ RunService.RenderStepped:Connect(function()
                         ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
                         ESPText.TextSize = 13
                         ESPText.Font = Enum.Font.GothamBold
-                        ESPText.Text = "🍎 " .. obj.Name .. " (" .. distance .. "m)"
+                        -- Đã vứt icon táo ở đây:
+                        ESPText.Text = obj.Name .. " (" .. distance .. "m)"
                         
                         local corner = Instance.new("UICorner")
                         corner.CornerRadius = UDim.new(0, 4)
