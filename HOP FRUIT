@@ -1,23 +1,87 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local Camera = Workspace.CurrentCamera
 
--- ==========================================
--- HÀM CHẠY SCRIPT CHÍNH (KAITUN FRUIT)
--- ==========================================
-local function LoadMainScript()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Workspace = game:GetService("Workspace")
-    local TeleportService = game:GetService("TeleportService")
-    local HttpService = game:GetService("HttpService")
-    local CoreGui = game:GetService("CoreGui")
-    local RunService = game:GetService("RunService")
-    local TweenService = game:GetService("TweenService")
+-- ==================== CẤU HÌNH (THAY LINK CỦA ÔNG VÀO ĐÂY) ====================
+local KEY_URL = "LINK_GITHUB_RAW_CỦA_FILE_KEY_DUBO"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
+local CACHE_FILE = "DuboHub_Session.json"
+-- ==============================================================================
 
-    local Camera = Workspace.CurrentCamera
+-- Hàm lấy HWID
+local function getHWID()
+    local hwid = ""
+    pcall(function()
+        hwid = (gethwid and gethwid()) or (syn and syn.get_hwid()) or (Fluxus and Fluxus.get_hwid()) or "UNKNOWN_HWID"
+    end)
+    return hwid
+end
 
+-- Hàm gửi Webhook yêu cầu gán HWID
+local function sendWebhookNotification(keyInput, currentHWID)
+    if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
+    local data = {
+        ["username"] = "DUBO KEY SYSTEM",
+        ["embeds"] = {{
+            ["title"] = "⚠️ Yêu Cầu Gán HWID Mới!",
+            ["color"] = 16776960,
+            ["fields"] = {
+                {["name"] = "Tài khoản:", ["value"] = player.Name, ["inline"] = false},
+                {["name"] = "Key vừa nhập:", ["value"] = "```fix\n" .. keyInput .. "\n```", ["inline"] = false},
+                {["name"] = "HWID (Copy dán vào sau dấu /):", ["value"] = "```yaml\n" .. currentHWID .. "\n```", ["inline"] = false}
+            },
+            ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")}
+        }}
+    }
+    pcall(function()
+        local req = request or http_request or syn.request or fluxus.request
+        if req then
+            req({Url = WEBHOOK_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)})
+        end
+    end)
+end
+
+-- Kiểm tra Key trên GitHub
+local function verifyKey(inputKey)
+    local success, response = pcall(function()
+        return game:HttpGet(KEY_URL)
+    end)
+    if not success then return false, "Lỗi kết nối GitHub!" end
+    
+    local myHWID = getHWID()
+    for line in response:gmatch("[^\r\n]+") do
+        local separatorPos = line:find("/")
+        if separatorPos then
+            local fileKey = line:sub(1, separatorPos - 1):match("^%s*(.-)%s*$")
+            local fileHWID = line:sub(separatorPos + 1):match("^%s*(.-)%s*$")
+            
+            if fileKey == inputKey then
+                if fileHWID == "" then
+                    sendWebhookNotification(inputKey, myHWID)
+                    return false, "Key chưa được gán HWID! Đã gửi yêu cầu về Discord."
+                elseif fileHWID == myHWID then
+                    return true, "Thành công!"
+                else
+                    return false, "Key này đang dùng ở thiết bị khác!"
+                end
+            end
+        end
+    end
+    return false, "Key không tồn tại!"
+end
+
+-- HÀM CHẠY SCRIPT KAITUN CHÍNH SAU KHI XÁC THỰC
+local function runMainScript()
     local remoteComm = nil
     pcall(function()
         remoteComm = ReplicatedStorage.Remotes.CommF_
@@ -55,31 +119,47 @@ local function LoadMainScript()
     }
 
     local FruitImages = {
-        ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a945da5&is=6a930c25&hm=737553e0a602adb85b77d206a4b9d79c76b6492d326ab7354ba9970f2a766412&",
-        ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a946089&is=6a930f09&hm=d1670069b01844c4f87b70e20386032bb30a7db19556811c5d85442ac48856e8&",
-        ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a94616b&is=6a930feb&hm=7283a6200343e3be2084b08a54340da6b7fa62b503c749950c8dbb7d17efbaab&",
-        ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a94619d&is=6a93101d&hm=9b96abdaf46a5f72db86f2e9e5dae2e368b1ddc21f82555975296a793daec0a1&",
-        ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9461ca&is=6a93104a&hm=2dfb4a911ff9ef6bdaf58ea9914a7381506adb4d61c31e1269f10a4fa0444b88&",
-        ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a946219&is=6a931099&hm=99a11acec600be0304947264a96c3f396496eb49982b0841dc2054302dc6eecc&",
-        ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a946253&is=6a9310d3&hm=a2f6c89c2256f38c949c7e4470e684d677a4eff3060488c93acc208df26c0ed4&",
-        ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a946273&is=6a9310f3&hm=7de3f57fd3780f667069a8786e9872d4ff98ef4973250246d2cafb287610f4e7&",
-        ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9462b5&is=6a931135&hm=a2eca1ab5262a2d31a2f8636f210f296a12ef62a83e0cb94622b95310683d29d&",
-        ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a946304&is=6a931184&hm=3728d94ede0769625be520d7200148d1cf05ed7c272fe3d8bb7ec5faa6e304f7&",
-        ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a946317&is=6a931197&hm=a3f4ab0ffbadadd6e36673969d777fcc27715abde6278c4db1ee443f7826e753&",
-        ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9463bd&is=6a93123d&hm=0abcffccccb33555dac2b0bf78b61207c22eea6bedccaf09ca5e27aacc299474&",
-        ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9463d2&is=6a931252&hm=e828876218af8fd98393c3e39c091f21a3aa8dd49a69cdc3a95da88a52f030c6&",
-        ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a94640d&is=6a93128d&hm=98e417d81d43990278c81b08d4c05f1f9de0a80dd7e29a3c8f0a910aa9c149b3&",
-        ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9464d9&is=6a931359&hm=a0725fdd6df76ccce3c1f1e17c9e4488fe11fe2964f8644035f7df5cc8098ab0&",
-        ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&",
-        ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg?ex=6a946568&is=6a9313e8&hm=1234567890abcdef...",
-        ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg?ex=6a946611&is=6a931491&hm=1234567890abcdef...",
-        ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg?ex=6a9466f9&is=6a931539&hm=1234567890abcdef...",
-        ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg?ex=6a9468ac&is=6a93172c&hm=1234567890abcdef...",
-        ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg?ex=6a9468ea&is=6a93176a&hm=1234567890abcdef..."
+        ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg",
+        ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg",
+        ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg",
+        ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg",
+        ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg",
+        ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg",
+        ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg",
+        ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg",
+        ["Eagle"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg",
+        ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg",
+        ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg",
+        ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg",
+        ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg",
+        ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg",
+        ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg",
+        ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg",
+        ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg",
+        ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg",
+        ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308123475988510/image0.jpg",
+        ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg",
+        ["Sound"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308591241769012/image0.jpg",
+        ["Phoenix"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308823178461244/image0.jpg",
+        ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg",
+        ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309281536725052/image0.jpg",
+        ["Rumble"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309512391278632/image0.jpg",
+        ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309753471418422/image0.jpg",
+        ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg",
+        ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310281249087522/image0.jpg",
+        ["Venom"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310541912543252/image0.jpg",
+        ["Control"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310801217318932/image0.jpg",
+        ["Gas"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311062325350412/image0.jpg",
+        ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg",
+        ["Mammoth"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311582138138712/image0.jpg",
+        ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg",
+        ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg",
+        ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg",
+        ["Creative"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312622912470052/image0.jpg"
     }
 
     local function sendDiscordWebhook(fruitName, uniqueId)
-        if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
+        if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
         if storedFruitsCache[uniqueId] then return end
         storedFruitsCache[uniqueId] = true
         
@@ -106,7 +186,7 @@ local function LoadMainScript()
         pcall(function()
             local req = request or http_request or syn.request or fluxus.request
             if req then
-                req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)})
+                req({Url = WEBHOOK_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)})
             end
         end)
     end
@@ -227,7 +307,6 @@ local function LoadMainScript()
                     local uniqueId = item:GetDebugId()
                     if not storedFruitsCache[uniqueId] then
                         if item.Parent == player.Backpack and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-                            player.Character.HumanoidModelScale = player.Character.HumanoidModelScale
                             player.Character:FindFirstChildOfClass("Humanoid"):EquipTool(item)
                             task.wait(0.2)
                         end
@@ -282,133 +361,117 @@ local function LoadMainScript()
     end)
 end
 
--- ==========================================
--- GIAO DIỆN BẢO VỆ KEY & KẾT NỐI GITHUB
--- ==========================================
-if playerGui:FindFirstChild("DuboHubAuth") then
-    playerGui.DuboHubAuth:Destroy()
-end
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "DuboHubAuth"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
-
-local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size = UDim2.new(0, 380, 0, 260)
-mainFrame.Position = UDim2.new(0.5, -190, 0.5, -130)
-mainFrame.BackgroundColor3 = Color3.fromRGB(10, 25, 47)
-mainFrame.BorderSizePixel = 0
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
-
-local titleLabel = Instance.new("TextLabel", mainFrame)
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "DUBO HUB - AUTHENTICATION"
-titleLabel.TextColor3 = Color3.fromRGB(144, 224, 239)
-titleLabel.TextSize = 16
-titleLabel.Font = Enum.Font.GothamBold
-
-local keyInput = Instance.new("TextBox", mainFrame)
-keyInput.Size = UDim2.new(0.9, 0, 0, 40)
-keyInput.Position = UDim2.new(0.05, 0, 0, 55)
-keyInput.BackgroundColor3 = Color3.fromRGB(3, 7, 18)
-keyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-keyInput.PlaceholderText = "Nhập Key bản quyền..."
-keyInput.TextSize = 14
-keyInput.Font = Enum.Font.Gotham
-Instance.new("UICorner", keyInput).CornerRadius = UDim.new(0, 8)
-
-local submitBtn = Instance.new("TextButton", mainFrame)
-submitBtn.Size = UDim2.new(0.9, 0, 0, 38)
-submitBtn.Position = UDim2.new(0.05, 0, 0, 105)
-submitBtn.BackgroundColor3 = Color3.fromRGB(16, 185, 129)
-submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitBtn.Text = "XÁC THỰC KEY (SUBMIT)"
-submitBtn.TextSize = 14
-submitBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0, 8)
-
-local getLinkBtn = Instance.new("TextButton", mainFrame)
-getLinkBtn.Size = UDim2.new(0.9, 0, 0, 38)
-getLinkBtn.Position = UDim2.new(0.05, 0, 0, 155)
-getLinkBtn.BackgroundColor3 = Color3.fromRGB(37, 99, 235)
-getLinkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-getLinkBtn.Text = "🔗 LẤY LINK GET KEY"
-getLinkBtn.TextSize = 13
-getLinkBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", getLinkBtn).CornerRadius = UDim.new(0, 8)
-
-local statusLabel = Instance.new("TextLabel", mainFrame)
-statusLabel.Size = UDim2.new(0.9, 0, 0, 30)
-statusLabel.Position = UDim2.new(0.05, 0, 0, 205)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.fromRGB(239, 68, 68)
-statusLabel.TextSize = 12
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.Text = "Trạng thái: Chưa bấm lấy link!"
-
-local clickTime = 0
-local linkClicked = false
-
-local function generateRandomId(length)
-    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local id = ""
-    for i = 1, length do
-        local rand = math.random(1, #chars)
-        id = id .. string.sub(chars, rand, rand)
-    end
-    return id
-end
-
-getLinkBtn.MouseButton1Click:Connect(function()
-    clickTime = tick()
-    linkClicked = true
-    local uniqueSessionId = generateRandomId(10)
-    
-    -- LINK ĐÃ ĐƯỢC GẮN ĐÚNG TÊN KHO SEVER-DUBO-HUB
-    local webUrl = "https://dunghub.github.io/SEVER-DUBO-HUB/bypass.html?sid=" .. uniqueSessionId
-    
-    if setclipboard then
-        setclipboard(webUrl)
-        statusLabel.TextColor3 = Color3.fromRGB(52, 211, 153)
-        statusLabel.Text = "Đã copy link! (Mã phiên: " .. uniqueSessionId .. ")"
-    else
-        statusLabel.Text = "Executor không hỗ trợ setclipboard!"
+-- KIỂM TRA CACHE TRƯỚC (NẾU ĐÃ LƯU THÌ BỎ QUA GIAO DIỆN NHẬP KEY)
+local savedKey = ""
+pcall(function()
+    if readfile and isfile and isfile(CACHE_FILE) then
+        local content = readfile(CACHE_FILE)
+        local data = HttpService:JSONDecode(content)
+        if data and data.Key and data.HWID == getHWID() then
+            savedKey = data.Key
+        end
     end
 end)
 
-submitBtn.MouseButton1Click:Connect(function()
-    local enteredKey = keyInput.Text
-    
-    if not linkClicked then
-        statusLabel.Text = "Lỗi: Bạn chưa bấm nút lấy link!"
+if savedKey ~= "" then
+    local isValid, _ = verifyKey(savedKey)
+    if isValid then
+        runMainScript()
         return
     end
+end
+
+-- GIAO DIỆN NHẬP KEY (CHỈ HIỆN KHI CHƯA CÓ CACHE HOẶC ĐỔI MÁY)
+pcall(function() if CoreGui:FindFirstChild("DuboKeyUI") then CoreGui.DuboKeyUI:Destroy() end end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DuboKeyUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 320, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -90)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Thickness = 3
+Stroke.Color = Color3.fromRGB(0, 170, 255)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "DUBO HUB - KEY SYSTEM"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 280, 0, 40)
+TextBox.Position = UDim2.new(0.5, -140, 0, 50)
+TextBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TextBox.BorderSizePixel = 0
+TextBox.PlaceholderText = "Nhập Key vào đây..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
+TextBox.TextSize = 14
+TextBox.Font = Enum.Font.Gotham
+Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
+TextBox.Parent = MainFrame
+
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Size = UDim2.new(0, 280, 0, 40)
+SubmitBtn.Position = UDim2.new(0.5, -140, 0, 105)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+SubmitBtn.BorderSizePixel = 0
+SubmitBtn.Text = "SUBMIT KEY"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextSize = 15
+SubmitBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
+SubmitBtn.Parent = MainFrame
+
+local Notification = Instance.new("TextLabel")
+Notification.Size = UDim2.new(1, 0, 0, 20)
+Notification.Position = UDim2.new(0, 0, 0, 150)
+Notification.BackgroundTransparency = 1
+Notification.Text = ""
+Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
+Notification.TextSize = 12
+Notification.Font = Enum.Font.Gotham
+Notification.Parent = MainFrame
+
+SubmitBtn.MouseButton1Click:Connect(function()
+    local typedKey = TextBox.Text
+    SubmitBtn.Text = "Đang kiểm tra..."
     
-    local timeSpent = tick() - clickTime
-    if timeSpent < 90 then
-        statusLabel.Text = "Nghi vấn bypass nhanh! (" .. math.floor(timeSpent) .. "s < 90s)"
-        return
-    elseif timeSpent > 150 then
-        statusLabel.Text = "Quá thời gian (Hơn 150s)! Vui lòng lấy lại link."
-        linkClicked = false
-        return
-    end
-    
-    if enteredKey == "" then
-        statusLabel.Text = "Vui lòng nhập Key vào ô trống!"
-        return
-    end
-    
-    if string.sub(enteredKey, 1, 8) == "DUBOHUB-" then
-        statusLabel.TextColor3 = Color3.fromRGB(52, 211, 153)
-        statusLabel.Text = "Thành công! Đang khởi động Hub..."
-        task.wait(1)
-        screenGui:Destroy()
-        LoadMainScript()
-    else
-        statusLabel.TextColor3 = Color3.fromRGB(239, 68, 68)
-        statusLabel.Text = "Key không hợp lệ hoặc sai định dạng!"
-    end
+    task.spawn(function()
+        local isValid, msg = verifyKey(typedKey)
+        if isValid then
+            Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
+            Notification.Text = "Thành công! Đang vào game..."
+            
+            pcall(function()
+                if writefile then
+                    local dataToSave = HttpService:JSONEncode({Key = typedKey, HWID = getHWID()})
+                    writefile(CACHE_FILE, dataToSave)
+                end
+            end)
+            
+            task.wait(1)
+            ScreenGui:Destroy()
+            runMainScript()
+        else
+            Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
+            Notification.Text = msg
+            SubmitBtn.Text = "SUBMIT KEY"
+        end
+    end)
 end)
