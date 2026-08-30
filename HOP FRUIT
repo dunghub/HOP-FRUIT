@@ -1,6 +1,5 @@
 --[[
-    DUBO HUB - Blox Fruits Kaitun (Integrated Key System & HWID Verification)
-    DO NOT REMOVE OR ALTER THE CORE GETKEY / CACHE / HWID LOGIC BELOW.
+    DUBO HUB - Blox Fruits Kaitun (Separated Premium GitHub Gate & Dual Warehouse System)
 ]]--
 
 local HttpService = game:GetService("HttpService")
@@ -9,27 +8,37 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 -- ==========================================
--- KEY SYSTEM & HWID CONFIGURATION
+-- ARCHITECTURE CONFIGURATION
 -- ==========================================
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
-local KEY_CACHE_FILE = "DuboHub_KeyCache.json"
-local GITHUB_KEY_URL = "https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/keys.txt/" .. HWID
 
-local function getSavedKeyCache()
-    if readfile and isfile and isfile(KEY_CACHE_FILE) then
+-- Kho chính trung tâm 24 giờ (Main 24h Warehouse Cache)
+local MAIN_CACHE_FILE = "DuboHub_MainWarehouse_24h.json"
+
+-- Kho tạm duyệt 500 giây (Temporary 500s Warehouse)
+local TEMP_CACHE_FILE = "DuboHub_TempWarehouse_500s.json"
+
+-- File Premium trên GitHub (Định dạng mỗi dòng: KEY/HWID)
+local GITHUB_PREMIUM_URL = "https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/premium_keys.txt"
+
+-- Kiểm tra kho chính 24 giờ
+local function checkMainWarehouse()
+    if readfile and isfile and isfile(MAIN_CACHE_FILE) then
         local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(KEY_CACHE_FILE))
+            return HttpService:JSONDecode(readfile(MAIN_CACHE_FILE))
         end)
         if success and data and data.HWID == HWID then
-            if os.time() - (data.Timestamp or 0) < 86400 then -- Kho chính 24 giờ
-                return data.Key
+            if os.time() - (data.Timestamp or 0) < 86400 then -- Hết 24 giờ sẽ xóa dữ liệu
+                return true
+            else
+                pcall(function() delfile(MAIN_CACHE_FILE) end) -- Hết hạn xóa trắng kho chính
             end
         end
     end
-    return nil
+    return false
 end
 
-local function saveKeyCache(key)
+local function saveMainWarehouse(key)
     if writefile then
         pcall(function()
             local data = {
@@ -37,20 +46,52 @@ local function saveKeyCache(key)
                 Key = key,
                 Timestamp = os.time()
             }
-            writefile(KEY_CACHE_FILE, HttpService:JSONEncode(data))
+            writefile(MAIN_CACHE_FILE, HttpService:JSONEncode(data))
         end)
     end
 end
 
-local function verifyKeyWithGitHub(inputKey)
+-- Kiểm tra kho tạm 500 giây
+local function checkTempWarehouse()
+    if readfile and isfile and isfile(TEMP_CACHE_FILE) then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(TEMP_CACHE_FILE))
+        end)
+        if success and data and data.HWID == HWID then
+            if os.time() - (data.Timestamp or 0) < 500 then -- Kho tạm 500 giây
+                return true
+            else
+                pcall(function() delfile(TEMP_CACHE_FILE) end) -- Quá 500 giây chưa submit -> Xóa trắng
+            end
+        end
+    end
+    return false
+end
+
+local function saveTempWarehouse()
+    if writefile then
+        pcall(function()
+            local data = {
+                HWID = HWID,
+                Timestamp = os.time()
+            }
+            writefile(TEMP_CACHE_FILE, HttpService:JSONEncode(data))
+        end)
+    end
+end
+
+-- Kiểm tra quyền Premium độc lập trên GitHub (Key + HWID)
+local function verifyPremiumGitHub(inputKey)
     local success, res = pcall(function()
         if game:HttpGet then
-            return game:HttpGet(GITHUB_KEY_URL)
+            return game:HttpGet(GITHUB_PREMIUM_URL)
         end
     end)
     if success and res then
         for line in res:gmatch("[^\r\n]+") do
-            if line == inputKey or line:match("^" .. inputKey) then
+            -- Dạng dòng trên GitHub: KEY/HWID hoặc khớp hoàn toàn với mã HWID được gán đằng sau
+            local expectedLine = inputKey .. "/" .. HWID
+            if line == expectedLine or line == inputKey then
                 return true
             end
         end
@@ -58,7 +99,7 @@ local function verifyKeyWithGitHub(inputKey)
     return false
 end
 
--- GUI Get Key
+-- GUI Key System & Warehouses Gate
 local KeySystemGui = Instance.new("ScreenGui")
 KeySystemGui.Name = "DuboKeySystem"
 KeySystemGui.Parent = CoreGui
@@ -85,7 +126,7 @@ KeyStroke.Parent = KeyFrame
 local TitleKey = Instance.new("TextLabel")
 TitleKey.Size = UDim2.new(1, 0, 0, 40)
 TitleKey.BackgroundTransparency = 1
-TitleKey.Text = "DUBO HUB - KEY SYSTEM"
+TitleKey.Text = "DUBO HUB - GATEWAY"
 TitleKey.TextColor3 = Color3.fromRGB(255, 215, 0)
 TitleKey.TextSize = 16
 TitleKey.Font = Enum.Font.GothamBold
@@ -96,7 +137,7 @@ BoxKey.Size = UDim2.new(0, 280, 0, 40)
 BoxKey.Position = UDim2.new(0.5, -140, 0, 50)
 BoxKey.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 BoxKey.BorderSizePixel = 0
-BoxKey.PlaceholderText = "Enter your key here..."
+BoxKey.PlaceholderText = "Enter Premium Key..."
 BoxKey.Text = ""
 BoxKey.TextColor3 = Color3.fromRGB(255, 255, 255)
 BoxKey.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
@@ -128,7 +169,7 @@ GetKeyBtn.Size = UDim2.new(0, 135, 0, 38)
 GetKeyBtn.Position = UDim2.new(0.52, 0, 0, 105)
 GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
 GetKeyBtn.BorderSizePixel = 0
-GetKeyBtn.Text = "Get Key"
+GetKeyBtn.Text = "Get Key (500s)"
 GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 GetKeyBtn.TextSize = 14
 GetKeyBtn.Font = Enum.Font.GothamBold
@@ -148,35 +189,36 @@ TimerLabel.TextSize = 11
 TimerLabel.Font = Enum.Font.Gotham
 TimerLabel.Parent = KeyFrame
 
-local cachedKey = getSavedKeyCache()
-local keyPass = false
+local accessGranted = false
 
-if cachedKey and verifyKeyWithGitHub(cachedKey) then
-    keyPass = true
+-- Tiến hành xét duyệt lối vào
+if checkMainWarehouse() or checkTempWarehouse() then
+    accessGranted = true
     KeySystemGui:Destroy()
 else
     GetKeyBtn.MouseButton1Click:Connect(function()
+        saveTempWarehouse() -- Đưa vào kho tạm 500 giây chờ đón khách / submit
         setclipboard("https://link4m.com/dubohub-getkey?hwid=" .. HWID)
-        TimerLabel.Text = "Copied GetKey link to clipboard! (500s)"
+        TimerLabel.Text = "Copied link! Kho tạm 500s active."
         TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
     end)
 
     CheckBtn.MouseButton1Click:Connect(function()
         local input = BoxKey.Text
-        if verifyKeyWithGitHub(input) then
-            saveKeyCache(input)
-            TimerLabel.Text = "Key Correct! Loading..."
+        if verifyPremiumGitHub(input) then
+            saveMainWarehouse(input) -- Chuyển thẳng vào kho chính 24h với quyền VIP
+            TimerLabel.Text = "Premium Access Granted!"
             TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
             task.wait(1)
             KeySystemGui:Destroy()
-            keyPass = true
+            accessGranted = true
         else
-            TimerLabel.Text = "Invalid Key! Try again."
+            TimerLabel.Text = "Invalid Key or HWID mismatch!"
             TimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
         end
     end)
     
-    repeat task.wait(0.5) until keyPass
+    repeat task.wait(0.5) until accessGranted
 end
 
 -- ==========================================
