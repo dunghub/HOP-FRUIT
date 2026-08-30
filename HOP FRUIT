@@ -83,15 +83,25 @@ end
 -- Kiểm tra quyền Premium độc lập trên GitHub (Key + HWID)
 local function verifyPremiumGitHub(inputKey)
     local success, res = pcall(function()
-        if game:HttpGet then
+        local req = request or http_request or syn.request or fluxus.request
+        if req then
+            local response = req({
+                Url = GITHUB_PREMIUM_URL,
+                Method = "GET"
+            })
+            if response and response.StatusCode == 200 then
+                return response.Body
+            end
+        elseif game:HttpGet then
             return game:HttpGet(GITHUB_PREMIUM_URL)
         end
     end)
+    
     if success and res then
         for line in res:gmatch("[^\r\n]+") do
-            -- Dạng dòng trên GitHub: KEY/HWID hoặc khớp hoàn toàn với mã HWID được gán đằng sau
+            local cleanLine = line:gsub("%s+", "")
             local expectedLine = inputKey .. "/" .. HWID
-            if line == expectedLine or line == inputKey then
+            if cleanLine == expectedLine or cleanLine == inputKey then
                 return true
             end
         end
