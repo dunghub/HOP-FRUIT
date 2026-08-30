@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - KEY SYSTEM & SMART AUTO HOP (FIX ERROR 773)
+-- DUBO HUB - PREMIUM KEY SYSTEM (WORKSPACE & HWID LOCK) & AUTO HOP
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -8,9 +8,16 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Xóa UI cũ nếu có
 pcall(function()
+    if CoreGui:FindFirstChild("DuboHubPremiumGUI") then
+        CoreGui.DuboHubPremiumGUI:Destroy()
+    end
     if CoreGui:FindFirstChild("DuboHubKeySystem") then
         CoreGui.DuboHubKeySystem:Destroy()
     end
@@ -20,188 +27,201 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY (BẢO MẬT & BỘ NHỚ RAM)
+-- HỆ THỐNG XÁC THỰC KEY PREMIUM & WORKSPACE
 -- ==========================================
-local WorkspaceFolder = "DuboKeySystem"
-local KEY_DURATION = 24 * 60 * 60 -- 24 giờ tính bằng giây
+local GITHUB_KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/main/DUBO%20HUB%20KEY"
+local WORKSPACE_FOLDER = "DuboHubPremium"
+local LOCAL_KEY_FILE = WORKSPACE_FOLDER .. "/saved_premium.json"
 
-if not isfolder(WorkspaceFolder) then
-    makefolder(WorkspaceFolder)
+if not isfolder(WORKSPACE_FOLDER) then
+    makefolder(WORKSPACE_FOLDER)
 end
 
-local function getValidKeyFileAndRemaining()
-    local files = listfiles(WorkspaceFolder)
-    local currentTime = os.time()
-    
-    for _, filePath in ipairs(files) do
-        local fileName = filePath:match("([^/]+)$") or filePath:match("([^\\]+)$")
-        if fileName and fileName:sub(1, 8) == "dubokey_" then
-            local success, data = pcall(function()
-                return HttpService:JSONDecode(readfile(filePath))
-            end)
-            if success and data and data.timestamp then
-                local elapsed = currentTime - data.timestamp
-                if elapsed < KEY_DURATION then
-                    return filePath, (KEY_DURATION - elapsed)
+local function getMyHWID()
+    local hwid = ""
+    pcall(function()
+        if syn and syn.request then
+            hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+        elseif getgenv().gethwid then
+            hwid = getgenv().gethwid()
+        else
+            hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+        end
+    end)
+    return hwid ~= "" and hwid or "UNKNOWN_HWID"
+end
+
+local currentHWID = getMyHWID()
+
+local function validateKeyWithServer(inputKey)
+    local success, response = pcall(function()
+        return game:HttpGet(GITHUB_KEY_URL)
+    end)
+
+    if not success then return false, "Lỗi kết nối đến GitHub!" end
+
+    for line in response:gmatch("[^\r\n]+") do
+        if line ~= "" then
+            local parts = {}
+            for part in line:gmatch("[^/]+") do
+                table.insert(parts, part)
+            end
+
+            local keyOnServer = parts[1] and parts[1]:gsub("^%s*(.-)%s*$", "%1") or ""
+            local hwidOnServer = parts[2] and parts[2]:gsub("^%s*(.-)%s*$", "%1") or ""
+
+            if keyOnServer == inputKey then
+                if hwidOnServer == currentHWID then
+                    return true, "Thành công"
                 else
-                    pcall(function() delfile(filePath) end)
+                    return false, "Key này đã bị khóa với HWID của máy khác!"
                 end
             end
         end
     end
-    return nil, 0
+
+    return false, "Key không tồn tại trên hệ thống!"
 end
 
-local validFilePath, remainingTime = getValidKeyFileAndRemaining()
-local keyVerified = (validFilePath ~= nil)
-
-local cachedGeneratedKey = nil
-local targetUrl = ""
-
-if not keyVerified then
-    local function generateRandomKey(length)
-        local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        local key = "DUBO-KEY-"
-        math.randomseed(tick() + math.random(1000, 999999))
-        for i = 1, length do
-            local randIndex = math.random(1, #chars)
-            key = key .. chars:sub(randIndex, randIndex)
+local function checkAutoLogin()
+    if isfile(LOCAL_KEY_FILE) then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile(LOCAL_KEY_FILE))
+        end)
+        
+        if success and data and data.Key and data.HWID then
+            if data.HWID == currentHWID then
+                local isValid, _ = validateKeyWithServer(data.Key)
+                if isValid then
+                    return true, data.Key
+                end
+            end
         end
-        return key
     end
-
-    cachedGeneratedKey = generateRandomKey(14)
-    targetUrl = "https://authtool.app/get-key/?result=" .. cachedGeneratedKey
+    return false, ""
 end
 
-if not keyVerified then
-    local KeyScreenGui = Instance.new("ScreenGui")
-    KeyScreenGui.Name = "DuboHubKeySystem"
-    KeyScreenGui.Parent = CoreGui
-    KeyScreenGui.ResetOnSpawn = false
+local isAutoLoginValid, savedKey = checkAutoLogin()
+local keyVerified = isAutoLoginValid
 
-    local KeyMainFrame = Instance.new("Frame")
-    KeyMainFrame.Name = "MainFrame"
-    KeyMainFrame.Parent = KeyScreenGui
-    KeyMainFrame.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
-    KeyMainFrame.BorderColor3 = Color3.fromRGB(0, 120, 255)
-    KeyMainFrame.BorderSizePixel = 2
-    KeyMainFrame.Position = UDim2.new(0.5, -180, 0.5, -135)
-    KeyMainFrame.Size = UDim2.new(0, 360, 0, 270)
+-- Nếu chưa đăng nhập tự động qua Workspace thì hiện bảng nhập Key
+if not keyVerified then
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "DuboHubPremiumGUI"
+    ScreenGui.Parent = CoreGui
+    ScreenGui.ResetOnSpawn = false
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 320, 0, 240)
+    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = KeyMainFrame
+    UICorner.Parent = MainFrame
 
-    local TitleLabelKey = Instance.new("TextLabel")
-    TitleLabelKey.Parent = KeyMainFrame
-    TitleLabelKey.BackgroundTransparency = 1
-    TitleLabelKey.Position = UDim2.new(0, 0, 0, 20)
-    TitleLabelKey.Size = UDim2.new(1, 0, 0, 30)
-    TitleLabelKey.Font = Enum.Font.GothamBold
-    TitleLabelKey.Text = "DUBO HUB - KEY SYSTEM"
-    TitleLabelKey.TextColor3 = Color3.fromRGB(0, 150, 255)
-    TitleLabelKey.TextSize = 16
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.Text = "DUBO HUB - PREMIUM"
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    TitleLabel.TextSize = 18
+    TitleLabel.Parent = MainFrame
+
+    local StatusBox = Instance.new("Frame")
+    StatusBox.Size = UDim2.new(0, 280, 0, 35)
+    StatusBox.Position = UDim2.new(0.5, -140, 0, 50)
+    StatusBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+    StatusBox.BorderSizePixel = 0
+    StatusBox.Parent = MainFrame
+
+    local StatusBoxCorner = Instance.new("UICorner")
+    StatusBoxCorner.CornerRadius = UDim.new(0, 8)
+    StatusBoxCorner.Parent = StatusBox
+
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Size = UDim2.new(1, 0, 1, 0)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Font = Enum.Font.GothamBold
+    StatusLabel.Text = "Please enter your valid Premium Key!"
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+    StatusLabel.TextSize = 12
+    StatusLabel.Parent = StatusBox
 
     local KeyTextBox = Instance.new("TextBox")
-    KeyTextBox.Name = "KeyTextBox"
-    KeyTextBox.Parent = KeyMainFrame
-    KeyTextBox.BackgroundColor3 = Color3.fromRGB(28, 32, 44)
-    KeyTextBox.BorderColor3 = Color3.fromRGB(40, 50, 70)
-    KeyTextBox.Position = UDim2.new(0.5, -150, 0, 70)
-    KeyTextBox.Size = UDim2.new(0, 300, 0, 42)
+    KeyTextBox.Size = UDim2.new(0, 280, 0, 40)
+    KeyTextBox.Position = UDim2.new(0.5, -140, 0, 100)
+    KeyTextBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+    KeyTextBox.BorderSizePixel = 0
     KeyTextBox.Font = Enum.Font.Gotham
-    KeyTextBox.PlaceholderText = "Enter your key here..."
+    KeyTextBox.PlaceholderText = "Enter your Premium Key here..."
     KeyTextBox.PlaceholderColor3 = Color3.fromRGB(100, 110, 130)
     KeyTextBox.Text = ""
     KeyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     KeyTextBox.TextSize = 13
+    KeyTextBox.Parent = MainFrame
 
     local BoxCorner = Instance.new("UICorner")
     BoxCorner.CornerRadius = UDim.new(0, 8)
     BoxCorner.Parent = KeyTextBox
 
     local SubmitButton = Instance.new("TextButton")
-    SubmitButton.Name = "SubmitButton"
-    SubmitButton.Parent = KeyMainFrame
-    SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 102, 204)
-    SubmitButton.Position = UDim2.new(0.5, -150, 0, 128)
-    SubmitButton.Size = UDim2.new(0, 300, 0, 42)
+    SubmitButton.Size = UDim2.new(0, 280, 0, 40)
+    SubmitButton.Position = UDim2.new(0.5, -140, 0, 150)
+    SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    SubmitButton.BorderSizePixel = 0
     SubmitButton.Font = Enum.Font.GothamBold
-    SubmitButton.Text = "SUBMIT KEY"
+    SubmitButton.Text = "LOGIN PREMIUM"
     SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     SubmitButton.TextSize = 14
+    SubmitButton.Parent = MainFrame
 
     local SubmitCorner = Instance.new("UICorner")
     SubmitCorner.CornerRadius = UDim.new(0, 8)
     SubmitCorner.Parent = SubmitButton
 
-    local GetKeyButton = Instance.new("TextButton")
-    GetKeyButton.Name = "GetKeyButton"
-    GetKeyButton.Parent = KeyMainFrame
-    GetKeyButton.BackgroundColor3 = Color3.fromRGB(22, 35, 48)
-    GetKeyButton.BorderColor3 = Color3.fromRGB(0, 180, 120)
-    GetKeyButton.Position = UDim2.new(0.5, -150, 0, 182)
-    GetKeyButton.Size = UDim2.new(0, 300, 0, 42)
-    GetKeyButton.Font = Enum.Font.GothamBold
-    GetKeyButton.Text = "GET KEY LINK"
-    GetKeyButton.TextColor3 = Color3.fromRGB(0, 230, 150)
-    GetKeyButton.TextSize = 14
-
-    local GetKeyCorner = Instance.new("UICorner")
-    GetKeyCorner.CornerRadius = UDim.new(0, 8)
-    GetKeyCorner.Parent = GetKeyButton
-
-    local StatusLabelKey = Instance.new("TextLabel")
-    StatusLabelKey.Name = "StatusLabel"
-    StatusLabelKey.Parent = KeyMainFrame
-    StatusLabelKey.BackgroundTransparency = 1
-    StatusLabelKey.Position = UDim2.new(0, 0, 0, 234)
-    StatusLabelKey.Size = UDim2.new(1, 0, 0, 20)
-    StatusLabelKey.Font = Enum.Font.Gotham
-    StatusLabelKey.Text = "Complete link verification and enter key!"
-    StatusLabelKey.TextColor3 = Color3.fromRGB(0, 200, 100)
-    StatusLabelKey.TextSize = 12
-
-    GetKeyButton.MouseButton1Click:Connect(function()
-        pcall(function()
-            setclipboard(targetUrl)
-        end)
-        StatusLabelKey.TextColor3 = Color3.fromRGB(50, 180, 255)
-        StatusLabelKey.Text = "Copied link to clipboard!"
-    end)
+    local SubMsgLabel = Instance.new("TextLabel")
+    SubMsgLabel.Size = UDim2.new(1, 0, 0, 20)
+    SubMsgLabel.Position = UDim2.new(0, 0, 0, 205)
+    SubMsgLabel.BackgroundTransparency = 1
+    SubMsgLabel.Font = Enum.Font.Gotham
+    SubMsgLabel.Text = "Hardware Locked System"
+    SubMsgLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    SubMsgLabel.TextSize = 11
+    SubMsgLabel.Parent = MainFrame
 
     SubmitButton.MouseButton1Click:Connect(function()
-        local userKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        
-        if userKey == cachedGeneratedKey then
-            StatusLabelKey.TextColor3 = Color3.fromRGB(50, 220, 50)
-            StatusLabelKey.Text = "Key correct! Saving to workspace..."
+        local inputKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if inputKey == "" then
+            StatusLabel.Text = "Please type a key!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            return
+        end
+
+        SubmitButton.Text = "CHECKING..."
+        local isValid, message = validateKeyWithServer(inputKey)
+
+        if isValid then
+            StatusLabel.Text = "SUCCESS!"
+            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             
-            local uniqueFileIdentifier = math.random(100000, 999999)
-            local newFileName = "dubokey_" .. uniqueFileIdentifier .. ".json"
-            local newFilePath = WorkspaceFolder .. "/" .. newFileName
-            
-            local saveData = {
-                key = cachedGeneratedKey,
-                timestamp = os.time()
-            }
             pcall(function()
-                writefile(newFilePath, HttpService:JSONEncode(saveData))
+                local data = { Key = inputKey, HWID = currentHWID }
+                writefile(LOCAL_KEY_FILE, HttpService:JSONEncode(data))
             end)
             
-            validFilePath = newFilePath
-            remainingTime = KEY_DURATION
-            
-            cachedGeneratedKey = nil
-            userKey = nil
-            
-            task.wait(0.8)
-            KeyScreenGui:Destroy()
+            task.wait(1)
+            ScreenGui:Destroy()
             keyVerified = true
         else
-            StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
-            StatusLabelKey.Text = "Invalid Key! Please try again."
+            StatusLabel.Text = message
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            SubmitButton.Text = "LOGIN PREMIUM"
             KeyTextBox.Text = ""
         end
     end)
@@ -212,11 +232,6 @@ repeat task.wait(0.5) until keyVerified
 -- ==========================================
 -- PHẦN SCRIPT CHÍNH (AUTO HOP & CHỐNG LỖI 773)
 -- ==========================================
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local Camera = Workspace.CurrentCamera
 
 local remoteComm = nil
@@ -394,7 +409,7 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung hiển thị thời gian key còn lại
+-- Khung hiển thị trạng thái Premium vĩnh viễn thay thế cho thời gian đếm ngược
 local KeyTimeBox = Instance.new("Frame")
 KeyTimeBox.Size = UDim2.new(0, 250, 0, 28)
 KeyTimeBox.Position = UDim2.new(0.5, -125, 0, 52)
@@ -409,15 +424,15 @@ KeyTimeBoxCorner.Parent = KeyTimeBox
 
 local KeyTimeBoxStroke = Instance.new("UIStroke")
 KeyTimeBoxStroke.Thickness = 1.5
-KeyTimeBoxStroke.Color = Color3.fromRGB(0, 170, 255)
+KeyTimeBoxStroke.Color = Color3.fromRGB(255, 215, 0)
 KeyTimeBoxStroke.Parent = KeyTimeBox
 
 local KeyTimeLabel = Instance.new("TextLabel")
 KeyTimeLabel.Size = UDim2.new(1, 0, 1, 0)
 KeyTimeLabel.BackgroundTransparency = 1
 KeyTimeLabel.Font = Enum.Font.GothamBold
-KeyTimeLabel.Text = "Key Time: Calculating..."
-KeyTimeLabel.TextColor3 = Color3.fromRGB(0, 220, 150)
+KeyTimeLabel.Text = "PREMIUM VĨNH VIỄN"
+KeyTimeLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 KeyTimeLabel.TextSize = 11
 KeyTimeLabel.ZIndex = 3
 KeyTimeLabel.Parent = KeyTimeBox
@@ -567,10 +582,6 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    -- ĐIỀU KIỆN LỌC AN TOÀN TRÁNH LỖI 773 & SERVER ĐẦY/LỖI:
-                    -- 1. Phải có trên 6 người chơi (playing >= 6) để tránh server chết, server cô lập hoặc lỗi kết nối.
-                    -- 2. Số lượng người chơi phải nhỏ hơn maxPlayers - 1 để không bị kẹt.
-                    -- 3. Khác JobId hiện tại.
                     if s.playing >= 6 and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
@@ -579,7 +590,6 @@ local function hopServer()
         end)
 
         if success and #servers > 0 then
-            -- Xáo trộn danh sách server ngẫu nhiên để nhảy mượt mà hơn
             for i = #servers, 2, -1 do
                 local j = math.random(1, i)
                 servers[i], servers[j] = servers[j], servers[i]
@@ -600,7 +610,6 @@ local function hopServer()
             end
         end
         
-        -- Nếu chưa tìm thấy server phù hợp, chờ 2 giây quét lại
         task.wait(2)
     end
 end
@@ -654,7 +663,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = Player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " + obj.Name
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
@@ -667,38 +676,6 @@ local function autoPickAndStore()
     end)
     return found
 end
-
--- Vòng lặp đếm ngược thời gian key
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if remainingTime > 0 then
-            remainingTime = remainingTime - 1
-            
-            local hours = math.floor(remainingTime / 3600)
-            local minutes = math.floor((remainingTime % 3600) / 60)
-            local seconds = remainingTime % 60
-            
-            KeyTimeLabel.Text = string.format("Key Expire: %02d:%02d:%02d", hours, minutes, seconds)
-            
-            if remainingTime <= 0 then
-                isRunning = false
-                StatusLabel.Text = "Key Expired!"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                KeyTimeLabel.Text = "Key Expired! Removed."
-                KeyTimeLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                
-                pcall(function()
-                    if validFilePath and isfile(validFilePath) then
-                        delfile(validFilePath)
-                    end
-                end)
-                
-                break
-            end
-        end
-    end
-end)
 
 task.spawn(function()
     while true do
