@@ -227,7 +227,7 @@ local function LoadMainScript()
                     local uniqueId = item:GetDebugId()
                     if not storedFruitsCache[uniqueId] then
                         if item.Parent == player.Backpack and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-                            player.Character.HumanoidModelScale = player.Character.HumanoidModelScale -- dummy
+                            player.Character.HumanoidModelScale = player.Character.HumanoidModelScale
                             player.Character:FindFirstChildOfClass("Humanoid"):EquipTool(item)
                             task.wait(0.2)
                         end
@@ -366,7 +366,7 @@ getLinkBtn.MouseButton1Click:Connect(function()
     linkClicked = true
     local uniqueSessionId = generateRandomId(10)
     
-    -- ĐÃ CẬP NHẬT ĐÚNG KHO SEVER-DUBO-HUB CỦA ÔNG
+    -- LINK ĐÃ ĐƯỢC GẮN ĐÚNG TÊN KHO SEVER-DUBO-HUB
     local webUrl = "https://dunghub.github.io/SEVER-DUBO-HUB/bypass.html?sid=" .. uniqueSessionId
     
     if setclipboard then
