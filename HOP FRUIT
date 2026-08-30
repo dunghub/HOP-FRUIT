@@ -1,6 +1,5 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -18,19 +17,15 @@ pcall(function()
     remoteComm = ReplicatedStorage.Remotes.CommF_
 end)
 
-local isRunning = false -- Mặc định chưa get key thì KHÔNG CHO CHẠY
+local isRunning = false
 local storedFruitsCache = {}
 
 DuboCFG = DuboCFG or {}
 
--- ==================== HỆ THỐNG XÁC THỰC KEY, HWID & LƯU FILE ====================
+-- ==================== HỆ THỐNG XÁC THỰC KEY & LƯU THIẾT BỊ ====================
 local KEY_FILE_NAME = "dubo_fruit_key.json"
 local PendingKeysStore = {}
 local CentralHWIDStore = {}
-
-local PremiumKeyList = {
-    "DUBO-VIP-EXAMPLE:CHUA_CO_HWID",
-}
 
 local function getClientHWID()
     local hwid = ""
@@ -51,7 +46,6 @@ local function generateRandomString(length)
     return table.concat(s)
 end
 
--- Lưu key xuống thiết bị
 local function saveSavedKey(key)
     if writefile then
         pcall(function()
@@ -61,14 +55,12 @@ local function saveSavedKey(key)
     end
 end
 
--- Đọc key đã lưu trên thiết bị
 local function getSavedKey()
     if readfile and isfile and isfile(KEY_FILE_NAME) then
         local success, result = pcall(function()
             return HttpService:JSONDecode(readfile(KEY_FILE_NAME))
         end)
         if success and result and result.Key then
-            -- Kiểm tra xem key lưu trong vòng 24h không (86400s) hoặc tùy ý ông
             if tick() - (result.Time or 0) < 86400 then
                 return result.Key
             end
@@ -77,56 +69,44 @@ local function getSavedKey()
     return nil
 end
 
-local function verifyAccess(inputKey)
-    local currentHWID = getClientHWID()
-    
-    if CentralHWIDStore[currentHWID] and tick() < CentralHWIDStore[currentHWID] then
-        return true
-    end
-
-    if inputKey and inputKey ~= "" then
-        for _, line in ipairs(PremiumKeyList) do
-            local separatorPos = line:find(":")
-            if separatorPos then
-                local pKey = line:sub(1, separatorPos - 1)
-                local pHWID = line:sub(separatorPos + 1)
-                
-                if inputKey == pKey then
-                    if pHWID == "" or pHWID == "CHUA_CO_HWID" or currentHWID == pHWID then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-
-    return false
-end
-
 local function generateGetKeysLink()
-    local currentHWID = getClientHWID()
     local randomPart = generateRandomString(15)
     local generatedKey = "DUBO-KEY-" .. randomPart
     
     PendingKeysStore[generatedKey] = {
-        hwid = currentHWID,
+        hwid = getClientHWID(),
         expiresAt = tick() + 500
     }
     
-    local finalLink = "https://authtool.app/get-key/?result=" .. generatedKey
-    return finalLink, generatedKey
+    local rawLink = "https://authtool.app/get-key/?result=" .. generatedKey
+    
+    -- Tích hợp API Layma rút gọn link
+    local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
+    local encodedUrl = HttpService:UrlEncode(rawLink)
+    local apiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
+    
+    local success, response = pcall(function()
+        return game:HttpGet(apiUrl)
+    end)
+    
+    if success then
+        local decodeSuccess, data = pcall(function()
+            return HttpService:JSONDecode(response)
+        end)
+        if decodeSuccess and data then
+            local finalShortLink = data.short_url or data.url or data.shortened_url or data.result
+            if finalShortLink then
+                return finalShortLink, generatedKey
+            end
+        end
+    end
+    
+    return rawLink, generatedKey
 end
 
 local function submitAndVerifyKey(inputKey)
     local currentHWID = getClientHWID()
     
-    -- Kiểm tra nếu nhập trực tiếp key hệ thống hoặc key vừa gen
-    if verifyAccess(inputKey) then
-        CentralHWIDStore[currentHWID] = tick() + 86400
-        saveSavedKey(inputKey)
-        return true, "Thành công! Đã lưu key trên thiết bị."
-    end
-
     local pendingData = PendingKeysStore[inputKey]
     if pendingData then
         if tick() <= pendingData.expiresAt then
@@ -134,17 +114,17 @@ local function submitAndVerifyKey(inputKey)
                 CentralHWIDStore[currentHWID] = tick() + 86400
                 PendingKeysStore[inputKey] = nil
                 saveSavedKey(inputKey)
-                return true, "Thành công! Đã lưu key trên thiết bị."
+                return true, "Success! Key verified."
             else
-                return false, "Key không thuộc thiết bị này!"
+                return false, "Key does not belong to this device!"
             end
         else
             PendingKeysStore[inputKey] = nil
-            return false, "Key đã hết hạn 500 giây!"
+            return false, "Key has expired!"
         end
     end
     
-    return false, "Sai key hoặc không tồn tại!"
+    return false, "Key does not exist or has expired!"
 end
 -- ======================================================================
 
@@ -245,23 +225,24 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 310, 0, 410)
-MainFrame.Position = UDim2.new(0.5, -155, 0.5, -205)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- Giao diện Ảnh 2 (Key System UI)
+local KeyMainFrame = Instance.new("Frame")
+KeyMainFrame.Size = UDim2.new(0, 310, 0, 410)
+KeyMainFrame.Position = UDim2.new(0.5, -155, 0.5, -205)
+KeyMainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
+KeyMainFrame.BorderSizePixel = 0
+KeyMainFrame.ClipsDescendants = true
+KeyMainFrame.Active = true
+KeyMainFrame.Draggable = true
+KeyMainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 18)
-MainCorner.Parent = MainFrame
+local KeyMainCorner = Instance.new("UICorner")
+KeyMainCorner.CornerRadius = UDim.new(0, 16)
+KeyMainCorner.Parent = KeyMainFrame
 
 local RainbowStroke = Instance.new("UIStroke")
-RainbowStroke.Thickness = 4
-RainbowStroke.Parent = MainFrame
+RainbowStroke.Thickness = 3.5
+RainbowStroke.Parent = KeyMainFrame
 
 task.spawn(function()
     while true do
@@ -272,23 +253,114 @@ task.spawn(function()
     end
 end)
 
-local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -16, 0, 35)
-DuboHubTitle.Position = UDim2.new(0, 8, 0, 10)
-DuboHubTitle.BackgroundTransparency = 1
-DuboHubTitle.Text = "DUBO HUB"
-DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 26
-DuboHubTitle.Font = Enum.Font.GothamBold
-DuboHubTitle.ZIndex = 2
-DuboHubTitle.Parent = MainFrame
+local KeySystemTitle = Instance.new("TextLabel")
+KeySystemTitle.Size = UDim2.new(1, 0, 0, 50)
+KeySystemTitle.Position = UDim2.new(0, 0, 0, 15)
+KeySystemTitle.BackgroundTransparency = 1
+KeySystemTitle.Text = "DUBO HUB - KEY SYSTEM"
+KeySystemTitle.TextColor3 = Color3.fromRGB(0, 170, 255)
+KeySystemTitle.TextSize = 16
+KeySystemTitle.Font = Enum.Font.GothamBold
+KeySystemTitle.Parent = KeyMainFrame
+
+local KeyInputBox = Instance.new("TextBox")
+KeyInputBox.Size = UDim2.new(0, 270, 0, 42)
+KeyInputBox.Position = UDim2.new(0.5, -135, 0, 75)
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInputBox.PlaceholderText = "Paste Key Here..."
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
+KeyInputBox.TextSize = 13
+KeyInputBox.Font = Enum.Font.Gotham
+KeyInputBox.ClearTextOnFocus = false
+KeyInputBox.Parent = KeyMainFrame
+
+local KeyInputCorner = Instance.new("UICorner")
+KeyInputCorner.CornerRadius = UDim.new(0, 8)
+KeyInputCorner.Parent = KeyInputBox
+
+local KeyInputStroke = Instance.new("UIStroke")
+KeyInputStroke.Thickness = 1
+KeyInputStroke.Color = Color3.fromRGB(50, 60, 80)
+KeyInputStroke.Parent = KeyInputBox
+
+local SubmitButton = Instance.new("TextButton")
+SubmitButton.Size = UDim2.new(0, 270, 0, 45)
+SubmitButton.Position = UDim2.new(0.5, -135, 0, 130)
+SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
+SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitButton.Text = "SUBMIT KEY"
+SubmitButton.TextSize = 14
+SubmitButton.Font = Enum.Font.GothamBold
+SubmitButton.Parent = KeyMainFrame
+
+local SubmitCorner = Instance.new("UICorner")
+SubmitCorner.CornerRadius = UDim.new(0, 8)
+SubmitCorner.Parent = SubmitButton
+
+local GetKeyButton = Instance.new("TextButton")
+GetKeyButton.Size = UDim2.new(0, 270, 0, 45)
+GetKeyButton.Position = UDim2.new(0.5, -135, 0, 185)
+GetKeyButton.BackgroundColor3 = Color3.fromRGB(18, 25, 38)
+GetKeyButton.TextColor3 = Color3.fromRGB(0, 230, 140)
+GetKeyButton.Text = "GET KEY LINK"
+GetKeyButton.TextSize = 14
+GetKeyButton.Font = Enum.Font.GothamBold
+GetKeyButton.Parent = KeyMainFrame
+
+local GetKeyCorner = Instance.new("UICorner")
+GetKeyCorner.CornerRadius = UDim.new(0, 8)
+GetKeyCorner.Parent = GetKeyButton
+
+local GetKeyStroke = Instance.new("UIStroke")
+GetKeyStroke.Thickness = 1.5
+GetKeyStroke.Color = Color3.fromRGB(0, 180, 110)
+GetKeyStroke.Parent = GetKeyButton
+
+local ErrorLabel = Instance.new("TextLabel")
+ErrorLabel.Size = UDim2.new(1, 0, 0, 30)
+ErrorLabel.Position = UDim2.new(0, 0, 0, 240)
+ErrorLabel.BackgroundTransparency = 1
+ErrorLabel.Text = "Key does not exist or has expired!"
+ErrorLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+ErrorLabel.TextSize = 12
+ErrorLabel.Font = Enum.Font.GothamMedium
+ErrorLabel.Parent = KeyMainFrame
+
+-- Giao diện Ảnh 3 (Main HUD sau khi vượt key thành công)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 290, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 16)
+MainCorner.Parent = MainFrame
+
+local MainRainbowStroke = Instance.new("UIStroke")
+MainRainbowStroke.Thickness = 3.5
+MainRainbowStroke.Parent = MainFrame
+
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.005 do
+            MainRainbowStroke.Color = Color3.fromHSV(i, 1, 1)
+            task.wait(0.02)
+        end
+    end
+end)
 
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 75, 0, 75)
-CircleAvatarBg.Position = UDim2.new(0.5, -37.5, 0, 50)
-CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+CircleAvatarBg.Position = UDim2.new(0.5, -37.5, 0, 15)
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 CircleAvatarBg.BorderSizePixel = 0
-CircleAvatarBg.ZIndex = 2
 CircleAvatarBg.Parent = MainFrame
 
 local CircleBgCorner = Instance.new("UICorner")
@@ -296,15 +368,14 @@ CircleBgCorner.CornerRadius = UDim.new(1, 0)
 CircleBgCorner.Parent = CircleAvatarBg
 
 local CircleAvatarStroke = Instance.new("UIStroke")
-CircleAvatarStroke.Thickness = 3
-CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
+CircleAvatarStroke.Thickness = 2.5
+CircleAvatarStroke.Color = Color3.fromRGB(0, 170, 255)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
 AvatarImg.Size = UDim2.new(0, 67, 0, 67)
 AvatarImg.Position = UDim2.new(0.5, -33.5, 0.5, -33.5)
 AvatarImg.BackgroundTransparency = 1
-AvatarImg.ZIndex = 2
 pcall(function()
     AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 end)
@@ -314,121 +385,51 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 20)
-TitleLabel.Position = UDim2.new(0, 0, 0, 130)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "DUBO KAITUN FRUIT"
-TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 12
-TitleLabel.Font = Enum.Font.GothamMedium
-TitleLabel.ZIndex = 2
-TitleLabel.Parent = MainFrame
+local DuboHubTitleHud = Instance.new("TextLabel")
+DuboHubTitleHud.Size = UDim2.new(1, 0, 0, 22)
+DuboHubTitleHud.Position = UDim2.new(0, 0, 0, 98)
+DuboHubTitleHud.BackgroundTransparency = 1
+DuboHubTitleHud.Text = "DUBO HUB"
+DuboHubTitleHud.TextColor3 = Color3.fromRGB(0, 170, 255)
+DuboHubTitleHud.TextSize = 18
+DuboHubTitleHud.Font = Enum.Font.GothamBold
+DuboHubTitleHud.Parent = MainFrame
 
-local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 270, 0, 32)
-StatusBox.Position = UDim2.new(0.5, -135, 0, 155)
-StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-StatusBox.BorderSizePixel = 0
-StatusBox.ZIndex = 2
-StatusBox.Parent = MainFrame
+local SubTitleHud = Instance.new("TextLabel")
+SubTitleHud.Size = UDim2.new(1, 0, 0, 18)
+SubTitleHud.Position = UDim2.new(0, 0, 0, 120)
+SubTitleHud.BackgroundTransparency = 1
+SubTitleHud.Text = "DUBO KAITUN FRUIT"
+SubTitleHud.TextColor3 = Color3.fromRGB(150, 150, 170)
+SubTitleHud.TextSize = 11
+SubTitleHud.Font = Enum.Font.GothamMedium
+SubTitleHud.Parent = MainFrame
+
+-- Status Box chính giữa (hiển thị trạng thái màu xanh lá/đỏ/cam theo yêu cầu)
+local StatusBoxHud = Instance.new("Frame")
+StatusBoxHud.Size = UDim2.new(0, 250, 0, 40)
+StatusBoxHud.Position = UDim2.new(0.5, -125, 0, 155)
+StatusBoxHud.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+StatusBoxHud.BorderSizePixel = 0
+StatusBoxHud.Parent = MainFrame
 
 local StatusBoxCorner = Instance.new("UICorner")
 StatusBoxCorner.CornerRadius = UDim.new(0, 8)
-StatusBoxCorner.Parent = StatusBox
+StatusBoxCorner.Parent = StatusBoxHud
 
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 1, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Locked: Please Get Key!"
-StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-StatusLabel.TextSize = 12
-StatusLabel.Font = Enum.Font.GothamBold
-StatusLabel.ZIndex = 2
-StatusLabel.Parent = StatusBox
-
--- ==================== Ô NHẬP KEY & CÁC NÚT BẤM ====================
-local KeyInputBox = Instance.new("TextBox")
-KeyInputBox.Size = UDim2.new(0, 270, 0, 38)
-KeyInputBox.Position = UDim2.new(0.5, -135, 0, 195)
-KeyInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInputBox.PlaceholderText = "Paste Key Here..."
-KeyInputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 150)
-KeyInputBox.TextSize = 13
-KeyInputBox.Font = Enum.Font.Gotham
-KeyInputBox.ClearTextOnFocus = false
-KeyInputBox.ZIndex = 2
-KeyInputBox.Parent = MainFrame
-
-local KeyInputCorner = Instance.new("UICorner")
-KeyInputCorner.CornerRadius = UDim.new(0, 8)
-KeyInputCorner.Parent = KeyInputBox
-
-local KeyInputStroke = Instance.new("UIStroke")
-KeyInputStroke.Thickness = 1.5
-KeyInputStroke.Color = Color3.fromRGB(60, 60, 90)
-KeyInputStroke.Parent = KeyInputBox
-
-local SubmitButton = Instance.new("TextButton")
-SubmitButton.Size = UDim2.new(0, 270, 0, 38)
-SubmitButton.Position = UDim2.new(0.5, -135, 0, 240)
-SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
-SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitButton.Text = "SUBMIT KEY"
-SubmitButton.TextSize = 14
-SubmitButton.Font = Enum.Font.GothamBold
-SubmitButton.ZIndex = 2
-SubmitButton.Parent = MainFrame
-
-local SubmitCorner = Instance.new("UICorner")
-SubmitCorner.CornerRadius = UDim.new(0, 8)
-SubmitCorner.Parent = SubmitButton
-
-local GetKeyButton = Instance.new("TextButton")
-GetKeyButton.Size = UDim2.new(0, 270, 0, 38)
-GetKeyButton.Position = UDim2.new(0.5, -135, 0, 285)
-GetKeyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-GetKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyButton.Text = "GET KEY"
-GetKeyButton.TextSize = 14
-GetKeyButton.Font = Enum.Font.GothamBold
-GetKeyButton.ZIndex = 2
-GetKeyButton.Parent = MainFrame
-
-local GetKeyCorner = Instance.new("UICorner")
-GetKeyCorner.CornerRadius = UDim.new(0, 8)
-GetKeyCorner.Parent = GetKeyButton
-
-local LinkBox = Instance.new("TextBox")
-LinkBox.Size = UDim2.new(0, 270, 0, 38)
-LinkBox.Position = UDim2.new(0.5, -135, 0, 330)
-LinkBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
-LinkBox.TextColor3 = Color3.fromRGB(255, 215, 0)
-LinkBox.PlaceholderText = "Link will appear here..."
-LinkBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 130)
-LinkBox.TextSize = 11
-LinkBox.Font = Enum.Font.Gotham
-LinkBox.ClearTextOnFocus = false
-LinkBox.TextEditable = false
-LinkBox.ZIndex = 2
-LinkBox.Parent = MainFrame
-
-local LinkBoxCorner = Instance.new("UICorner")
-LinkBoxCorner.CornerRadius = UDim.new(0, 8)
-LinkBoxCorner.Parent = LinkBox
-
-local LinkBoxStroke = Instance.new("UIStroke")
-LinkBoxStroke.Thickness = 1
-LinkBoxStroke.Color = Color3.fromRGB(50, 50, 80)
-LinkBoxStroke.Parent = LinkBox
--- =============================================================
+local StatusLabelHud = Instance.new("TextLabel")
+StatusLabelHud.Size = UDim2.new(1, 0, 1, 0)
+StatusLabelHud.BackgroundTransparency = 1
+StatusLabelHud.Text = "Scanning..."
+StatusLabelHud.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusLabelHud.TextSize = 13
+StatusLabelHud.Font = Enum.Font.GothamBold
+StatusLabelHud.Parent = StatusBoxHud
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = ScreenGui
 
--- [KHÓA CHẶT] - Noclipping chỉ chạy khi isRunning = true (đã get key)
 RunService.Stepped:Connect(function()
     if not isRunning then return end
     pcall(function()
@@ -443,7 +444,6 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
--- [KHÓA CHẶT] - ESP chỉ chạy khi isRunning = true (đã get key)
 RunService.RenderStepped:Connect(function()
     if not isRunning then 
         ESPFolder:ClearAllChildren()
@@ -486,13 +486,18 @@ RunService.RenderStepped:Connect(function()
 end)
 
 GetKeyButton.MouseButton1Click:Connect(function()
-    local link, generatedKey = generateGetKeysLink()
-    LinkBox.Text = link
-    if Clipboard then
-        pcall(function() Clipboard(link) end)
-    end
-    StatusLabel.Text = "Generated! Link Copied!"
-    StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+    ErrorLabel.Text = "Generating Link..."
+    ErrorLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+    
+    task.spawn(function()
+        local link, generatedKey = generateGetKeysLink()
+        KeyInputBox.Text = generatedKey
+        if Clipboard then
+            pcall(function() Clipboard(link) end)
+        end
+        ErrorLabel.Text = "Link Copied to Clipboard!"
+        ErrorLabel.TextColor3 = Color3.fromRGB(0, 230, 140)
+    end)
 end)
 
 SubmitButton.MouseButton1Click:Connect(function()
@@ -500,29 +505,26 @@ SubmitButton.MouseButton1Click:Connect(function()
     local success, msg = submitAndVerifyKey(inputVal)
     
     if success then
-        StatusLabel.Text = msg
-        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        task.wait(1)
-        MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-        KeyInputBox.Visible = false
-        SubmitButton.Visible = false
-        GetKeyButton.Visible = false
-        LinkBox.Visible = false
+        ErrorLabel.Text = msg
+        ErrorLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.wait(0.5)
+        KeyMainFrame.Visible = false
+        MainFrame.Visible = true
         
-        isRunning = true -- Cho phép script chính hoạt động
+        isRunning = true
         startMainScript = startMainScript or function() end
         startMainScript()
     else
-        StatusLabel.Text = msg
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        ErrorLabel.Text = msg
+        ErrorLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
     end
 end)
 
 local function hopServer()
     if not isRunning then return end
     isRunning = false
-    StatusLabel.Text = "Hopping Server..."
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+    StatusLabelHud.Text = "HOP SERVER"
+    StatusLabelHud.TextColor3 = Color3.fromRGB(255, 140, 0) -- Màu cam
     
     while true do
         local servers = {}
@@ -536,6 +538,7 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
+                    -- Lọc server dưới 6 người chơi theo yêu cầu
                     if s.playing < 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
@@ -545,7 +548,7 @@ local function hopServer()
 
         if success and #servers > 0 then
             local randomServerId = servers[math.random(1, #servers)]
-            StatusLabel.Text = "Connecting..."
+            StatusLabelHud.Text = "Connecting..."
             
             local teleSuccess = pcall(function()
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
@@ -592,7 +595,7 @@ local function storeAllOwnedFruits()
             end
         end
         if player:FindFirstChild("Backpack") then
-            for _, item in ipairs(player.Backpack:GetChildren()) do
+            for _, item in ipairs(player.Backpack::GetChildren()) do
                 storeFruit(item)
             end
         end
@@ -609,8 +612,10 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. obj.Name
-                    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    -- Khi thấy fruit: Chuyển text thành màu xanh lá "Collect fruit"
+                    StatusLabelHud.Text = "Collect fruit"
+                    StatusLabelHud.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
                     storeAllOwnedFruits()
@@ -626,9 +631,6 @@ end
 startMainScript = function()
     task.spawn(function()
         while isRunning do
-            StatusLabel.Text = "Team: " .. factionDisplayName
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            
             local attempts = 0
             repeat
                 pcall(function()
@@ -642,13 +644,10 @@ startMainScript = function()
 
             if not isRunning then break end
 
-            StatusLabel.Text = "Ready!"
-            task.wait(0.5)
-
             local scanStart = tick()
             while isRunning do
-                StatusLabel.Text = "Scanning..."
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                StatusLabelHud.Text = "Scanning..."
+                StatusLabelHud.TextColor3 = Color3.fromRGB(255, 255, 255)
                 
                 local collected = false
                 pcall(function()
@@ -659,9 +658,10 @@ startMainScript = function()
                     scanStart = tick()
                 end
                 
+                -- Nhặt xong / Không thấy fruit: Chuyển thành "Not found"
                 if not collected and (tick() - scanStart > 3) then
-                    StatusLabel.Text = "Not found (Hopping...)"
-                    StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    StatusLabelHud.Text = "Not found"
+                    StatusLabelHud.TextColor3 = Color3.fromRGB(255, 80, 80)
                     task.wait(0.5)
                     break
                 end
@@ -671,29 +671,23 @@ startMainScript = function()
             end
 
             if not isRunning then break end
+            -- Chuyển sang HOP SERVER màu cam rồi tiến hành hop server dưới 6 người
             hopServer()
             task.wait(3)
         end
     end)
 end
 
--- Tự động kiểm tra file key đã lưu trên máy khi vừa khởi động
 local function initializeScript()
     local savedKey = getSavedKey()
-    if savedKey and verifyAccess(savedKey) then
-        StatusLabel.Text = "Auto-loaded saved key!"
-        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        task.wait(0.8)
-        MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-        KeyInputBox.Visible = false
-        SubmitButton.Visible = false
-        GetKeyButton.Visible = false
-        LinkBox.Visible = false
-        
-        isRunning = true -- Bật cờ cho phép script chạy thẳng luôn vì đã có key lưu
+    if savedKey and submitAndVerifyKey(savedKey) then
+        KeyMainFrame.Visible = false
+        MainFrame.Visible = true
+        isRunning = true
         startMainScript()
     else
-        -- Chưa có key / Key hỏng -> Giữ nguyên bảng khóa, KHÔNG CHO CHẠY GÌ CẢ
+        KeyMainFrame.Visible = true
+        MainFrame.Visible = false
         isRunning = false
     end
 end
