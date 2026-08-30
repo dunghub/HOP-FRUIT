@@ -9,6 +9,7 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Clipboard = setclipboard or toclipboard or syn and syn.clipboard
 
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -24,18 +25,13 @@ local storedFruitsCache = {}
 DuboCFG = DuboCFG or {}
 
 -- ==================== HỆ THỐNG XÁC THỰC KEY & HWID ====================
--- Kho 1: Kho duyệt key tạm thời (Lưu key do script tự sinh ra, hạn 500 giây)
 local PendingKeysStore = {}
-
--- Kho 2: Kho trung tâm lưu trữ HWID đã vượt link/nhập key thành công (Hoạt động 24 giờ)
 local CentralHWIDStore = {}
 
--- Danh sách Key Premium vĩnh viễn (Định dạng: "KEY:HWID" do chính bạn gắn HWID thủ công vào sau)
 local PremiumKeyList = {
-    "DUBO-VIP-EXAMPLE:CHUA_CO_HWID", -- Thay key và HWID thật của bạn vào đây
+    "DUBO-VIP-EXAMPLE:CHUA_CO_HWID",
 }
 
--- Hàm lấy HWID thiết bị của người dùng
 local function getClientHWID()
     local hwid = ""
     pcall(function()
@@ -44,7 +40,6 @@ local function getClientHWID()
     return hwid
 end
 
--- Hàm tạo chuỗi ngẫu nhiên gồm chữ và số (15 ký tự)
 local function generateRandomString(length)
     local chars = "abcdefghijklmnopqrstuvwxyz0123456789"
     local rng = math.random
@@ -56,16 +51,13 @@ local function generateRandomString(length)
     return table.concat(s)
 end
 
--- Hàm kiểm tra quyền truy cập (Dựa vào Key Premium vĩnh viễn hoặc HWID đã vượt link 24h)
 local function verifyAccess(inputKey)
     local currentHWID = getClientHWID()
     
-    -- 1. Kiểm tra qua Kho 2 trung tâm (HWID đã vượt link thành công trong 24 giờ qua)
     if CentralHWIDStore[currentHWID] and tick() < CentralHWIDStore[currentHWID] then
         return true
     end
 
-    -- 2. Kiểm tra qua danh sách Key Premium vĩnh viễn do bạn tự gắn HWID
     if inputKey and inputKey ~= "" then
         for _, line in ipairs(PremiumKeyList) do
             local separatorPos = line:find(":")
@@ -85,50 +77,40 @@ local function verifyAccess(inputKey)
     return false
 end
 
--- Hàm khi người dùng ấn Get Key: Tự sinh mã DUBO-KEY-[15 ký tự] và gắn vào link authtool.app
 local function generateGetKeysLink()
     local currentHWID = getClientHWID()
-    
-    -- Tạo key cấu trúc: DUBO-KEY-[15 ký tự ngẫu nhiên]
     local randomPart = generateRandomString(15)
     local generatedKey = "DUBO-KEY-" .. randomPart
     
-    -- Lưu vào Kho 1 với hiệu lực 500 giây
     PendingKeysStore[generatedKey] = {
         hwid = currentHWID,
         expiresAt = tick() + 500
     }
     
-    -- Gắn trực tiếp key tự sinh vào đuôi link yêu cầu
     local finalLink = "https://authtool.app/get-key/?result=" .. generatedKey
     return finalLink, generatedKey
 end
 
--- Hàm Submit Key để so khớp 1:1 với lúc script tạo ra
 local function submitAndVerifyKey(inputKey)
     local currentHWID = getClientHWID()
     
     local pendingData = PendingKeysStore[inputKey]
     if pendingData then
-        -- Kiểm tra thời hạn 500 giây
         if tick() <= pendingData.expiresAt then
-            -- So khớp đúng thiết bị tạo key
             if pendingData.hwid == currentHWID then
-                -- Khớp hoàn toàn: Cấp quyền chuyển vào Kho 2 hoạt động trong 24 giờ (86400s)
                 CentralHWIDStore[currentHWID] = tick() + 86400
-                -- Xóa key ở kho tạm sau khi sử dụng
                 PendingKeysStore[inputKey] = nil
-                return true, "Xác thực thành công! Script được phép hoạt động trong 24 giờ."
+                return true, "Thành công! Kích hoạt 24 giờ."
             else
-                return false, "Key này không thuộc về thiết bị của bạn!"
+                return false, "Key không thuộc thiết bị này!"
             end
         else
             PendingKeysStore[inputKey] = nil
-            return false, "Key đã hết hạn (quá 500 giây), vui lòng lấy lại key mới!"
+            return false, "Key đã hết hạn 500 giây!"
         end
     end
     
-    return false, "Sai key! Key không khớp với lúc tạo hoặc không tồn tại."
+    return false, "Sai key hoặc không tồn tại!"
 end
 -- ======================================================================
 
@@ -230,8 +212,8 @@ ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 290, 0, 350)
-MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
+MainFrame.Size = UDim2.new(0, 310, 0, 410)
+MainFrame.Position = UDim2.new(0.5, -155, 0.5, -205)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -257,19 +239,19 @@ task.spawn(function()
 end)
 
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
-DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
+DuboHubTitle.Size = UDim2.new(1, -16, 0, 35)
+DuboHubTitle.Position = UDim2.new(0, 8, 0, 10)
 DuboHubTitle.BackgroundTransparency = 1
 DuboHubTitle.Text = "DUBO HUB"
 DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 28
+DuboHubTitle.TextSize = 26
 DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
-CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
+CircleAvatarBg.Size = UDim2.new(0, 75, 0, 75)
+CircleAvatarBg.Position = UDim2.new(0.5, -37.5, 0, 50)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -285,8 +267,8 @@ CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 84, 0, 84)
-AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
+AvatarImg.Size = UDim2.new(0, 67, 0, 67)
+AvatarImg.Position = UDim2.new(0.5, -33.5, 0.5, -33.5)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -299,37 +281,117 @@ AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 26)
-TitleLabel.Position = UDim2.new(0, 0, 0, 160)
+TitleLabel.Size = UDim2.new(1, 0, 0, 20)
+TitleLabel.Position = UDim2.new(0, 0, 0, 130)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "DUBO KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 13
+TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamMedium
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 250, 0, 48)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
+StatusBox.Size = UDim2.new(0, 270, 0, 32)
+StatusBox.Position = UDim2.new(0.5, -135, 0, 155)
 StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
 
 local StatusBoxCorner = Instance.new("UICorner")
-StatusBoxCorner.CornerRadius = UDim.new(0, 12)
+StatusBoxCorner.CornerRadius = UDim.new(0, 8)
 StatusBoxCorner.Parent = StatusBox
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "... Initializing ..."
-StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-StatusLabel.TextSize = 14
+StatusLabel.Text = "Locked: Please Get Key!"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
+
+-- ==================== Ô NHẬP KEY & CÁC NÚT BẤM ====================
+local KeyInputBox = Instance.new("TextBox")
+KeyInputBox.Size = UDim2.new(0, 270, 0, 38)
+KeyInputBox.Position = UDim2.new(0.5, -135, 0, 195)
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInputBox.PlaceholderText = "Paste Key Here..."
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 150)
+KeyInputBox.TextSize = 13
+KeyInputBox.Font = Enum.Font.Gotham
+KeyInputBox.ClearTextOnFocus = false
+KeyInputBox.ZIndex = 2
+KeyInputBox.Parent = MainFrame
+
+local KeyInputCorner = Instance.new("UICorner")
+KeyInputCorner.CornerRadius = UDim.new(0, 8)
+KeyInputCorner.Parent = KeyInputBox
+
+local KeyInputStroke = Instance.new("UIStroke")
+KeyInputStroke.Thickness = 1.5
+KeyInputStroke.Color = Color3.fromRGB(60, 60, 90)
+KeyInputStroke.Parent = KeyInputBox
+
+-- Nút Submit Key
+local SubmitButton = Instance.new("TextButton")
+SubmitButton.Size = UDim2.new(0, 270, 0, 38)
+SubmitButton.Position = UDim2.new(0.5, -135, 0, 240)
+SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitButton.Text = "SUBMIT KEY"
+SubmitButton.TextSize = 14
+SubmitButton.Font = Enum.Font.GothamBold
+SubmitButton.ZIndex = 2
+SubmitButton.Parent = MainFrame
+
+local SubmitCorner = Instance.new("UICorner")
+SubmitCorner.CornerRadius = UDim.new(0, 8)
+SubmitCorner.Parent = SubmitButton
+
+-- Nút Get Key
+local GetKeyButton = Instance.new("TextButton")
+GetKeyButton.Size = UDim2.new(0, 270, 0, 38)
+GetKeyButton.Position = UDim2.new(0.5, -135, 0, 285)
+GetKeyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+GetKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetKeyButton.Text = "GET KEY"
+GetKeyButton.TextSize = 14
+GetKeyButton.Font = Enum.Font.GothamBold
+GetKeyButton.ZIndex = 2
+GetKeyButton.Parent = MainFrame
+
+local GetKeyCorner = Instance.new("UICorner")
+GetKeyCorner.CornerRadius = UDim.new(0, 8)
+GetKeyCorner.Parent = GetKeyButton
+
+-- Khung hiển thị Link Get Key (Sẽ hiện link đầy đủ có gắn chuỗi random 15 ký tự để copy)
+local LinkBox = Instance.new("TextBox")
+LinkBox.Size = UDim2.new(0, 270, 0, 38)
+LinkBox.Position = UDim2.new(0.5, -135, 0, 330)
+LinkBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+LinkBox.TextColor3 = Color3.fromRGB(255, 215, 0)
+LinkBox.PlaceholderText = "Link will appear here..."
+LinkBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 130)
+LinkBox.TextSize = 11
+LinkBox.Font = Enum.Font.Gotham
+LinkBox.ClearTextOnFocus = false
+LinkBox.TextEditable = false
+LinkBox.ZIndex = 2
+LinkBox.Parent = MainFrame
+
+local LinkBoxCorner = Instance.new("UICorner")
+LinkBoxCorner.CornerRadius = UDim.new(0, 8)
+LinkBoxCorner.Parent = LinkBox
+
+local LinkBoxStroke = Instance.new("UIStroke")
+LinkBoxStroke.Thickness = 1
+LinkBoxStroke.Color = Color3.fromRGB(50, 50, 80)
+LinkBoxStroke.Parent = LinkBox
+-- =============================================================
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
@@ -388,6 +450,40 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end)
+end)
+
+-- Sự kiện bấm nút Get Key: Tự sinh mã ngẫu nhiên 15 ký tự nối vào đuôi authtool.app
+GetKeyButton.MouseButton1Click:Connect(function()
+    local link, generatedKey = generateGetKeysLink()
+    LinkBox.Text = link
+    if Clipboard then
+        pcall(function() Clipboard(link) end)
+    end
+    StatusLabel.Text = "Generated! Link Copied!"
+    StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+end)
+
+-- Sự kiện bấm nút Submit Key: So khớp 1:1 với key được sinh lúc nãy
+SubmitButton.MouseButton1Click:Connect(function()
+    local inputVal = KeyInputBox.Text
+    local success, msg = submitAndVerifyKey(inputVal)
+    
+    if success then
+        StatusLabel.Text = msg
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.wait(1)
+        -- Ẩn phần UI Key đi hoặc thu gọn khung sau khi vượt thành công
+        MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        KeyInputBox.Visible = false
+        SubmitButton.Visible = false
+        GetKeyButton.Visible = false
+        LinkBox.Visible = false
+        
+        startMainScript()
+    else
+        StatusLabel.Text = msg
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
 end)
 
 -- Bộ lọc Server Hop dưới 6 người chơi (< 6)
@@ -495,7 +591,6 @@ local function autoPickAndStore()
     return found
 end
 
--- Vòng lặp chạy tính năng Kaitun Fruit chính
 local function startMainScript()
     task.spawn(function()
         while true do
@@ -551,14 +646,15 @@ local function startMainScript()
     end)
 end
 
--- Khởi động hệ thống kiểm tra bảo mật (Key / HWID)
+-- Tự động kiểm tra nếu đã xác thực từ trước đó rồi thì bật script luôn, chưa thì hiện bảng nhập key
 local function initializeScript()
     if verifyAccess() then
+        MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        KeyInputBox.Visible = false
+        SubmitButton.Visible = false
+        GetKeyButton.Visible = false
+        LinkBox.Visible = false
         startMainScript()
-    else
-        StatusLabel.Text = "Locked: Please Get Key!"
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        print("[DUBO HUB] Script đang bị khóa. Vui lòng thực hiện Get Key để nhận link authtool.app hoặc nhập Key Premium.")
     end
 end
 
