@@ -3,7 +3,6 @@ repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 -- Roblox System Services
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 
@@ -22,7 +21,7 @@ local function generateRandomKey()
         local randIndex = math.random(1, #chars)
         key = key .. chars:sub(randIndex, randIndex)
     end
-    return "DUBO-" .. key
+    return "DUBO-KEY=" .. key
 end
 
 pcall(function()
@@ -31,16 +30,16 @@ pcall(function()
     end
 end)
 
--- ==================== GIAO DIỆN UI DUBO HUB ====================
+-- ==================== GIAO DIỆN UI CHUẨN NHƯ ẢNH ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 410)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -205)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+MainFrame.Size = UDim2.new(0, 360, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Active = true
@@ -48,23 +47,16 @@ MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 18)
+MainCorner.CornerRadius = UDim.new(0, 16)
 MainCorner.Parent = MainFrame
 
+-- Viền sáng xanh lá neon chuẩn ảnh 1
 local RainbowStroke = Instance.new("UIStroke")
-RainbowStroke.Thickness = 4
+RainbowStroke.Color = Color3.fromRGB(46, 204, 113)
+RainbowStroke.Thickness = 3
 RainbowStroke.Parent = MainFrame
 
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.005 do
-            RainbowStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.02)
-        end
-    end
-end)
-
--- Hiệu ứng Tuyết rơi trang trí
+-- Hiệu ứng Tuyết rơi trang trí như ảnh 1
 local SnowContainer = Instance.new("Folder")
 SnowContainer.Name = "SnowContainer"
 SnowContainer.Parent = MainFrame
@@ -75,7 +67,7 @@ task.spawn(function()
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 280), 0, -20)
+            snowflake.Position = UDim2.new(0, math.random(10, 340), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -85,7 +77,7 @@ task.spawn(function()
 
             local fallDuration = math.random(5, 8)
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
-                Position = UDim2.new(0, snowflake.Position.X.Offset, 0, 430),
+                Position = UDim2.new(0, snowflake.Position.X.Offset, 0, 400),
                 Rotation = math.random(180, 360),
                 TextTransparency = 0.9
             })
@@ -95,62 +87,39 @@ task.spawn(function()
     end
 end)
 
-local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, 0, 0, 35)
-DuboHubTitle.Position = UDim2.new(0, 0, 0, 8)
-DuboHubTitle.BackgroundTransparency = 1
-DuboHubTitle.Text = "DUBO HUB"
-DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 24
-DuboHubTitle.Font = Enum.Font.GothamBold
-DuboHubTitle.Parent = MainFrame
-
--- Khung giao diện Nhập & Get Key
+-- ==================== KHUNG 1: KEY SYSTEM (GIỐNG ẢNH 2) ====================
 local KeySystemFrame = Instance.new("Frame")
-KeySystemFrame.Size = UDim2.new(1, 0, 1, -45)
-KeySystemFrame.Position = UDim2.new(0, 0, 0, 45)
+KeySystemFrame.Size = UDim2.new(1, 0, 1, 0)
 KeySystemFrame.BackgroundTransparency = 1
 KeySystemFrame.Parent = MainFrame
 
-local KeyNotice = Instance.new("TextLabel")
-KeyNotice.Size = UDim2.new(1, -20, 0, 40)
-KeyNotice.Position = UDim2.new(0, 10, 0, 5)
-KeyNotice.BackgroundTransparency = 1
-KeyNotice.Text = "Vui lòng bấm 'Get Key' để lấy mã truy cập hệ thống trong 24 giờ!"
-KeyNotice.TextColor3 = Color3.fromRGB(200, 200, 200)
-KeyNotice.TextSize = 13
-KeyNotice.Font = Enum.Font.GothamMedium
-KeyNotice.TextWrapped = true
-KeyNotice.Parent = KeySystemFrame
-
-local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0, 260, 0, 40)
-GetKeyBtn.Position = UDim2.new(0.5, -130, 0, 55)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-GetKeyBtn.Text = "GET KEY"
-GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyBtn.TextSize = 15
-GetKeyBtn.Font = Enum.Font.GothamBold
-GetKeyBtn.Parent = KeySystemFrame
-Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+KeyTitle.Position = UDim2.new(0, 0, 0, 15)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
+KeyTitle.TextColor3 = Color3.fromRGB(52, 152, 219)
+KeyTitle.TextSize = 18
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.Parent = KeySystemFrame
 
 local KeyInputBox = Instance.new("TextBox")
-KeyInputBox.Size = UDim2.new(0, 260, 0, 40)
-KeyInputBox.Position = UDim2.new(0.5, -130, 0, 105)
-KeyInputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-KeyInputBox.PlaceholderText = "Dán Key vào đây..."
+KeyInputBox.Size = UDim2.new(0, 310, 0, 45)
+KeyInputBox.Position = UDim2.new(0.5, -155, 0, 80)
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+KeyInputBox.PlaceholderText = "Nhập Key vào đây..."
 KeyInputBox.Text = ""
 KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInputBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-KeyInputBox.TextSize = 14
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
+KeyInputBox.TextSize = 13
 KeyInputBox.Font = Enum.Font.Gotham
 KeyInputBox.Parent = KeySystemFrame
 Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
 
 local SubmitKeyBtn = Instance.new("TextButton")
-SubmitKeyBtn.Size = UDim2.new(0, 260, 0, 40)
-SubmitKeyBtn.Position = UDim2.new(0.5, -130, 0, 155)
-SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+SubmitKeyBtn.Size = UDim2.new(0, 310, 0, 45)
+SubmitKeyBtn.Position = UDim2.new(0.5, -155, 0, 140)
+SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
 SubmitKeyBtn.Text = "SUBMIT KEY"
 SubmitKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SubmitKeyBtn.TextSize = 15
@@ -158,25 +127,55 @@ SubmitKeyBtn.Font = Enum.Font.GothamBold
 SubmitKeyBtn.Parent = KeySystemFrame
 Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 8)
 
--- Giao diện Sau khi Vượt Key Thành Công (Thanh thời gian 24h)
+local GetKeyBtn = Instance.new("TextButton")
+GetKeyBtn.Size = UDim2.new(0, 310, 0, 45)
+GetKeyBtn.Position = UDim2.new(0.5, -155, 0, 200)
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(20, 24, 33)
+GetKeyBtn.Text = "GET KEY LINK"
+GetKeyBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
+GetKeyBtn.TextSize = 15
+GetKeyBtn.Font = Enum.Font.GothamBold
+GetKeyBtn.Parent = KeySystemFrame
+Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
+
+local KeyNotice = Instance.new("TextLabel")
+KeyNotice.Size = UDim2.new(1, -20, 0, 30)
+KeyNotice.Position = UDim2.new(0, 10, 0, 260)
+KeyNotice.BackgroundTransparency = 1
+KeyNotice.Text = ""
+KeyNotice.TextColor3 = Color3.fromRGB(231, 76, 60)
+KeyNotice.TextSize = 13
+KeyNotice.Font = Enum.Font.GothamMedium
+KeyNotice.Parent = KeySystemFrame
+
+-- ==================== KHUNG 2: MAIN HUB (GIỐNG ẢNH 1) ====================
 local MainHubContent = Instance.new("Frame")
-MainHubContent.Size = UDim2.new(1, 0, 1, -45)
-MainHubContent.Position = UDim2.new(0, 0, 0, 45)
+MainHubContent.Size = UDim2.new(1, 0, 1, 0)
 MainHubContent.BackgroundTransparency = 1
 MainHubContent.Visible = false
 MainHubContent.Parent = MainFrame
 
+local HubTitle = Instance.new("TextLabel")
+HubTitle.Size = UDim2.new(1, 0, 0, 40)
+HubTitle.Position = UDim2.new(0, 0, 0, 10)
+HubTitle.BackgroundTransparency = 1
+HubTitle.Text = "DUBO HUB"
+HubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+HubTitle.TextSize = 22
+HubTitle.Font = Enum.Font.GothamBold
+HubTitle.Parent = MainHubContent
+
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 80, 0, 80)
-CircleAvatarBg.Position = UDim2.new(0.5, -40, 0, 10)
-CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+CircleAvatarBg.Size = UDim2.new(0, 85, 0, 85)
+CircleAvatarBg.Position = UDim2.new(0.5, -42, 0, 55)
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.Parent = MainHubContent
 Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0)
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 72, 0, 72)
-AvatarImg.Position = UDim2.new(0.5, -36, 0.5, -36)
+AvatarImg.Size = UDim2.new(0, 77, 0, 77)
+AvatarImg.Position = UDim2.new(0.5, -38, 0.5, -38)
 AvatarImg.BackgroundTransparency = 1
 pcall(function()
     AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
@@ -184,49 +183,34 @@ end)
 AvatarImg.Parent = CircleAvatarBg
 Instance.new("UICorner", AvatarImg).CornerRadius = UDim.new(1, 0)
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 24)
-TitleLabel.Position = UDim2.new(0, 0, 0, 95)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "DUBO KAITUN FRUIT ACTIVE"
-TitleLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-TitleLabel.TextSize = 13
-TitleLabel.Font = Enum.Font.GothamMedium
-TitleLabel.Parent = MainHubContent
+local SubTitleLabel = Instance.new("TextLabel")
+SubTitleLabel.Size = UDim2.new(1, 0, 0, 25)
+SubTitleLabel.Position = UDim2.new(0, 0, 0, 148)
+SubTitleLabel.BackgroundTransparency = 1
+SubTitleLabel.Text = "DUBO KAITUN FRUIT"
+SubTitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SubTitleLabel.TextSize = 14
+SubTitleLabel.Font = Enum.Font.GothamBold
+SubTitleLabel.Parent = MainHubContent
 
--- Thanh đếm ngược 24 giờ (Progress Bar màu mè đẹp mắt)
-local TimeBarBg = Instance.new("Frame")
-TimeBarBg.Size = UDim2.new(0, 260, 0, 20)
-TimeBarBg.Position = UDim2.new(0.5, -130, 0, 135)
-TimeBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-TimeBarBg.Parent = MainHubContent
-Instance.new("UICorner", TimeBarBg).CornerRadius = UDim.new(0, 8)
+-- Khung Team Pirates hệt như ảnh 1
+local TeamBox = Instance.new("Frame")
+TeamBox.Size = UDim2.new(0, 310, 0, 45)
+TeamBox.Position = UDim2.new(0.5, -155, 0, 185)
+TeamBox.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+TeamBox.Parent = MainHubContent
+Instance.new("UICorner", TeamBox).CornerRadius = UDim.new(0, 8)
 
-local TimeBarFill = Instance.new("Frame")
-TimeBarFill.Size = UDim2.new(1, 0, 1, 0)
-TimeBarFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-TimeBarFill.Parent = TimeBarBg
-Instance.new("UICorner", TimeBarFill).CornerRadius = UDim.new(0, 8)
+local TeamText = Instance.new("TextLabel")
+TeamText.Size = UDim2.new(1, 0, 1, 0)
+TeamText.BackgroundTransparency = 1
+TeamText.Text = "Team: Pirates"
+TeamText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeamText.TextSize = 14
+TeamText.Font = Enum.Font.GothamMedium
+TeamText.Parent = TeamBox
 
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0.0, Color3.fromRGB(46, 204, 113)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(52, 152, 219)),
-    ColorSequenceKeypoint.new(1.0, Color3.fromRGB(155, 89, 182))
-}
-UIGradient.Parent = TimeBarFill
-
-local TimeText = Instance.new("TextLabel")
-TimeText.Size = UDim2.new(1, 0, 1, 0)
-TimeText.BackgroundTransparency = 1
-TimeText.Text = "Key Time: 24h 00m left"
-TimeText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TimeText.TextSize = 11
-TimeText.Font = Enum.Font.GothamBold
-TimeText.ZIndex = 2
-TimeText.Parent = TimeBarBg
-
--- Sự kiện bấm nút Get Key: Tự sinh mã và gắn vào đuôi link
+-- ==================== XỬ LÝ SỰ KIỆN NÚT BẤM ====================
 GetKeyBtn.MouseButton1Click:Connect(function()
     generatedKey = generateRandomKey()
     local fullLink = "https://authtool.app/get-key/?result=" .. generatedKey
@@ -237,17 +221,17 @@ GetKeyBtn.MouseButton1Click:Connect(function()
         end
     end)
     
-    KeyNotice.Text = "Đã tự động tạo và copy link Get Key! Hãy dán vào trình duyệt để lấy mã."
+    KeyInputBox.Text = generatedKey
+    KeyNotice.Text = "Đã tạo và copy link Get Key vào khay nhớ tạm!"
     KeyNotice.TextColor3 = Color3.fromRGB(46, 204, 113)
 end)
 
--- Sự kiện bấm Submit Key: So sánh, lưu trữ vào Workspace, kích hoạt Loadstring
 SubmitKeyBtn.MouseButton1Click:Connect(function()
     local enteredKey = KeyInputBox.Text
     if enteredKey == generatedKey and generatedKey ~= "" then
         isKeyVerified = true
         
-        -- Lưu thông tin cấu hình vào workspace để thuận tiện cho hệ thống lưu trữ
+        -- Lưu thông tin vào Workspace
         pcall(function()
             local folder = Workspace:FindFirstChild("DuboWorkspaceData") or Instance.new("Folder", Workspace)
             folder.Name = "DuboWorkspaceData"
@@ -256,34 +240,9 @@ SubmitKeyBtn.MouseButton1Click:Connect(function()
             keyVal.Value = generatedKey
         end)
         
+        -- Chuyển giao diện từ Khung Key sang Khung Main Hub hệt như ảnh 1
         KeySystemFrame.Visible = false
         MainHubContent.Visible = true
-        
-        -- Xóa key tạm thời trong bộ nhớ đệm sau khi submit thành công để bảo mật
-        generatedKey = ""
-        
-        -- Chạy thanh đếm ngược thời gian 24 giờ tụt dần
-        task.spawn(function()
-            local totalSeconds = 24 * 3600
-            local startTime = tick()
-            while true do
-                local elapsed = tick() - startTime
-                local remaining = totalSeconds - elapsed
-                if remaining <= 0 then
-                    isKeyVerified = false
-                    MainHubContent.Visible = false
-                    KeySystemFrame.Visible = true
-                    KeyNotice.Text = "Key đã hết hạn sau 24 giờ! Vui lòng lấy lại key mới."
-                    break
-                end
-                
-                local hours = math.floor(remaining / 3600)
-                local mins = math.floor((remaining % 3600) / 60)
-                TimeText.Text = string.format("Key Time: %dh %dm left", hours, mins)
-                TimeBarFill.Size = UDim2.new(remaining / totalSeconds, 0, 1, 0)
-                task.wait(1)
-            end
-        end)
         
         -- ==================== GỌI SCRIPT CHÍNH CỦA ÔNG ====================
         task.spawn(function()
@@ -296,7 +255,7 @@ SubmitKeyBtn.MouseButton1Click:Connect(function()
         end)
         
     else
-        KeyNotice.Text = "Key không đúng hoặc bạn chưa bấm Get Key trước đó!"
+        KeyNotice.Text = "Key does not exist or incorrect!"
         KeyNotice.TextColor3 = Color3.fromRGB(231, 76, 60)
     end
 end)
