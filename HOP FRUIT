@@ -218,7 +218,6 @@ local function runMainScript()
         end
     end)
 
-    -- KHUNG AVATAR PROFILE & HIỆU ỨNG NHIỀU BÔNG TUYẾT RƠI
     local AvatarFrame = Instance.new("ImageLabel", MainFrame)
     AvatarFrame.Size = UDim2.new(0, 90, 0, 90)
     AvatarFrame.Position = UDim2.new(0.5, -45, 0, 20)
@@ -229,9 +228,10 @@ local function runMainScript()
     AvatarStroke.Thickness = 3
     AvatarStroke.Color = Color3.fromRGB(0, 170, 255)
 
+    -- HIỆU ỨNG TUYẾT RƠI TỰ NHIÊN (RƠI THẲNG TỪ TRÊN XUỐNG DƯỚI)
     local snowFlakes = {}
     math.randomseed(tick())
-    for i = 1, 8 do
+    for i = 1, 10 do
         local sf = Instance.new("TextLabel", MainFrame)
         sf.Size = UDim2.new(0, 20, 0, 20)
         sf.BackgroundTransparency = 1
@@ -240,11 +240,10 @@ local function runMainScript()
         
         table.insert(snowFlakes, {
             Object = sf,
-            XOffset = math.random(-120, 120),
-            YPos = math.random(-50, 250),
-            Speed = math.random(30, 70) / 100,
-            FallSpeed = math.random(35, 65) / 100,
-            RotSpeed = math.random(30, 90)
+            XPos = math.random(10, 270),
+            YPos = math.random(-50, 330),
+            FallSpeed = math.random(40, 90) / 100,
+            RotSpeed = math.random(10, 40)
         })
     end
 
@@ -253,12 +252,12 @@ local function runMainScript()
         for _, snow in ipairs(snowFlakes) do
             if snow.Object and snow.Object.Parent then
                 snow.YPos = snow.YPos + snow.FallSpeed
-                if snow.YPos > 310 then
+                if snow.YPos > 350 then
                     snow.YPos = -20
-                    snow.XOffset = math.random(-120, 120)
+                    snow.XPos = math.random(10, 270)
                 end
                 snow.Object.Rotation = (t * snow.RotSpeed)
-                snow.Object.Position = UDim2.new(0.5, snow.XOffset + math.sin(t * snow.Speed + snow.YPos) * 12, 0, snow.YPos)
+                snow.Object.Position = UDim2.new(0, snow.XPos, 0, snow.YPos)
             end
         end
     end)
@@ -331,7 +330,7 @@ local function runMainScript()
         end)
     end)
 
-    -- FIXED: Đã fix lỗi 773 bằng cách lọc kỹ server hợp lệ và bọc pcall an toàn
+    -- Fix lỗi 773 triệt để
     local function hopServer()
         isRunning = false
         StatusLabel.Text = "Hopping Server..."
