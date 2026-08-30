@@ -16,7 +16,6 @@ local CACHE_FILE = "DuboHub_Session_24h.json"
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
 -- ==========================================================
 
--- Lấy HWID thiết bị (tương thích mobile/executor)
 local function getClientHWID()
     local hwid = "Unknown"
     pcall(function()
@@ -123,8 +122,8 @@ local function sendKeyWebhook(usedKey)
             ["color"] = 16776960,
             ["fields"] = {
                 {["name"] = "⚠️ Yêu Cầu Gán HWID Mới!", ["value"] = "**Tài khoản:**\n" .. maskedName, ["inline"] = false},
-                {["name"] = "Key vừa nhập:", ["value"] = "```\n" .. usedKey .. "\n```", ["inline"] = false},
-                {["name"] = "HWID (Copy dán vào sau dấu /):", ["value"] = "```\n" .. hwid .. "\n```", ["inline"] = false}
+                {["name"] = "Key vừa nhập:", ["value"] = "`" .. usedKey .. "`", ["inline"] = false},
+                {["name"] = "HWID (Copy dán vào sau dấu /):", ["value"] = "`" .. hwid .. "`", ["inline"] = false}
             },
             ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")}
         }}
