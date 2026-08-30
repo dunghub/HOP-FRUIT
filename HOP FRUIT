@@ -12,7 +12,12 @@ local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/
 DuboCFG = DuboCFG or {}
 DuboCFG.WebhookURL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session_24h.json"
-local GENERATED_KEYS_FILE = "DuboHub_GeneratedKeys.json"
+
+-- Kho tạm thời chứa key (tồn tại tối đa 500 giây)
+local TemporaryKeyPool = TemporaryKeyPool or {}
+
+-- Kho chính thức chứa HWID (tồn tại 24 giờ)
+local Authorized24hPool = Authorized24hPool or {}
 
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
 -- ==========================================================
@@ -40,57 +45,56 @@ local function generateRandomKey()
     return "DUBO-KEY-" .. randomString
 end
 
--- Lưu key vừa tạo vào file local và dọn dẹp các key quá hạn > 300s luôn từ lúc tạo
-local function saveGeneratedKey(newKey)
-    pcall(function()
-        local keysList = {}
-        local currentTime = os.time()
-        if isfile and isfile(GENERATED_KEYS_FILE) then
-            local content = readfile(GENERATED_KEYS_FILE)
-            local decoded = HttpService:JSONDecode(content)
-            if type(decoded) == "table" then
-                for _, item in ipairs(decoded) do
-                    if item.Time and (currentTime - item.Time < 300) then
-                        table.insert(keysList, item)
-                    end
-                end
-            end
+-- Hàm dọn dẹp toàn bộ dữ liệu hết hạn (cả kho tạm lẫn kho chính)
+local function cleanupExpiredData()
+    local currentTime = os.time()
+    
+    -- Dọn dẹp kho tạm nếu quá thời hạn 500 giây mà chưa submit
+    for key, data in pairs(TemporaryKeyPool) do
+        if currentTime > data.expireTime then
+            TemporaryKeyPool[key] = nil
         end
-        table.insert(keysList, {Key = newKey, Time = currentTime})
-        if writefile then
-            writefile(GENERATED_KEYS_FILE, HttpService:JSONEncode(keysList))
+    end
+    
+    -- Dọn dẹp kho chính quá hạn 24 giờ để tiết kiệm dữ liệu và gỡ HWID
+    for hwid, expireTime in pairs(Authorized24hPool) do
+        if currentTime >= expireTime then
+            Authorized24hPool[hwid] = nil
         end
-    end)
+    end
 end
 
--- Kiểm tra, tự động xóa key khi submit thành công và dọn rác các key quá 300 giây không submit
-local function verifyGeneratedKey(inputKey)
-    local foundAndValid = false
-    pcall(function()
-        if isfile and isfile(GENERATED_KEYS_FILE) then
-            local content = readfile(GENERATED_KEYS_FILE)
-            local keysList = HttpService:JSONDecode(content)
-            if type(keysList) == "table" then
-                local newKeysList = {}
-                local currentTime = os.time()
-                for _, item in ipairs(keysList) do
-                    if item.Key == inputKey then
-                        if item.Time and (currentTime - item.Time < 300) then
-                            foundAndValid = true
-                        end
-                    else
-                        if item.Time and (currentTime - item.Time < 300) then
-                            table.insert(newKeysList, item)
-                        end
-                    end
-                end
-                if writefile then
-                    writefile(GENERATED_KEYS_FILE, HttpService:JSONEncode(newKeysList))
-                end
-            end
+-- Hàm lấy chuỗi thời gian còn lại của key (để hiển thị trực tiếp lên UI)
+local function getRemainingTimeText()
+    cleanupExpiredData()
+    local currentHwid = getClientHWID()
+    local currentTime = os.time()
+    
+    if Authorized24hPool[currentHwid] then
+        local expireTime = Authorized24hPool[currentHwid]
+        local remainingSeconds = expireTime - currentTime
+        
+        if remainingSeconds > 0 then
+            local hours = math.floor(remainingSeconds / 3600)
+            local minutes = math.floor((remainingSeconds % 3600) / 60)
+            local seconds = remainingSeconds % 60
+            return string.format("Thời gian key còn lại: %02d:%02d:%02d", hours, minutes, seconds)
+        else
+            Authorized24hPool[currentHwid] = nil
         end
-    end)
-    return foundAndValid
+    end
+    
+    return "Trạng thái: Chưa kích hoạt hoặc đã hết hạn"
+end
+
+-- Lưu key vào kho tạm (giữ chỗ trong 500 giây)
+local function registerGeneratedKey(newKey)
+    cleanupExpiredData()
+    local currentTime = os.time()
+    TemporaryKeyPool[newKey] = {
+        createdTime = currentTime,
+        expireTime = currentTime + 500
+    }
 end
 
 local function getLaymaShortLink(targetUrl)
@@ -119,11 +123,30 @@ local function getLaymaShortLink(targetUrl)
     return targetUrl
 end
 
+-- Hàm kiểm tra và xác thực key hoàn chỉnh
 local function verifyKey(inputKey)
-    if verifyGeneratedKey(inputKey) then
-        return true, "Success!"
-    end
+    cleanupExpiredData()
     
+    local currentHwid = getClientHWID()
+    local currentTime = os.time()
+
+    -- 1. Kiểm tra kho chính thức 24 giờ
+    if Authorized24hPool[currentHwid] then
+        if currentTime < Authorized24hPool[currentHwid] then
+            return true, "Success! (Within 24h)"
+        else
+            Authorized24hPool[currentHwid] = nil
+        end
+    end
+
+    -- 2. Kiểm tra so sánh khít từng chữ với kho tạm (trong vòng 500 giây)
+    if TemporaryKeyPool[inputKey] then
+        TemporaryKeyPool[inputKey] = nil -- Xóa ngay lập tức khỏi kho tạm để chống dùng ké
+        Authorized24hPool[currentHwid] = currentTime + (24 * 60 * 60) -- Cấp kho chính 24h
+        return true, "Success! Key accepted, added to 24h whitelist."
+    end
+
+    -- 3. Kiểm tra kho Key Premium vĩnh viễn trên GitHub (dành cho key thủ công của admin)
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
     end)
@@ -131,7 +154,6 @@ local function verifyKey(inputKey)
     
     local keyFound = false
     local isHwidMatched = false
-    local currentHwid = getClientHWID()
     
     for line in response:gmatch("[^\r\n]+") do
         local cleanLine = line:match("^%s*(.-)%s*$")
@@ -162,7 +184,7 @@ local function verifyKey(inputKey)
         return false, "Admin has not configured your HWID for this key, please wait!"
     end
     
-    return true, "Success!"
+    return true, "Success! (Permanent Premium Key)"
 end
 
 local function sendKeyWebhook(usedKey)
@@ -369,7 +391,6 @@ local function hopServer()
     
     if success and result and result.data then
         for _, s in ipairs(result.data) do
-            -- Chỉ chọn các server có số lượng player từ 6 trở lên và chưa full
             if type(s) == "table" and s.playing and s.maxPlayers and s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
                 table.insert(Servers, s.id)
             end
@@ -432,7 +453,7 @@ local function storeAllOwnedFruits()
             for _, item in ipairs(player.Character:GetChildren()) do storeFruit(item) end
         end
         if player:FindFirstChild("Backpack") then
-            for _, item in ipairs(player.Backpack:GetChildren()) do storeFruit(item) end
+            for _, item in ipairs(player:FindFirstChild("Backpack"):GetChildren()) do storeFruit(item) end
         end
     end)
 end
@@ -520,8 +541,8 @@ ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 235)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -117)
+MainFrame.Size = UDim2.new(0, 320, 0, 275) -- Tăng chiều cao để đủ chỗ chứa dòng hiển thị thời gian
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -137)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -590,6 +611,27 @@ Notification.TextSize = 12
 Notification.Font = Enum.Font.Gotham
 Notification.Parent = MainFrame
 
+-- TextLabel hiển thị thời hạn key còn lại nằm ở dưới cùng của UI
+local TimeRemainingLabel = Instance.new("TextLabel")
+TimeRemainingLabel.Size = UDim2.new(1, 0, 0, 25)
+TimeRemainingLabel.Position = UDim2.new(0, 0, 0, 215)
+TimeRemainingLabel.BackgroundTransparency = 1
+TimeRemainingLabel.Text = "Trạng thái: Chưa kích hoạt"
+TimeRemainingLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+TimeRemainingLabel.TextSize = 12
+TimeRemainingLabel.Font = Enum.Font.GothamBold
+TimeRemainingLabel.Parent = MainFrame
+
+-- Vòng lặp cập nhật liên tục thời gian còn lại trực tiếp trên giao diện
+task.spawn(function()
+    while ScreenGui and ScreenGui.Parent do
+        pcall(function()
+            TimeRemainingLabel.Text = getRemainingTimeText()
+        end)
+        task.wait(1)
+    end
+end)
+
 local cachedShortLink = ""
 
 GetKeyBtn.MouseButton1Click:Connect(function()
@@ -598,7 +640,7 @@ GetKeyBtn.MouseButton1Click:Connect(function()
             GetKeyBtn.Text = "Generating Link..."
             task.spawn(function()
                 local newKey = generateRandomKey()
-                saveGeneratedKey(newKey)
+                registerGeneratedKey(newKey)
                 
                 local rawTargetUrl = "https://authtool.app/get-key/?result=" .. newKey
                 cachedShortLink = getLaymaShortLink(rawTargetUrl)
