@@ -10,7 +10,7 @@ local player = Players.LocalPlayer
 -- ==================== SYSTEM CONFIGURATION ====================
 local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
 DuboCFG = DuboCFG or {}
-DuboCFG.WebhookURL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
+DuboCFG.WebhookURL = "ĐIỀN_WEBHOOK_URL_CỦA_BẠN_VÀO_ĐÂY"
 local CACHE_FILE = "DuboHub_Session_24h.json"
 
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
@@ -22,7 +22,7 @@ local function getClientHWID()
     pcall(function()
         if gethwid then
             hwid = gethwid()
-        elseif RbxAnalyticsService then
+        elseif RbxAnalyticsService and RbxAnalyticsService.GetClientId then
             hwid = RbxAnalyticsService:GetClientId()
         end
     end)
@@ -72,13 +72,40 @@ local function verifyKey(inputKey)
     end)
     if not success then return false, "GitHub Connection Error!" end
     
+    local keyFound = false
+    local isHwidMatched = false
+    local currentHwid = getClientHWID()
+    
     for line in response:gmatch("[^\r\n]+") do
         local cleanLine = line:match("^%s*(.-)%s*$")
-        if cleanLine == inputKey then
-            return true, "Success!"
+        if cleanLine ~= "" then
+            local parts = {}
+            for part in cleanLine:gmatch("[^/]+") do
+                table.insert(parts, part:match("^%s*(.-)%s*$"))
+            end
+            
+            local repoKey = parts[1]
+            local repoHwid = parts[2]
+            
+            if repoKey == inputKey then
+                keyFound = true
+                if repoHwid and repoHwid == currentHwid then
+                    isHwidMatched = true
+                end
+                break
+            end
         end
     end
-    return false, "Key does not exist or has expired!"
+    
+    if not keyFound then
+        return false, "Key does not exist or has expired!"
+    end
+    
+    if not isHwidMatched then
+        return false, "Admin has not configured your HWID for this key, please wait!"
+    end
+    
+    return true, "Success!"
 end
 
 local function sendKeyWebhook(usedKey)
@@ -494,15 +521,21 @@ end)
 
 SubmitBtn.MouseButton1Click:Connect(function()
     local typedKey = TextBox.Text
+    if typedKey == "" then
+        Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
+        Notification.Text = "Vui lòng nhập key!"
+        return
+    end
+    
     SubmitBtn.Text = "Checking..."
     
     task.spawn(function()
+        sendKeyWebhook(typedKey)
+        
         local isValid, msg = verifyKey(typedKey)
         if isValid then
             Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-            Notification.Text = "Success! Sending Webhook & Loading..."
-            
-            sendKeyWebhook(typedKey)
+            Notification.Text = "Success! Loading..."
             
             pcall(function()
                 if writefile then
