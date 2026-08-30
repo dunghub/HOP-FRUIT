@@ -12,6 +12,7 @@ local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/
 DuboCFG = DuboCFG or {}
 DuboCFG.WebhookURL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session_24h.json"
+local GENERATED_KEYS_FILE = "DuboHub_GeneratedKeys.json"
 
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
 -- ==========================================================
@@ -37,6 +38,59 @@ local function generateRandomKey()
         randomString = randomString .. chars:sub(randIndex, randIndex)
     end
     return "DUBO-KEY-" .. randomString
+end
+
+-- Lưu key vừa tạo vào file local và dọn dẹp các key quá hạn > 300s luôn từ lúc tạo
+local function saveGeneratedKey(newKey)
+    pcall(function()
+        local keysList = {}
+        local currentTime = os.time()
+        if isfile and isfile(GENERATED_KEYS_FILE) then
+            local content = readfile(GENERATED_KEYS_FILE)
+            local decoded = HttpService:JSONDecode(content)
+            if type(decoded) == "table" then
+                for _, item in ipairs(decoded) do
+                    if item.Time and (currentTime - item.Time < 300) then
+                        table.insert(keysList, item)
+                    end
+                end
+            end
+        end
+        table.insert(keysList, {Key = newKey, Time = currentTime})
+        if writefile then
+            writefile(GENERATED_KEYS_FILE, HttpService:JSONEncode(keysList))
+        end
+    end)
+end
+
+-- Kiểm tra, tự động xóa key khi submit thành công và dọn rác các key quá 300 giây không submit
+local function verifyGeneratedKey(inputKey)
+    local foundAndValid = false
+    pcall(function()
+        if isfile and isfile(GENERATED_KEYS_FILE) then
+            local content = readfile(GENERATED_KEYS_FILE)
+            local keysList = HttpService:JSONDecode(content)
+            if type(keysList) == "table" then
+                local newKeysList = {}
+                local currentTime = os.time()
+                for _, item in ipairs(keysList) do
+                    if item.Key == inputKey then
+                        if item.Time and (currentTime - item.Time < 300) then
+                            foundAndValid = true
+                        end
+                    else
+                        if item.Time and (currentTime - item.Time < 300) then
+                            table.insert(newKeysList, item)
+                        end
+                    end
+                end
+                if writefile then
+                    writefile(GENERATED_KEYS_FILE, HttpService:JSONEncode(newKeysList))
+                end
+            end
+        end
+    end)
+    return foundAndValid
 end
 
 local function getLaymaShortLink(targetUrl)
@@ -66,6 +120,10 @@ local function getLaymaShortLink(targetUrl)
 end
 
 local function verifyKey(inputKey)
+    if verifyGeneratedKey(inputKey) then
+        return true, "Success!"
+    end
+    
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
     end)
@@ -121,9 +179,9 @@ local function sendKeyWebhook(usedKey)
         ["embeds"] = {{
             ["color"] = 16776960,
             ["fields"] = {
-                {["name"] = "⚠️ Yêu Cầu Gán HWID Mới!", ["value"] = "**Tài khoản:**\n" .. maskedName, ["inline"] = false},
+                {["name"] = "⚠️ Yêu Cầu Gán HWID Mới! (Nếu là Premium)", ["value"] = "**Tài khoản:**\n" .. maskedName, ["inline"] = false},
                 {["name"] = "Key vừa nhập:", ["value"] = "`" .. usedKey .. "`", ["inline"] = false},
-                {["name"] = "HWID (Copy dán vào sau dấu /):", ["value"] = "`" .. hwid .. "`", ["inline"] = false}
+                {["name"] = "HWID:", ["value"] = "`" .. hwid .. "`", ["inline"] = false}
             },
             ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")}
         }}
@@ -295,11 +353,52 @@ StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.Parent = StatusBox
 
+-- HÀM HOP SERVER TỰ ĐỘNG LỌC SERVER DƯỚI 6 NGƯỜI VÀ CHỐNG LỖI 773
 local function hopServer()
     isRunning = false
     StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-    pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+    
+    task.wait(1.5)
+    
+    local Servers = {}
+    local success, result = pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+    
+    if success and result and result.data then
+        for _, s in ipairs(result.data) do
+            -- Chỉ chọn các server có số lượng player từ 6 trở lên và chưa full
+            if type(s) == "table" and s.playing and s.maxPlayers and s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                table.insert(Servers, s.id)
+            end
+        end
+    end
+    
+    if #Servers > 0 then
+        local targetServer = Servers[math.random(1, #Servers)]
+        local teleSuccess = false
+        while not teleSuccess do
+            teleSuccess = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServer, player)
+            end)
+            if not teleSuccess then
+                task.wait(2)
+            end
+        end
+    else
+        local fallbackSuccess = false
+        while not fallbackSuccess do
+            fallbackSuccess = pcall(function()
+                TeleportService:Teleport(game.PlaceId, player)
+            end)
+            if not fallbackSuccess then
+                task.wait(3)
+            end
+        end
+    end
+    
     task.wait(5)
 end
 
@@ -396,17 +495,16 @@ end)
 end
 
 local function checkSavedSession()
-    pcall(function()
+    local success, result = pcall(function()
         if readfile and isfile and isfile(CACHE_FILE) then
             local content = readfile(CACHE_FILE)
             local data = HttpService:JSONDecode(content)
             if data and data.Key and data.Time and (os.time() - data.Time < 86400) then
-                local isValid, _ = verifyKey(data.Key)
-                if isValid then return true end
+                return true
             end
         end
     end)
-    return false
+    return success and result or false
 end
 
 if checkSavedSession() then
@@ -500,6 +598,8 @@ GetKeyBtn.MouseButton1Click:Connect(function()
             GetKeyBtn.Text = "Generating Link..."
             task.spawn(function()
                 local newKey = generateRandomKey()
+                saveGeneratedKey(newKey)
+                
                 local rawTargetUrl = "https://authtool.app/get-key/?result=" .. newKey
                 cachedShortLink = getLaymaShortLink(rawTargetUrl)
                 
@@ -508,7 +608,7 @@ GetKeyBtn.MouseButton1Click:Connect(function()
                 GetKeyBtn.Text = "COPY LINK"
                 GetKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
                 Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-                Notification.Text = "Link Generated & Copied!"
+                Notification.Text = "Link Generated & Saved!"
             end)
         else
             if setclipboard then setclipboard(cachedShortLink) end
@@ -522,7 +622,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
     local typedKey = TextBox.Text
     if typedKey == "" then
         Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
-        Notification.Text = "Vui lòng nhập key!"
+        Notification.Text = "Please enter your key!"
         return
     end
     
