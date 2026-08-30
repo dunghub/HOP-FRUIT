@@ -6,6 +6,7 @@ repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
 -- Xóa UI cũ nếu có
 pcall(function()
@@ -16,6 +17,74 @@ pcall(function()
         CoreGui.KaitunFruitGUI:Destroy()
     end
 end)
+
+-- ==========================================
+-- HỆ THỐNG XÁC THỰC KEY (WORKSPACE & 24H)
+-- ==========================================
+local WorkspaceFile = "dubokey_session.json"
+
+local function generateRandomKey(length)
+    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local key = ""
+    math.randomseed(tick() + math.random(1000, 999999))
+    for i = 1, length do
+        local randIndex = math.random(1, #chars)
+        key = key .. chars:sub(randIndex, randIndex)
+    end
+    return key
+end
+
+local function loadStoredKeyData()
+    if not pcall(function() return readfile(WorkspaceFile) end) then
+        return nil
+    end
+    local success, data = pcall(function()
+        return HttpService:JSONDecode(readfile(WorkspaceFile))
+    end)
+    if success then
+        return data
+    end
+    return nil
+end
+
+local function clearKeyData()
+    pcall(function()
+        if isfile(WorkspaceFile) then
+            delfile(WorkspaceFile)
+        end
+    end)
+end
+
+local function saveKeyData(key)
+    local expireTime = os.time() + 86400 -- 24 giờ
+    local data = {
+        key = key,
+        expireTime = expireTime
+    }
+    pcall(function()
+        writefile(WorkspaceFile, HttpService:JSONEncode(data))
+    end)
+end
+
+local function getOrGenerateActiveKey()
+    local data = loadStoredKeyData()
+    local currentTime = os.time()
+
+    if data and data.key and data.expireTime then
+        if currentTime < data.expireTime then
+            return data.key, false
+        else
+            clearKeyData()
+        end
+    end
+
+    local newKey = generateRandomKey(15)
+    saveKeyData(newKey)
+    return newKey, true
+end
+
+local currentKey, isNew = getOrGenerateActiveKey()
+local targetUrl = "https://authtool.app/get-key/?result=DUBO-KEY=" .. currentKey
 
 -- Tạo bảng Get Key UI
 local KeyScreenGui = Instance.new("ScreenGui")
@@ -110,7 +179,7 @@ local keyVerified = false
 
 GetKeyButton.MouseButton1Click:Connect(function()
     pcall(function()
-        setclipboard("https://link4m.com/your-link-here") -- Thay link get key của bạn vào đây
+        setclipboard(targetUrl)
     end)
     StatusLabelKey.TextColor3 = Color3.fromRGB(50, 180, 255)
     StatusLabelKey.Text = "Copied get key link to clipboard!"
@@ -118,19 +187,33 @@ end)
 
 SubmitButton.MouseButton1Click:Connect(function()
     local userKey = KeyTextBox.Text
-    if userKey == "DUBO-KEY-CORRECT" then -- Thay key thật của bạn vào đây
-        StatusLabelKey.TextColor3 = Color3.fromRGB(50, 220, 50)
-        StatusLabelKey.Text = "Key correct! Loading script..."
-        task.wait(1)
-        KeyScreenGui:Destroy()
-        keyVerified = true
+    local data = loadStoredKeyData()
+    
+    if data and data.key and data.expireTime then
+        if os.time() >= data.expireTime then
+            clearKeyData()
+            StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
+            StatusLabelKey.Text = "Key has expired (24h)!"
+            return
+        end
+        
+        if userKey == data.key then
+            StatusLabelKey.TextColor3 = Color3.fromRGB(50, 220, 50)
+            StatusLabelKey.Text = "Key correct! Loading script..."
+            task.wait(1)
+            KeyScreenGui:Destroy()
+            keyVerified = true
+        else
+            StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
+            StatusLabelKey.Text = "Key does not exist or incorrect!"
+        end
     else
         StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
         StatusLabelKey.Text = "Key does not exist or has expired!"
     end
 end)
 
--- Dừng toàn bộ chương trình cho đến khi xác thực thành công
+-- Dừng chương trình cho đến khi xác thực thành công
 repeat task.wait(0.5) until keyVerified
 
 -- ==========================================
@@ -139,7 +222,6 @@ repeat task.wait(0.5) until keyVerified
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -199,26 +281,7 @@ local FruitImages = {
     ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a94640d&is=6a93128d&hm=98e417d81d43990278c81b08d4c05f1f9de0a80dd7e29a3c8f0a910aa9c149b3&",
     ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a946448&is=6a9312c8&hm=5c7f68b3e580bbb287f69c4c3fdaa7e591eadb9ff1b108281226f676712fde33&",
     ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9464d9&is=6a931359&hm=a0725fdd6df76ccce3c1f1e17c9e4488fe11fe2964f8644035f7df5cc8098ab0&",
-    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&",
-    ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308123475988510/image0.jpg?ex=6a946532&is=6a9313b2&hm=1234567890abcdef...",
-    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg?ex=6a946568&is=6a9313e8&hm=1234567890abcdef...",
-    ["Sound"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308591241769012/image0.jpg?ex=6a9465a2&is=6a931422&hm=1234567890abcdef...",
-    ["Phoenix"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308823178461244/image0.jpg?ex=6a9465da&is=6a93145a&hm=1234567890abcdef...",
-    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg?ex=6a946611&is=6a931491&hm=1234567890abcdef...",
-    ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309281536725052/image0.jpg?ex=6a946648&is=6a9314c8&hm=1234567890abcdef...",
-    ["Rumble"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309512391278632/image0.jpg?ex=6a94667f&is=6a9314ff&hm=1234567890abcdef...",
-    ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309753471418422/image0.jpg?ex=6a9466b9&is=6a9314f9&hm=1234567890abcdef...",
-    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg?ex=6a9466f9&is=6a931539&hm=1234567890abcdef...",
-    ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310281249087522/image0.jpg?ex=6a946737&is=6a931577&hm=1234567890abcdef...",
-    ["Venom"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310541912543252/image0.jpg?ex=6a946775&is=6a9315f5&hm=1234567890abcdef...",
-    ["Control"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310801217318932/image0.jpg?ex=6a9467b3&is=6a9315f3&hm=1234567890abcdef...",
-    ["Gas"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311062325350412/image0.jpg?ex=6a9467f1&is=6a931631&hm=1234567890abcdef...",
-    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg?ex=6a946830&is=6a9316b0&hm=1234567890abcdef...",
-    ["Mammoth"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311582138138712/image0.jpg?ex=6a94686e&is=6a9316ee&hm=1234567890abcdef...",
-    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg?ex=6a9468ac&is=6a93172c&hm=1234567890abcdef...",
-    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg?ex=6a9468ea&is=6a93176a&hm=1234567890abcdef...",
-    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg?ex=6a946929&is=6a9317a9&hm=1234567890abcdef...",
-    ["Creative"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312622912470052/image0.jpg?ex=6a946967&is=6a9317e7&hm=1234567890abcdef..."
+    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&"
 }
 
 local function sendDiscordWebhook(fruitName, uniqueId)
@@ -228,9 +291,8 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local maskedName = "||" .. Player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
+    local fruitImage = FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
@@ -238,34 +300,14 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         ["avatar_url"] = defaultImage,
         ["embeds"] = {{
             ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
+            ["author"] = {["name"] = "DUBO HUB Notification", ["icon_url"] = defaultImage},
+            ["thumbnail"] = {["url"] = fruitImage},
             ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                }
+                {["name"] = "Main Status", ["value"] = "Username : " .. maskedName, ["inline"] = false},
+                {["name"] = "Status", ["value"] = "```fix\nStored Fruit Successfully!\n```", ["inline"] = false},
+                {["name"] = "Fruit", ["value"] = "```fix\n" .. cleanFruitName .. "\n```", ["inline"] = false}
             },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
+            ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"), ["icon_url"] = defaultImage}
         }}
     }
     
@@ -573,7 +615,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = Player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    StatusLabel.Text = "Fast TP: " + obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
