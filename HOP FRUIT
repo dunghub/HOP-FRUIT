@@ -27,10 +27,9 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY (HỖ TRỢ CẢ KEY THƯỜNG VÀ PREMIUM)
+-- HỆ THỐNG XÁC THỰC KEY (HỖ TRỢ CẢ KEY THƯỜNG VÀ PREMIUM CHUNG 1 KHUNG)
 -- ==========================================
 local GITHUB_KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/main/DUBO%20HUB%20KEY"
--- Link Get Key cho bản Thường (có thể thay đổi link bên dưới)
 local GET_KEY_LINK = "https://link4m.com/example" 
 
 local WORKSPACE_FOLDER = "DuboHubKeySystem"
@@ -74,7 +73,6 @@ local function validateKeyWithServer(inputKey)
             local hwidOnServer = parts[2] and parts[2]:gsub("^%s*(.-)%s*$", "%1") or ""
 
             if keyOnServer == inputKey then
-                -- Nếu trên server có đi kèm HWID (Dành cho Premium)
                 if hwidOnServer and hwidOnServer ~= "" then
                     if hwidOnServer == currentHWID then
                         return true, "Thành công"
@@ -82,7 +80,6 @@ local function validateKeyWithServer(inputKey)
                         return false, "Key này đã bị khóa với HWID của máy khác!"
                     end
                 else
-                    -- Key thường không ràng buộc HWID
                     return true, "Thành công"
                 end
             end
@@ -111,7 +108,7 @@ end
 local isAutoLoginValid, savedKey = checkAutoLogin()
 local keyVerified = isAutoLoginValid
 
--- Nếu chưa đăng nhập thành công, hiện giao diện khung Key System gốc
+-- Giao diện Key System duy nhất (Y hệt ảnh mẫu 3 & 4: Dùng chung một khung, nhập key rồi ấn Submit)
 if not keyVerified then
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "DuboHubKeySystem"
@@ -146,7 +143,7 @@ if not keyVerified then
     KeyTextBox.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
     KeyTextBox.BorderSizePixel = 0
     KeyTextBox.Font = Enum.Font.Gotham
-    KeyTextBox.PlaceholderText = "Paste your key here..."
+    KeyTextBox.PlaceholderText = "Paste your key here (Free / Premium)..."
     KeyTextBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
     KeyTextBox.Text = ""
     KeyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -192,12 +189,12 @@ if not keyVerified then
     StatusLabel.Position = UDim2.new(0, 0, 0, 235)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Font = Enum.Font.Gotham
-    StatusLabel.Text = ""
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+    StatusLabel.Text = "Hardware Locked System"
+    StatusLabel.TextColor3 = Color3.fromRGB(110, 120, 140)
     StatusLabel.TextSize = 12
     StatusLabel.Parent = MainFrame
 
-    -- Nút lấy key (Bản Thường)
+    -- Nút lấy key (Dành cho bản Thường)
     GetKeyButton.MouseButton1Click:Connect(function()
         pcall(function()
             if setclipboard then
@@ -210,7 +207,7 @@ if not keyVerified then
         end)
     end)
 
-    -- Nút bấm Submit: Xử lý cả Key Thường lẫn Key Premium tự động gạt vào
+    -- Nút Submit chung: Cả khách thường lẫn Premium đều dán key vào đây rồi ấn Summit
     SubmitButton.MouseButton1Click:Connect(function()
         local inputKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
         if inputKey == "" then
@@ -246,7 +243,7 @@ end
 repeat task.wait(0.5) until keyVerified
 
 -- ==========================================
--- PHẦN SCRIPT CHÍNH (AUTO HOP & CHỐNG LỖI 773)
+-- PHẦN SCRIPT CHÍNH (KAITUN FRUIT, ESP & AUTO HOP)
 -- ==========================================
 local Camera = Workspace.CurrentCamera
 
