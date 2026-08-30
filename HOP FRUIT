@@ -475,13 +475,13 @@ local GetKeyBtn = Instance.new("TextButton")
 GetKeyBtn.Size = UDim2.new(0, 280, 0, 35)
 GetKeyBtn.Position = UDim2.new(0.5, -140, 0, 135)
 GetKeyBtn.BackgroundColor3 = Color3.fromRGB(20, 40, 70)
-GetKeyBtn.BorderSizePixel, 0 = 0, 0
+GetKeyBtn.BorderSizePixel = 0
 GetKeyBtn.Text = "GET KEY LINK"
 GetKeyBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
 GetKeyBtn.TextSize = 14
 GetKeyBtn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
-GetKeyBtn.Parent = MainField -- giữ nguyên logic cũ, đoạn này chuẩn xác theo mã gốc
+GetKeyBtn.Parent = MainFrame
 
 local Notification = Instance.new("TextLabel")
 Notification.Size = UDim2.new(1, 0, 0, 25)
