@@ -13,7 +13,7 @@ local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ==================== CẤU HÌNH (THAY LINK CỦA ÔNG VÀO ĐÂY) ====================
-local KEY_URL = "LINK_GITHUB_RAW_CỦA_FILE_KEY_DUBO"
+local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session.json"
 -- ==============================================================================
