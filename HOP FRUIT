@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - UNIFIED KEY SYSTEM (DYNAMIC GENERATION + 24H CACHE) & AUTO HOP
+-- DUBO HUB - UNIFIED KEY SYSTEM (PERMANENT SYSTEM KEY + 24H LOCAL CACHE) & AUTO HOP
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -27,7 +27,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY (LƯU TẠM 24H, SO SÁNH RỒI XÓA FILE)
+-- HỆ THỐNG XÁC THỰC KEY (WORKSPACE CACHE 24H + KEY HỆ THỐNG VĨNH VIỄN)
 -- ==========================================
 local GITHUB_KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/main/DUBO%20HUB%20KEY"
 local WORKSPACE_FOLDER = "DuboHubKeySystem"
@@ -37,7 +37,7 @@ if not isfolder(WORKSPACE_FOLDER) then
     makefolder(WORKSPACE_FOLDER)
 end
 
--- Hàm tạo chuỗi ngẫu nhiên (chữ hoa, chữ thường, số)
+-- Hàm tạo chuỗi ngẫu nhiên chuẩn cấu trúc authtool (chữ hoa, chữ thường, số)
 local function generateRandomString(length)
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local randomStr = ""
@@ -65,6 +65,12 @@ end
 local currentHWID = getMyHWID()
 
 local function validateKeyWithServer(inputKey)
+    -- 1. Kiểm tra nếu là key hệ thống vĩnh viễn dạng DUBO-KEY=... do bạn phát hành
+    if inputKey:match("^DUBO%-KEY=") then
+        return true, "Thành công (Hệ thống vĩnh viễn)"
+    end
+
+    -- 2. Nếu không phải key hệ thống thì check qua danh sách trên GitHub
     local success, response = pcall(function()
         return game:HttpGet(GITHUB_KEY_URL)
     end)
@@ -106,16 +112,15 @@ local function checkAutoLogin()
         end)
         
         if success and data and data.Key and data.Time then
-            -- Kiểm tra xem quá 24 giờ (86400 giây) hay chưa
+            -- Kiểm tra xem quá 24 giờ (86400 giây) trong workspace hay chưa
             local currentTime = os.time()
             if (currentTime - data.Time) < 86400 then
-                -- Kiểm tra lại với server hoặc key tạm đã nhớ
                 local isValid, _ = validateKeyWithServer(data.Key)
                 if isValid then
                     return true, data.Key
                 end
             else
-                -- Quá hạn 24h -> Xóa luôn file trong workspace
+                -- Quá hạn 24h thì tự động xóa file trong workspace yêu cầu nhập lại hoặc lấy key mới
                 pcall(function() delfile(LOCAL_KEY_FILE) end)
             end
         end
@@ -129,7 +134,7 @@ local keyVerified = isAutoLoginValid
 -- Biến lưu tạm key vừa được tạo ra từ nút GET KEY LINK ở phiên chạy này
 local currentGeneratedKey = ""
 
--- Giao diện Key System duy nhất
+-- Giao diện Key System (chỉ hiện khi chưa xác thực hoặc hết hạn 24h trong workspace)
 if not keyVerified then
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "DuboHubKeySystem"
@@ -164,7 +169,7 @@ if not keyVerified then
     KeyTextBox.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
     KeyTextBox.BorderSizePixel = 0
     KeyTextBox.Font = Enum.Font.Gotham
-    KeyTextBox.PlaceholderText = "Paste your key here (Free / Premium)..."
+    KeyTextBox.PlaceholderText = "Paste your key here (Permanent / GitHub)..."
     KeyTextBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
     KeyTextBox.Text = ""
     KeyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -210,12 +215,12 @@ if not keyVerified then
     StatusLabel.Position = UDim2.new(0, 0, 0, 235)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Font = Enum.Font.Gotham
-    StatusLabel.Text = "Hardware Locked System (24H Cache)"
+    StatusLabel.Text = "Workspace Cache (24H) & Permanent Key System"
     StatusLabel.TextColor3 = Color3.fromRGB(110, 120, 140)
     StatusLabel.TextSize = 12
     StatusLabel.Parent = MainFrame
 
-    -- Nút lấy key: Tự sinh đoạn chuỗi random, ghép vào link authtool và nhớ tạm thời để so sánh
+    -- Nút lấy key: Tạo link authtool với đoạn mã random vĩnh viễn chuẩn của bạn
     GetKeyButton.MouseButton1Click:Connect(function()
         pcall(function()
             local randomPart = generateRandomString(16)
@@ -224,7 +229,7 @@ if not keyVerified then
             
             if setclipboard then
                 setclipboard(dynamicGetKeyLink)
-                StatusLabel.Text = "Copied Get Key link! (Temporary remembered)"
+                StatusLabel.Text = "Copied Link! (Key generated for you)"
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             else
                 StatusLabel.Text = "Executor does not support clipboard."
@@ -232,7 +237,7 @@ if not keyVerified then
         end)
     end)
 
-    -- Nút Submit: So sánh với key vừa tạo tạm hoặc check GitHub, nếu đúng thì lưu file workspace dùng 24h
+    -- Nút Submit: Kiểm tra, lưu vào Workspace dùng liên tục trong 24 giờ
     SubmitButton.MouseButton1Click:Connect(function()
         local inputKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
         if inputKey == "" then
@@ -246,12 +251,11 @@ if not keyVerified then
         local isValid = false
         local message = ""
 
-        -- Nếu người dùng nhập đúng cái key tạm mà nút GET KEY LINK vừa tạo ra ở phiên này
+        -- Nếu trùng với key hệ thống vừa sinh ra hoặc hợp lệ qua hàm check
         if currentGeneratedKey ~= "" and inputKey == currentGeneratedKey then
             isValid = true
-            message = "Success (Temporary Key Match)!"
+            message = "Success (Generated Permanent Key)!"
         else
-            -- Nếu không phải key tạm thì check qua GitHub như bình thường
             isValid, message = validateKeyWithServer(inputKey)
         end
 
@@ -259,7 +263,7 @@ if not keyVerified then
             StatusLabel.Text = "SUCCESS!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             
-            -- Lưu vào workspace kèm mốc thời gian (dùng trong 24 giờ)
+            -- Ghi vào thư mục Workspace để 24h tới mở lên tự động dùng luôn không cần nhập lại
             pcall(function()
                 local data = { 
                     Key = inputKey,
