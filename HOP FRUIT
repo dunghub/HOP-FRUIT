@@ -49,34 +49,8 @@ local function cleanupExpiredData()
     end
 end
 
--- Kiểm tra kho Key Premium riêng biệt trên GitHub (Vĩnh viễn)
-local function checkIsKeyPremium()
-    local success, response = pcall(function()
-        return game:HttpGet(KEY_URL)
-    end)
-    if success and response then
-        for line in response:gmatch("[^\r\n]+") do
-            local cleanLine = line:match("^%s*(.-)%s*$")
-            if cleanLine ~= "" then
-                local parts = {}
-                for part in cleanLine:gmatch("[^/]+") do
-                    table.insert(parts, part:match("^%s*(.-)%s*$"))
-                end
-                -- Nếu kho phụ 500s hoặc file github chứa key này mà không cần gán HWID ngặt nghèo
-                -- (Hoặc theo chuẩn file github chứa danh sách key)
-                if parts[1] then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
--- Hàm lấy nội dung hiển thị ở đáy khung hoạt động script chính
 local function getActiveFooterText()
     local success, response = pcall(function() return game:HttpGet(KEY_URL) end)
-    -- Nếu đang dùng key trong file GitHub thì hiện vĩnh viễn
     pcall(function()
         if success and response then
             local cachedData = readfile and isfile and isfile(CACHE_FILE) and HttpService:JSONDecode(readfile(CACHE_FILE))
@@ -103,7 +77,7 @@ local function getActiveFooterText()
     end)
     
     if sessionTime > 0 then
-        local expireTime = sessionTime + 86400 -- 24 giờ
+        local expireTime = sessionTime + 86400
         local remainingSeconds = expireTime - currentTime
         
         if remainingSeconds > 0 then
@@ -122,7 +96,7 @@ local function registerGeneratedKey(newKey)
     local currentTime = os.time()
     TemporaryKeyPool[newKey] = {
         createdTime = currentTime,
-        expireTime = currentTime + 500 -- Kho phụ 500 giây
+        expireTime = currentTime + 500
     }
 end
 
@@ -148,11 +122,9 @@ local function getLaymaShortLink(targetUrl)
     return targetUrl
 end
 
--- So sánh key nhập vào kho phụ 500s hoặc check key trong file GitHub
 local function verifyKey(inputKey)
     cleanupExpiredData()
     
-    -- 1. Check kho file GitHub (Chỉ cần có trong link file key là được coi như hợp lệ/vĩnh viễn)
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
     end)
@@ -171,7 +143,6 @@ local function verifyKey(inputKey)
         end
     end
 
-    -- 2. Check kho phụ 500 giây (TemporaryKeyPool)
     if TemporaryKeyPool[inputKey] then
         TemporaryKeyPool[inputKey] = nil
         return true, "Success! Key accepted for 24 hours."
@@ -250,32 +221,87 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active, MainFrame.Draggable = true, true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
-local RainbowStroke = Instance.new("UIStroke", MainFrame)
-RainbowStroke.Thickness = 4
 
+-- Viền xanh chuẩn như ảnh
+local BlueStroke = Instance.new("UIStroke", MainFrame)
+BlueStroke.Thickness = 3
+BlueStroke.Color = Color3.fromRGB(0, 102, 255)
+
+-- Hiệu ứng bông tuyết rơi trang trí UI
+local SnowContainer = Instance.new("Folder", MainFrame)
+SnowContainer.Name = "SnowContainer"
 task.spawn(function()
-    while true do
-        for i = 0, 1, 0.005 do
-            RainbowStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.02)
-        end
+    while ScreenGui and ScreenGui.Parent do
+        pcall(function()
+            local flake = Instance.new("Frame", SnowContainer)
+            flake.Size = UDim2.new(0, math.random(3, 6), 0, math.random(3, 6))
+            flake.Position = UDim2.new(math.random(), 0, 0, -10)
+            flake.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            flake.BackgroundTransparency = math.random(20, 50) / 100
+            Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
+            
+            task.spawn(function()
+                local duration = math.random(3, 6)
+                local elapsed = 0
+                local startX = flake.Position.X.Scale
+                while elapsed < duration and flake and flake.Parent do
+                    elapsed = elapsed + task.wait()
+                    local alpha = elapsed / duration
+                    flake.Position = UDim2.new(startX + math.sin(alpha * 10) * 0.05, 0, alpha, 0)
+                end
+                if flake then flake:Destroy() end
+            end)
+        end)
+        task.wait(0.4)
     end
 end)
 
+-- Avatar chuẩn y hệt ảnh
+local AvatarFrame = Instance.new("ImageLabel", MainFrame)
+AvatarFrame.Size = UDim2.new(0, 75, 0, 75)
+AvatarFrame.Position = UDim2.new(0.5, -37.5, 0, 20)
+AvatarFrame.BackgroundTransparency = 1
+AvatarFrame.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
+
+local AvatarStroke = Instance.new("UIStroke", AvatarFrame)
+AvatarStroke.Thickness = 2
+AvatarStroke.Color = Color3.fromRGB(0, 170, 255)
+
+local HubTitle = Instance.new("TextLabel", MainFrame)
+HubTitle.Size = UDim2.new(1, 0, 0, 22)
+HubTitle.Position = UDim2.new(0, 0, 0, 102)
+HubTitle.BackgroundTransparency = 1
+HubTitle.Text = "DUBO HUB"
+HubTitle.TextColor3 = Color3.fromRGB(0, 255, 180)
+HubTitle.TextSize = 16
+HubTitle.Font = Enum.Font.GothamBold
+
+local SubTitle = Instance.new("TextLabel", MainFrame)
+SubTitle.Size = UDim2.new(1, 0, 0, 18)
+SubTitle.Position = UDim2.new(0, 0, 0, 124)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "DUBO KAITUN FRUIT"
+SubTitle.TextColor3 = Color3.fromRGB(180, 190, 210)
+SubTitle.TextSize = 12
+SubTitle.Font = Enum.Font.Gotham
+
+-- Khung hiển thị "Scanning..." đúng vị trí ảnh
 local StatusBox = Instance.new("Frame", MainFrame)
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
-StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+StatusBox.Position = UDim2.new(0.5, -125, 0, 155)
+StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
 Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12)
 
 local StatusLabel = Instance.new("TextLabel", StatusBox)
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "... Initializing ..."
-StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+StatusLabel.Text = "Scanning..."
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 
+-- Dòng thời hạn key còn lại ở dưới cùng đúng yêu cầu
 local ActiveTimerLabel = Instance.new("TextLabel", MainFrame)
 ActiveTimerLabel.Size = UDim2.new(1, 0, 0, 30)
 ActiveTimerLabel.Position = UDim2.new(0, 0, 1, -32)
@@ -337,6 +363,9 @@ end
 
 local function autoPickAndStore()
     pcall(function()
+        StatusLabel.Text = "Scanning..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
         if player.Character then for _, item in ipairs(player.Character:GetChildren()) do storeFruit(item) end end
         if player:FindFirstChild("Backpack") then for _, item in ipairs(player.Backpack:GetChildren()) do storeFruit(item) end end
         for _, obj in ipairs(Workspace:GetChildren()) do
@@ -358,9 +387,6 @@ end
 task.spawn(function()
     while true do
         isRunning = true
-        StatusLabel.Text = "Team: " .. chosenFaction
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        
         local attempts = 0
         repeat
             pcall(function() if remoteComm then remoteComm:InvokeServer("SetTeam", chosenFaction) end end)
@@ -385,7 +411,6 @@ local function checkSavedSession()
     local success, result = pcall(function()
         if readfile and isfile and isfile(CACHE_FILE) then
             local data = HttpService:JSONDecode(readfile(CACHE_FILE))
-            -- Nếu có cache và còn hạn 24h hoặc key nằm trong github
             if data and data.Time and (os.time() - data.Time < 86400) then 
                 return true 
             end
@@ -399,7 +424,6 @@ if checkSavedSession() then
     return
 end
 
--- Kiểm tra ngay nếu key đang lưu trong cache khớp với file GitHub thì chạy luôn
 pcall(function()
     if readfile and isfile and isfile(CACHE_FILE) then
         local data = HttpService:JSONDecode(readfile(CACHE_FILE))
