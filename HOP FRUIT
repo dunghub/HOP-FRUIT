@@ -218,7 +218,7 @@ local function runMainScript()
         end
     end)
 
-    -- KHUNG AVATAR PROFILE & HIỆU ỨNG BÔNG TUYẾT QUAY TRÒN, BAY NHẸ
+    -- KHUNG AVATAR PROFILE & HIỆU ỨNG BÔNG TUYẾT XOAY VÀ RƠI XUỐNG
     local AvatarFrame = Instance.new("ImageLabel", MainFrame)
     AvatarFrame.Size = UDim2.new(0, 90, 0, 90)
     AvatarFrame.Position = UDim2.new(0.5, -45, 0, 20)
@@ -243,18 +243,23 @@ local function runMainScript()
     Snowflake2.Text = "❄️"
     Snowflake2.TextSize = 16
 
-    -- Chạy hiệu ứng xoay tròn và bay lượn cho 2 bông tuyết
-    task.spawn(function()
-        local angle = 0
-        while Snowflake1 and Snowflake2 and Snowflake1.Parent and Snowflake2.Parent do
-            angle = angle + 0.05
-            Snowflake1.Rotation = angle * 20
-            Snowflake1.Position = UDim2.new(0.5, -60 + math.sin(angle) * 5, 0, 15 + math.cos(angle) * 3)
-            
-            Snowflake2.Rotation = -angle * 20
-            Snowflake2.Position = UDim2.new(0.5, 40 + math.cos(angle) * 5, 0, 15 + math.sin(angle) * 3)
-            
-            task.wait(0.03)
+    -- Vòng lặp RenderStepped làm bông tuyết bay lượn kết hợp rơi từ từ xuống dưới
+    local snowFall1Y = 15
+    local snowFall2Y = 15
+    
+    RunService.RenderStepped:Connect(function()
+        local t = tick() * 3
+        if Snowflake1 and Snowflake1.Parent then
+            Snowflake1.Rotation = t * 60
+            snowFall1Y = snowFall1Y + 0.45
+            if snowFall1Y > 100 then snowFall1Y = -15 end
+            Snowflake1.Position = UDim2.new(0.5, -60 + math.sin(t) * 8, 0, snowFall1Y)
+        end
+        if Snowflake2 and Snowflake2.Parent then
+            Snowflake2.Rotation = -t * 60
+            snowFall2Y = snowFall2Y + 0.35
+            if snowFall2Y > 100 then snowFall2Y = -15 end
+            Snowflake2.Position = UDim2.new(0.5, 40 + math.cos(t) * 8, 0, snowFall2Y)
         end
     end)
 
