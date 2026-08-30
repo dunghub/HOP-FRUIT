@@ -8,7 +8,6 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Clipboard = setclipboard or toclipboard or syn and syn.clipboard
 
 local player = Players.LocalPlayer
@@ -19,12 +18,13 @@ pcall(function()
     remoteComm = ReplicatedStorage.Remotes.CommF_
 end)
 
-local isRunning = true
+local isRunning = false -- Mặc định chưa get key thì KHÔNG CHO CHẠY
 local storedFruitsCache = {}
 
 DuboCFG = DuboCFG or {}
 
--- ==================== HỆ THỐNG XÁC THỰC KEY & HWID ====================
+-- ==================== HỆ THỐNG XÁC THỰC KEY, HWID & LƯU FILE ====================
+local KEY_FILE_NAME = "dubo_fruit_key.json"
 local PendingKeysStore = {}
 local CentralHWIDStore = {}
 
@@ -49,6 +49,32 @@ local function generateRandomString(length)
         table.insert(s, chars:sub(randIndex, randIndex))
     end
     return table.concat(s)
+end
+
+-- Lưu key xuống thiết bị
+local function saveSavedKey(key)
+    if writefile then
+        pcall(function()
+            local data = HttpService:JSONEncode({Key = key, Time = tick()})
+            writefile(KEY_FILE_NAME, data)
+        end)
+    end
+end
+
+-- Đọc key đã lưu trên thiết bị
+local function getSavedKey()
+    if readfile and isfile and isfile(KEY_FILE_NAME) then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(KEY_FILE_NAME))
+        end)
+        if success and result and result.Key then
+            -- Kiểm tra xem key lưu trong vòng 24h không (86400s) hoặc tùy ý ông
+            if tick() - (result.Time or 0) < 86400 then
+                return result.Key
+            end
+        end
+    end
+    return nil
 end
 
 local function verifyAccess(inputKey)
@@ -94,13 +120,21 @@ end
 local function submitAndVerifyKey(inputKey)
     local currentHWID = getClientHWID()
     
+    -- Kiểm tra nếu nhập trực tiếp key hệ thống hoặc key vừa gen
+    if verifyAccess(inputKey) then
+        CentralHWIDStore[currentHWID] = tick() + 86400
+        saveSavedKey(inputKey)
+        return true, "Thành công! Đã lưu key trên thiết bị."
+    end
+
     local pendingData = PendingKeysStore[inputKey]
     if pendingData then
         if tick() <= pendingData.expiresAt then
             if pendingData.hwid == currentHWID then
                 CentralHWIDStore[currentHWID] = tick() + 86400
                 PendingKeysStore[inputKey] = nil
-                return true, "Thành công! Kích hoạt 24 giờ."
+                saveSavedKey(inputKey)
+                return true, "Thành công! Đã lưu key trên thiết bị."
             else
                 return false, "Key không thuộc thiết bị này!"
             end
@@ -336,7 +370,6 @@ KeyInputStroke.Thickness = 1.5
 KeyInputStroke.Color = Color3.fromRGB(60, 60, 90)
 KeyInputStroke.Parent = KeyInputBox
 
--- Nút Submit Key
 local SubmitButton = Instance.new("TextButton")
 SubmitButton.Size = UDim2.new(0, 270, 0, 38)
 SubmitButton.Position = UDim2.new(0.5, -135, 0, 240)
@@ -352,7 +385,6 @@ local SubmitCorner = Instance.new("UICorner")
 SubmitCorner.CornerRadius = UDim.new(0, 8)
 SubmitCorner.Parent = SubmitButton
 
--- Nút Get Key
 local GetKeyButton = Instance.new("TextButton")
 GetKeyButton.Size = UDim2.new(0, 270, 0, 38)
 GetKeyButton.Position = UDim2.new(0.5, -135, 0, 285)
@@ -368,7 +400,6 @@ local GetKeyCorner = Instance.new("UICorner")
 GetKeyCorner.CornerRadius = UDim.new(0, 8)
 GetKeyCorner.Parent = GetKeyButton
 
--- Khung hiển thị Link Get Key (Sẽ hiện link đầy đủ có gắn chuỗi random 15 ký tự để copy)
 local LinkBox = Instance.new("TextBox")
 LinkBox.Size = UDim2.new(0, 270, 0, 38)
 LinkBox.Position = UDim2.new(0.5, -135, 0, 330)
@@ -397,6 +428,7 @@ local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = ScreenGui
 
+-- [KHÓA CHẶT] - Noclipping chỉ chạy khi isRunning = true (đã get key)
 RunService.Stepped:Connect(function()
     if not isRunning then return end
     pcall(function()
@@ -411,6 +443,7 @@ RunService.Stepped:Connect(function()
     end)
 end)
 
+-- [KHÓA CHẶT] - ESP chỉ chạy khi isRunning = true (đã get key)
 RunService.RenderStepped:Connect(function()
     if not isRunning then 
         ESPFolder:ClearAllChildren()
@@ -452,7 +485,6 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Sự kiện bấm nút Get Key: Tự sinh mã ngẫu nhiên 15 ký tự nối vào đuôi authtool.app
 GetKeyButton.MouseButton1Click:Connect(function()
     local link, generatedKey = generateGetKeysLink()
     LinkBox.Text = link
@@ -463,7 +495,6 @@ GetKeyButton.MouseButton1Click:Connect(function()
     StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 end)
 
--- Sự kiện bấm nút Submit Key: So khớp 1:1 với key được sinh lúc nãy
 SubmitButton.MouseButton1Click:Connect(function()
     local inputVal = KeyInputBox.Text
     local success, msg = submitAndVerifyKey(inputVal)
@@ -472,13 +503,14 @@ SubmitButton.MouseButton1Click:Connect(function()
         StatusLabel.Text = msg
         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         task.wait(1)
-        -- Ẩn phần UI Key đi hoặc thu gọn khung sau khi vượt thành công
         MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
         KeyInputBox.Visible = false
         SubmitButton.Visible = false
         GetKeyButton.Visible = false
         LinkBox.Visible = false
         
+        isRunning = true -- Cho phép script chính hoạt động
+        startMainScript = startMainScript or function() end
         startMainScript()
     else
         StatusLabel.Text = msg
@@ -486,8 +518,8 @@ SubmitButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Bộ lọc Server Hop dưới 6 người chơi (< 6)
 local function hopServer()
+    if not isRunning then return end
     isRunning = false
     StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
@@ -591,10 +623,9 @@ local function autoPickAndStore()
     return found
 end
 
-local function startMainScript()
+startMainScript = function()
     task.spawn(function()
-        while true do
-            isRunning = true
+        while isRunning do
             StatusLabel.Text = "Team: " .. factionDisplayName
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
             
@@ -646,15 +677,24 @@ local function startMainScript()
     end)
 end
 
--- Tự động kiểm tra nếu đã xác thực từ trước đó rồi thì bật script luôn, chưa thì hiện bảng nhập key
+-- Tự động kiểm tra file key đã lưu trên máy khi vừa khởi động
 local function initializeScript()
-    if verifyAccess() then
+    local savedKey = getSavedKey()
+    if savedKey and verifyAccess(savedKey) then
+        StatusLabel.Text = "Auto-loaded saved key!"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.wait(0.8)
         MainFrame:TweenSize(UDim2.new(0, 290, 0, 260), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
         KeyInputBox.Visible = false
         SubmitButton.Visible = false
         GetKeyButton.Visible = false
         LinkBox.Visible = false
+        
+        isRunning = true -- Bật cờ cho phép script chạy thẳng luôn vì đã có key lưu
         startMainScript()
+    else
+        -- Chưa có key / Key hỏng -> Giữ nguyên bảng khóa, KHÔNG CHO CHẠY GÌ CẢ
+        isRunning = false
     end
 end
 
