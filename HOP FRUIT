@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - PREMIUM KEY SYSTEM (WORKSPACE & HWID LOCK) & AUTO HOP
+-- DUBO HUB - UNIFIED KEY SYSTEM (FREE & PREMIUM) & AUTO HOP
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -27,11 +27,14 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY PREMIUM & WORKSPACE
+-- HỆ THỐNG XÁC THỰC KEY (HỖ TRỢ CẢ KEY THƯỜNG VÀ PREMIUM)
 -- ==========================================
 local GITHUB_KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/main/DUBO%20HUB%20KEY"
-local WORKSPACE_FOLDER = "DuboHubPremium"
-local LOCAL_KEY_FILE = WORKSPACE_FOLDER .. "/saved_premium.json"
+-- Link Get Key cho bản Thường (có thể thay đổi link bên dưới)
+local GET_KEY_LINK = "https://link4m.com/example" 
+
+local WORKSPACE_FOLDER = "DuboHubKeySystem"
+local LOCAL_KEY_FILE = WORKSPACE_FOLDER .. "/saved_key.json"
 
 if not isfolder(WORKSPACE_FOLDER) then
     makefolder(WORKSPACE_FOLDER)
@@ -71,16 +74,22 @@ local function validateKeyWithServer(inputKey)
             local hwidOnServer = parts[2] and parts[2]:gsub("^%s*(.-)%s*$", "%1") or ""
 
             if keyOnServer == inputKey then
-                if hwidOnServer == currentHWID then
-                    return true, "Thành công"
+                -- Nếu trên server có đi kèm HWID (Dành cho Premium)
+                if hwidOnServer and hwidOnServer ~= "" then
+                    if hwidOnServer == currentHWID then
+                        return true, "Thành công"
+                    else
+                        return false, "Key này đã bị khóa với HWID của máy khác!"
+                    end
                 else
-                    return false, "Key này đã bị khóa với HWID của máy khác!"
+                    -- Key thường không ràng buộc HWID
+                    return true, "Thành công"
                 end
             end
         end
     end
 
-    return false, "Key không tồn tại trên hệ thống!"
+    return false, "Key does not exist or incorrect!"
 end
 
 local function checkAutoLogin()
@@ -89,12 +98,10 @@ local function checkAutoLogin()
             return HttpService:JSONDecode(readfile(LOCAL_KEY_FILE))
         end)
         
-        if success and data and data.Key and data.HWID then
-            if data.HWID == currentHWID then
-                local isValid, _ = validateKeyWithServer(data.Key)
-                if isValid then
-                    return true, data.Key
-                end
+        if success and data and data.Key then
+            local isValid, _ = validateKeyWithServer(data.Key)
+            if isValid then
+                return true, data.Key
             end
         end
     end
@@ -104,63 +111,43 @@ end
 local isAutoLoginValid, savedKey = checkAutoLogin()
 local keyVerified = isAutoLoginValid
 
--- Nếu chưa đăng nhập tự động qua Workspace thì hiện bảng nhập Key
+-- Nếu chưa đăng nhập thành công, hiện giao diện khung Key System gốc
 if not keyVerified then
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "DuboHubPremiumGUI"
+    ScreenGui.Name = "DuboHubKeySystem"
     ScreenGui.Parent = CoreGui
     ScreenGui.ResetOnSpawn = false
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 320, 0, 240)
-    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -120)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    MainFrame.Size = UDim2.new(0, 390, 0, 305)
+    MainFrame.Position = UDim2.new(0.5, -195, 0.5, -152)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
     MainFrame.Parent = ScreenGui
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.CornerRadius = UDim.new(0, 14)
     UICorner.Parent = MainFrame
 
     local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+    TitleLabel.Size = UDim2.new(1, 0, 0, 45)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.Text = "DUBO HUB - PREMIUM"
-    TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    TitleLabel.TextSize = 18
+    TitleLabel.Text = "DUBO HUB - KEY SYSTEM"
+    TitleLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+    TitleLabel.TextSize = 16
     TitleLabel.Parent = MainFrame
 
-    local StatusBox = Instance.new("Frame")
-    StatusBox.Size = UDim2.new(0, 280, 0, 35)
-    StatusBox.Position = UDim2.new(0.5, -140, 0, 50)
-    StatusBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
-    StatusBox.BorderSizePixel = 0
-    StatusBox.Parent = MainFrame
-
-    local StatusBoxCorner = Instance.new("UICorner")
-    StatusBoxCorner.CornerRadius = UDim.new(0, 8)
-    StatusBoxCorner.Parent = StatusBox
-
-    local StatusLabel = Instance.new("TextLabel")
-    StatusLabel.Size = UDim2.new(1, 0, 1, 0)
-    StatusLabel.BackgroundTransparency = 1
-    StatusLabel.Font = Enum.Font.GothamBold
-    StatusLabel.Text = "Please enter your valid Premium Key!"
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-    StatusLabel.TextSize = 12
-    StatusLabel.Parent = StatusBox
-
     local KeyTextBox = Instance.new("TextBox")
-    KeyTextBox.Size = UDim2.new(0, 280, 0, 40)
-    KeyTextBox.Position = UDim2.new(0.5, -140, 0, 100)
-    KeyTextBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
+    KeyTextBox.Size = UDim2.new(0, 335, 0, 44)
+    KeyTextBox.Position = UDim2.new(0.5, -167.5, 0, 55)
+    KeyTextBox.BackgroundColor3 = Color3.fromRGB(22, 25, 35)
     KeyTextBox.BorderSizePixel = 0
     KeyTextBox.Font = Enum.Font.Gotham
-    KeyTextBox.PlaceholderText = "Enter your Premium Key here..."
-    KeyTextBox.PlaceholderColor3 = Color3.fromRGB(100, 110, 130)
+    KeyTextBox.PlaceholderText = "Paste your key here..."
+    KeyTextBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
     KeyTextBox.Text = ""
     KeyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     KeyTextBox.TextSize = 13
@@ -171,12 +158,12 @@ if not keyVerified then
     BoxCorner.Parent = KeyTextBox
 
     local SubmitButton = Instance.new("TextButton")
-    SubmitButton.Size = UDim2.new(0, 280, 0, 40)
-    SubmitButton.Position = UDim2.new(0.5, -140, 0, 150)
+    SubmitButton.Size = UDim2.new(0, 335, 0, 45)
+    SubmitButton.Position = UDim2.new(0.5, -167.5, 0, 115)
     SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
     SubmitButton.BorderSizePixel = 0
     SubmitButton.Font = Enum.Font.GothamBold
-    SubmitButton.Text = "LOGIN PREMIUM"
+    SubmitButton.Text = "SUBMIT KEY"
     SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     SubmitButton.TextSize = 14
     SubmitButton.Parent = MainFrame
@@ -185,21 +172,50 @@ if not keyVerified then
     SubmitCorner.CornerRadius = UDim.new(0, 8)
     SubmitCorner.Parent = SubmitButton
 
-    local SubMsgLabel = Instance.new("TextLabel")
-    SubMsgLabel.Size = UDim2.new(1, 0, 0, 20)
-    SubMsgLabel.Position = UDim2.new(0, 0, 0, 205)
-    SubMsgLabel.BackgroundTransparency = 1
-    SubMsgLabel.Font = Enum.Font.Gotham
-    SubMsgLabel.Text = "Hardware Locked System"
-    SubMsgLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    SubMsgLabel.TextSize = 11
-    SubMsgLabel.Parent = MainFrame
+    local GetKeyButton = Instance.new("TextButton")
+    GetKeyButton.Size = UDim2.new(0, 335, 0, 45)
+    GetKeyButton.Position = UDim2.new(0.5, -167.5, 0, 175)
+    GetKeyButton.BackgroundColor3 = Color3.fromRGB(22, 32, 35)
+    GetKeyButton.BorderSizePixel = 0
+    GetKeyButton.Font = Enum.Font.GothamBold
+    GetKeyButton.Text = "GET KEY LINK"
+    GetKeyButton.TextColor3 = Color3.fromRGB(0, 255, 128)
+    GetKeyButton.TextSize = 14
+    GetKeyButton.Parent = MainFrame
 
+    local GetKeyCorner = Instance.new("UICorner")
+    GetKeyCorner.CornerRadius = UDim.new(0, 8)
+    GetKeyCorner.Parent = GetKeyButton
+
+    local StatusLabel = Instance.new("TextLabel")
+    StatusLabel.Size = UDim2.new(1, 0, 0, 30)
+    StatusLabel.Position = UDim2.new(0, 0, 0, 235)
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Text = ""
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+    StatusLabel.TextSize = 12
+    StatusLabel.Parent = MainFrame
+
+    -- Nút lấy key (Bản Thường)
+    GetKeyButton.MouseButton1Click:Connect(function()
+        pcall(function()
+            if setclipboard then
+                setclipboard(GET_KEY_LINK)
+                StatusLabel.Text = "Copied Get Key link to clipboard!"
+                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+            else
+                StatusLabel.Text = "Executor does not support clipboard."
+            end
+        end)
+    end)
+
+    -- Nút bấm Submit: Xử lý cả Key Thường lẫn Key Premium tự động gạt vào
     SubmitButton.MouseButton1Click:Connect(function()
         local inputKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
         if inputKey == "" then
-            StatusLabel.Text = "Please type a key!"
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            StatusLabel.Text = "Please enter a key!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
             return
         end
 
@@ -211,7 +227,7 @@ if not keyVerified then
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             
             pcall(function()
-                local data = { Key = inputKey, HWID = currentHWID }
+                local data = { Key = inputKey }
                 writefile(LOCAL_KEY_FILE, HttpService:JSONEncode(data))
             end)
             
@@ -220,8 +236,8 @@ if not keyVerified then
             keyVerified = true
         else
             StatusLabel.Text = message
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            SubmitButton.Text = "LOGIN PREMIUM"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+            SubmitButton.Text = "SUBMIT KEY"
             KeyTextBox.Text = ""
         end
     end)
@@ -409,7 +425,6 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Khung hiển thị trạng thái Premium vĩnh viễn thay thế cho thời gian đếm ngược
 local KeyTimeBox = Instance.new("Frame")
 KeyTimeBox.Size = UDim2.new(0, 250, 0, 28)
 KeyTimeBox.Position = UDim2.new(0.5, -125, 0, 52)
@@ -431,7 +446,7 @@ local KeyTimeLabel = Instance.new("TextLabel")
 KeyTimeLabel.Size = UDim2.new(1, 0, 1, 0)
 KeyTimeLabel.BackgroundTransparency = 1
 KeyTimeLabel.Font = Enum.Font.GothamBold
-KeyTimeLabel.Text = "PREMIUM VĨNH VIỄN"
+KeyTimeLabel.Text = "AUTHENTICATED SYSTEM"
 KeyTimeLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 KeyTimeLabel.TextSize = 11
 KeyTimeLabel.ZIndex = 3
