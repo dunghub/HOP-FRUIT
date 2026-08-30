@@ -1,241 +1,6 @@
---[[
-    DUBO HUB - Blox Fruits Kaitun (Separated Premium GitHub Gate & Dual Warehouse System)
-]]--
-
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
--- ==========================================
--- ARCHITECTURE CONFIGURATION
--- ==========================================
-local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
-
--- Kho chính trung tâm 24 giờ (Main 24h Warehouse Cache)
-local MAIN_CACHE_FILE = "DuboHub_MainWarehouse_24h.json"
-
--- Kho tạm duyệt 500 giây (Temporary 500s Warehouse)
-local TEMP_CACHE_FILE = "DuboHub_TempWarehouse_500s.json"
-
--- File Premium trên GitHub (Định dạng mỗi dòng: KEY/HWID)
-local GITHUB_PREMIUM_URL = "https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/premium_keys.txt"
-
--- Kiểm tra kho chính 24 giờ
-local function checkMainWarehouse()
-    if readfile and isfile and isfile(MAIN_CACHE_FILE) then
-        local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(MAIN_CACHE_FILE))
-        end)
-        if success and data and data.HWID == HWID then
-            if os.time() - (data.Timestamp or 0) < 86400 then -- Hết 24 giờ sẽ xóa dữ liệu
-                return true
-            else
-                pcall(function() delfile(MAIN_CACHE_FILE) end) -- Hết hạn xóa trắng kho chính
-            end
-        end
-    end
-    return false
-end
-
-local function saveMainWarehouse(key)
-    if writefile then
-        pcall(function()
-            local data = {
-                HWID = HWID,
-                Key = key,
-                Timestamp = os.time()
-            }
-            writefile(MAIN_CACHE_FILE, HttpService:JSONEncode(data))
-        end)
-    end
-end
-
--- Kiểm tra kho tạm 500 giây
-local function checkTempWarehouse()
-    if readfile and isfile and isfile(TEMP_CACHE_FILE) then
-        local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(TEMP_CACHE_FILE))
-        end)
-        if success and data and data.HWID == HWID then
-            if os.time() - (data.Timestamp or 0) < 500 then -- Kho tạm 500 giây
-                return true
-            else
-                pcall(function() delfile(TEMP_CACHE_FILE) end) -- Quá 500 giây chưa submit -> Xóa trắng
-            end
-        end
-    end
-    return false
-end
-
-local function saveTempWarehouse()
-    if writefile then
-        pcall(function()
-            local data = {
-                HWID = HWID,
-                Timestamp = os.time()
-            }
-            writefile(TEMP_CACHE_FILE, HttpService:JSONEncode(data))
-        end)
-    end
-end
-
--- Kiểm tra quyền Premium độc lập trên GitHub (Key + HWID)
-local function verifyPremiumGitHub(inputKey)
-    local success, res = pcall(function()
-        local req = request or http_request or syn.request or fluxus.request
-        if req then
-            local response = req({
-                Url = GITHUB_PREMIUM_URL,
-                Method = "GET"
-            })
-            if response and response.StatusCode == 200 then
-                return response.Body
-            end
-        elseif game:HttpGet then
-            return game:HttpGet(GITHUB_PREMIUM_URL)
-        end
-    end)
-    
-    if success and res then
-        for line in res:gmatch("[^\r\n]+") do
-            local cleanLine = line:gsub("%s+", "")
-            local expectedLine = inputKey .. "/" .. HWID
-            if cleanLine == expectedLine or cleanLine == inputKey then
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- GUI Key System & Warehouses Gate
-local KeySystemGui = Instance.new("ScreenGui")
-KeySystemGui.Name = "DuboKeySystem"
-KeySystemGui.Parent = CoreGui
-KeySystemGui.ResetOnSpawn = false
-
-local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 320, 0, 210)
-KeyFrame.Position = UDim2.new(0.5, -160, 0.5, -105)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-KeyFrame.BorderSizePixel = 0
-KeyFrame.Active = true
-KeyFrame.Draggable = true
-KeyFrame.Parent = KeySystemGui
-
-local KeyCorner = Instance.new("UICorner")
-KeyCorner.CornerRadius = UDim.new(0, 14)
-KeyCorner.Parent = KeyFrame
-
-local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Thickness = 2
-KeyStroke.Color = Color3.fromRGB(255, 215, 0)
-KeyStroke.Parent = KeyFrame
-
-local TitleKey = Instance.new("TextLabel")
-TitleKey.Size = UDim2.new(1, 0, 0, 40)
-TitleKey.BackgroundTransparency = 1
-TitleKey.Text = "DUBO HUB - GATEWAY"
-TitleKey.TextColor3 = Color3.fromRGB(255, 215, 0)
-TitleKey.TextSize = 16
-TitleKey.Font = Enum.Font.GothamBold
-TitleKey.Parent = KeyFrame
-
-local BoxKey = Instance.new("TextBox")
-BoxKey.Size = UDim2.new(0, 280, 0, 40)
-BoxKey.Position = UDim2.new(0.5, -140, 0, 50)
-BoxKey.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-BoxKey.BorderSizePixel = 0
-BoxKey.PlaceholderText = "Enter Premium Key..."
-BoxKey.Text = ""
-BoxKey.TextColor3 = Color3.fromRGB(255, 255, 255)
-BoxKey.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
-BoxKey.TextSize = 14
-BoxKey.Font = Enum.Font.Gotham
-BoxKey.Parent = KeyFrame
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 8)
-BoxCorner.Parent = BoxKey
-
-local CheckBtn = Instance.new("TextButton")
-CheckBtn.Size = UDim2.new(0, 135, 0, 38)
-CheckBtn.Position = UDim2.new(0.05, 0, 0, 105)
-CheckBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-CheckBtn.BorderSizePixel = 0
-CheckBtn.Text = "Check Key"
-CheckBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CheckBtn.TextSize = 14
-CheckBtn.Font = Enum.Font.GothamBold
-CheckBtn.Parent = KeyFrame
-
-local CheckCorner = Instance.new("UICorner")
-CheckCorner.CornerRadius = UDim.new(0, 8)
-CheckCorner.Parent = CheckBtn
-
-local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0, 135, 0, 38)
-GetKeyBtn.Position = UDim2.new(0.52, 0, 0, 105)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
-GetKeyBtn.BorderSizePixel = 0
-GetKeyBtn.Text = "Get Key (500s)"
-GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyBtn.TextSize = 14
-GetKeyBtn.Font = Enum.Font.GothamBold
-GetKeyBtn.Parent = KeyFrame
-
-local GetCorner = Instance.new("UICorner")
-GetCorner.CornerRadius = UDim.new(0, 8)
-GetCorner.Parent = GetKeyBtn
-
-local TimerLabel = Instance.new("TextLabel")
-TimerLabel.Size = UDim2.new(1, 0, 0, 25)
-TimerLabel.Position = UDim2.new(0, 0, 0, 155)
-TimerLabel.BackgroundTransparency = 1
-TimerLabel.Text = "HWID: " .. HWID:sub(1, 12) .. "..."
-TimerLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-TimerLabel.TextSize = 11
-TimerLabel.Font = Enum.Font.Gotham
-TimerLabel.Parent = KeyFrame
-
-local accessGranted = false
-
--- Tiến hành xét duyệt lối vào
-if checkMainWarehouse() or checkTempWarehouse() then
-    accessGranted = true
-    KeySystemGui:Destroy()
-else
-    GetKeyBtn.MouseButton1Click:Connect(function()
-        saveTempWarehouse() -- Đưa vào kho tạm 500 giây chờ đón khách / submit
-        setclipboard("https://link4m.com/dubohub-getkey?hwid=" .. HWID)
-        TimerLabel.Text = "Copied link! Kho tạm 500s active."
-        TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-    end)
-
-    CheckBtn.MouseButton1Click:Connect(function()
-        local input = BoxKey.Text
-        if verifyPremiumGitHub(input) then
-            saveMainWarehouse(input) -- Chuyển thẳng vào kho chính 24h với quyền VIP
-            TimerLabel.Text = "Premium Access Granted!"
-            TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-            task.wait(1)
-            KeySystemGui:Destroy()
-            accessGranted = true
-        else
-            TimerLabel.Text = "Invalid Key or HWID mismatch!"
-            TimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    end)
-    
-    repeat task.wait(0.5) until accessGranted
-end
-
--- ==========================================
--- MAIN SCRIPT & FRUIT WEBHOOK (GIỮ NGUYÊN 100%)
--- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
+-- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -257,6 +22,116 @@ local isRunning = true
 local storedFruitsCache = {}
 
 DuboCFG = DuboCFG or {}
+
+-- ==================== HỆ THỐNG XÁC THỰC KEY & HWID ====================
+-- Kho 1: Kho duyệt key tạm thời (Lưu key do script tự sinh ra, hạn 500 giây)
+local PendingKeysStore = {}
+
+-- Kho 2: Kho trung tâm lưu trữ HWID đã vượt link/nhập key thành công (Hoạt động 24 giờ)
+local CentralHWIDStore = {}
+
+-- Danh sách Key Premium vĩnh viễn (Định dạng: "KEY:HWID" do chính bạn gắn HWID thủ công vào sau)
+local PremiumKeyList = {
+    "DUBO-VIP-EXAMPLE:CHUA_CO_HWID", -- Thay key và HWID thật của bạn vào đây
+}
+
+-- Hàm lấy HWID thiết bị của người dùng
+local function getClientHWID()
+    local hwid = ""
+    pcall(function()
+        hwid = (gethwid and gethwid()) or (RbxEnvironment and RbxEnvironment.gethwid and RbxEnvironment.gethwid()) or tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+    end)
+    return hwid
+end
+
+-- Hàm tạo chuỗi ngẫu nhiên gồm chữ và số (15 ký tự)
+local function generateRandomString(length)
+    local chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+    local rng = math.random
+    local s = {}
+    for i = 1, length do
+        local randIndex = rng(1, #chars)
+        table.insert(s, chars:sub(randIndex, randIndex))
+    end
+    return table.concat(s)
+end
+
+-- Hàm kiểm tra quyền truy cập (Dựa vào Key Premium vĩnh viễn hoặc HWID đã vượt link 24h)
+local function verifyAccess(inputKey)
+    local currentHWID = getClientHWID()
+    
+    -- 1. Kiểm tra qua Kho 2 trung tâm (HWID đã vượt link thành công trong 24 giờ qua)
+    if CentralHWIDStore[currentHWID] and tick() < CentralHWIDStore[currentHWID] then
+        return true
+    end
+
+    -- 2. Kiểm tra qua danh sách Key Premium vĩnh viễn do bạn tự gắn HWID
+    if inputKey and inputKey ~= "" then
+        for _, line in ipairs(PremiumKeyList) do
+            local separatorPos = line:find(":")
+            if separatorPos then
+                local pKey = line:sub(1, separatorPos - 1)
+                local pHWID = line:sub(separatorPos + 1)
+                
+                if inputKey == pKey then
+                    if pHWID == "" or pHWID == "CHUA_CO_HWID" or currentHWID == pHWID then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+-- Hàm khi người dùng ấn Get Key: Tự sinh mã DUBO-KEY-[15 ký tự] và gắn vào link authtool.app
+local function generateGetKeysLink()
+    local currentHWID = getClientHWID()
+    
+    -- Tạo key cấu trúc: DUBO-KEY-[15 ký tự ngẫu nhiên]
+    local randomPart = generateRandomString(15)
+    local generatedKey = "DUBO-KEY-" .. randomPart
+    
+    -- Lưu vào Kho 1 với hiệu lực 500 giây
+    PendingKeysStore[generatedKey] = {
+        hwid = currentHWID,
+        expiresAt = tick() + 500
+    }
+    
+    -- Gắn trực tiếp key tự sinh vào đuôi link yêu cầu
+    local finalLink = "https://authtool.app/get-key/?result=" .. generatedKey
+    return finalLink, generatedKey
+end
+
+-- Hàm Submit Key để so khớp 1:1 với lúc script tạo ra
+local function submitAndVerifyKey(inputKey)
+    local currentHWID = getClientHWID()
+    
+    local pendingData = PendingKeysStore[inputKey]
+    if pendingData then
+        -- Kiểm tra thời hạn 500 giây
+        if tick() <= pendingData.expiresAt then
+            -- So khớp đúng thiết bị tạo key
+            if pendingData.hwid == currentHWID then
+                -- Khớp hoàn toàn: Cấp quyền chuyển vào Kho 2 hoạt động trong 24 giờ (86400s)
+                CentralHWIDStore[currentHWID] = tick() + 86400
+                -- Xóa key ở kho tạm sau khi sử dụng
+                PendingKeysStore[inputKey] = nil
+                return true, "Xác thực thành công! Script được phép hoạt động trong 24 giờ."
+            else
+                return false, "Key này không thuộc về thiết bị của bạn!"
+            end
+        else
+            PendingKeysStore[inputKey] = nil
+            return false, "Key đã hết hạn (quá 500 giây), vui lòng lấy lại key mới!"
+        end
+    end
+    
+    return false, "Sai key! Key không khớp với lúc tạo hoặc không tồn tại."
+end
+-- ======================================================================
+
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = ""
 
@@ -333,12 +208,10 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     }
     
     local encodedData = HttpService:JSONEncode(data)
-    local headers = {["Content-Type"] = "application/json"}
-    
     pcall(function()
         local req = request or http_request or syn.request or fluxus.request
         if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
+            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData})
         else
             HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
         end
@@ -394,6 +267,48 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
+local CircleAvatarBg = Instance.new("Frame")
+CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
+CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+CircleAvatarBg.BorderSizePixel = 0
+CircleAvatarBg.ZIndex = 2
+CircleAvatarBg.Parent = MainFrame
+
+local CircleBgCorner = Instance.new("UICorner")
+CircleBgCorner.CornerRadius = UDim.new(1, 0)
+CircleBgCorner.Parent = CircleAvatarBg
+
+local CircleAvatarStroke = Instance.new("UIStroke")
+CircleAvatarStroke.Thickness = 3
+CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
+CircleAvatarStroke.Parent = CircleAvatarBg
+
+local AvatarImg = Instance.new("ImageLabel")
+AvatarImg.Size = UDim2.new(0, 84, 0, 84)
+AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
+AvatarImg.BackgroundTransparency = 1
+AvatarImg.ZIndex = 2
+pcall(function()
+    AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+end)
+AvatarImg.Parent = CircleAvatarBg
+
+local AvatarCircle = Instance.new("UICorner")
+AvatarCircle.CornerRadius = UDim.new(1, 0)
+AvatarCircle.Parent = AvatarImg
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 26)
+TitleLabel.Position = UDim2.new(0, 0, 0, 160)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "DUBO KAITUN FRUIT"
+TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamMedium
+TitleLabel.ZIndex = 2
+TitleLabel.Parent = MainFrame
+
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
 StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
@@ -409,7 +324,7 @@ StatusBoxCorner.Parent = StatusBox
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Ready!"
+StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
@@ -419,6 +334,103 @@ StatusLabel.Parent = StatusBox
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
 ESPFolder.Parent = ScreenGui
+
+RunService.Stepped:Connect(function()
+    if not isRunning then return end
+    pcall(function()
+        local character = player.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not isRunning then 
+        ESPFolder:ClearAllChildren()
+        return 
+    end
+
+    ESPFolder:ClearAllChildren()
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle")
+                if handle then
+                    local vector, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                    if onScreen then
+                        local character = player.Character
+                        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                        local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
+
+                        local ESPText = Instance.new("TextLabel")
+                        ESPText.Size = UDim2.new(0, 150, 0, 30)
+                        ESPText.Position = UDim2.new(0, vector.X - 75, 0, vector.Y - 20)
+                        ESPText.BackgroundTransparency = 0.5
+                        ESPText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                        ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        ESPText.TextSize = 13
+                        ESPText.Font = Enum.Font.GothamBold
+                        ESPText.Text = obj.Name .. " (" .. distance .. "m)"
+                        
+                        local corner = Instance.new("UICorner")
+                        corner.CornerRadius = UDim.new(0, 4)
+                        corner.Parent = ESPText
+                        
+                        ESPText.Parent = ESPFolder
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- Bộ lọc Server Hop dưới 6 người chơi (< 6)
+local function hopServer()
+    isRunning = false
+    StatusLabel.Text = "Hopping Server..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+    
+    while true do
+        local servers = {}
+        local success = pcall(function()
+            local cursor = ""
+            repeat
+                local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+                if cursor ~= "" then
+                    url = url .. "&cursor=" .. cursor
+                end
+                local response = HttpService:JSONDecode(game:HttpGet(url))
+                cursor = response.nextCursor or ""
+                for _, s in ipairs(response.data) do
+                    if s.playing < 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                        table.insert(servers, s.id)
+                    end
+                end
+            until #servers >= 30 or cursor == ""
+        end)
+
+        if success and #servers > 0 then
+            local randomServerId = servers[math.random(1, #servers)]
+            StatusLabel.Text = "Connecting..."
+            
+            local teleSuccess = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
+            end)
+            
+            if teleSuccess then
+                task.wait(5)
+            end
+        end
+        
+        task.wait(2)
+    end
+end
 
 local function storeFruit(item)
     pcall(function()
@@ -483,53 +495,71 @@ local function autoPickAndStore()
     return found
 end
 
-task.spawn(function()
-    while true do
-        isRunning = true
-        StatusLabel.Text = "Team: " .. factionDisplayName
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        
-        local attempts = 0
-        repeat
-            pcall(function()
-                if remoteComm then
-                    remoteComm:InvokeServer("SetTeam", chosenFaction)
-                end
-            end)
-            task.wait(1)
-            attempts = attempts + 1
-        until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
-
-        if not isRunning then break end
-
-        local scanStart = tick()
-        while isRunning do
-            StatusLabel.Text = "Scanning..."
+-- Vòng lặp chạy tính năng Kaitun Fruit chính
+local function startMainScript()
+    task.spawn(function()
+        while true do
+            isRunning = true
+            StatusLabel.Text = "Team: " .. factionDisplayName
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
             
-            local collected = false
-            pcall(function()
-                collected = autoPickAndStore()
-            end)
-            
-            if collected then
-                scanStart = tick()
-            end
-            
-            if not collected and (tick() - scanStart > 3) then
-                StatusLabel.Text = "Not found (Hopping...)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                task.wait(0.5)
-                break
-            end
-            
-            if not isRunning then break end
-            task.wait(0.2)
-        end
+            local attempts = 0
+            repeat
+                pcall(function()
+                    if remoteComm then
+                        remoteComm:InvokeServer("SetTeam", chosenFaction)
+                    end
+                end)
+                task.wait(1)
+                attempts = attempts + 1
+            until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
 
-        if not isRunning then break end
-        StatusLabel.Text = "Hopping Server..."
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-        task.wait(2)
+            if not isRunning then break end
+
+            StatusLabel.Text = "Ready!"
+            task.wait(0.5)
+
+            local scanStart = tick()
+            while isRunning do
+                StatusLabel.Text = "Scanning..."
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                
+                local collected = false
+                pcall(function()
+                    collected = autoPickAndStore()
+                end)
+                
+                if collected then
+                    scanStart = tick()
+                end
+                
+                if not collected and (tick() - scanStart > 3) then
+                    StatusLabel.Text = "Not found (Hopping...)"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    task.wait(0.5)
+                    break
+                end
+                
+                if not isRunning then break end
+                task.wait(0.2)
+            end
+
+            if not isRunning then break end
+            hopServer()
+            task.wait(3)
+        end
+    end)
+end
+
+-- Khởi động hệ thống kiểm tra bảo mật (Key / HWID)
+local function initializeScript()
+    if verifyAccess() then
+        startMainScript()
+    else
+        StatusLabel.Text = "Locked: Please Get Key!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        print("[DUBO HUB] Script đang bị khóa. Vui lòng thực hiện Get Key để nhận link authtool.app hoặc nhập Key Premium.")
     end
-end)
+end
+
+initializeScript()
