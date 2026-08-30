@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - UNIFIED KEY SYSTEM (FREE & PREMIUM) & AUTO HOP
+-- DUBO HUB - UNIFIED KEY SYSTEM (DYNAMIC GENERATION + 24H CACHE) & AUTO HOP
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -27,16 +27,25 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY (HỖ TRỢ CẢ KEY THƯỜNG VÀ PREMIUM CHUNG 1 KHUNG)
+-- HỆ THỐNG XÁC THỰC KEY (LƯU TẠM 24H, SO SÁNH RỒI XÓA FILE)
 -- ==========================================
 local GITHUB_KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/main/DUBO%20HUB%20KEY"
-local GET_KEY_LINK = "https://link4m.com/example" 
-
 local WORKSPACE_FOLDER = "DuboHubKeySystem"
 local LOCAL_KEY_FILE = WORKSPACE_FOLDER .. "/saved_key.json"
 
 if not isfolder(WORKSPACE_FOLDER) then
     makefolder(WORKSPACE_FOLDER)
+end
+
+-- Hàm tạo chuỗi ngẫu nhiên (chữ hoa, chữ thường, số)
+local function generateRandomString(length)
+    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local randomStr = ""
+    for i = 1, length do
+        local randIndex = math.random(1, #chars)
+        randomStr = randomStr .. chars:sub(randIndex, randIndex)
+    end
+    return randomStr
 end
 
 local function getMyHWID()
@@ -92,13 +101,22 @@ end
 local function checkAutoLogin()
     if isfile(LOCAL_KEY_FILE) then
         local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile(LOCAL_KEY_FILE))
+            local decoded = HttpService:JSONDecode(readfile(LOCAL_KEY_FILE))
+            return decoded
         end)
         
-        if success and data and data.Key then
-            local isValid, _ = validateKeyWithServer(data.Key)
-            if isValid then
-                return true, data.Key
+        if success and data and data.Key and data.Time then
+            -- Kiểm tra xem quá 24 giờ (86400 giây) hay chưa
+            local currentTime = os.time()
+            if (currentTime - data.Time) < 86400 then
+                -- Kiểm tra lại với server hoặc key tạm đã nhớ
+                local isValid, _ = validateKeyWithServer(data.Key)
+                if isValid then
+                    return true, data.Key
+                end
+            else
+                -- Quá hạn 24h -> Xóa luôn file trong workspace
+                pcall(function() delfile(LOCAL_KEY_FILE) end)
             end
         end
     end
@@ -108,7 +126,10 @@ end
 local isAutoLoginValid, savedKey = checkAutoLogin()
 local keyVerified = isAutoLoginValid
 
--- Giao diện Key System duy nhất (Y hệt ảnh mẫu 3 & 4: Dùng chung một khung, nhập key rồi ấn Submit)
+-- Biến lưu tạm key vừa được tạo ra từ nút GET KEY LINK ở phiên chạy này
+local currentGeneratedKey = ""
+
+-- Giao diện Key System duy nhất
 if not keyVerified then
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "DuboHubKeySystem"
@@ -189,17 +210,21 @@ if not keyVerified then
     StatusLabel.Position = UDim2.new(0, 0, 0, 235)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Font = Enum.Font.Gotham
-    StatusLabel.Text = "Hardware Locked System"
+    StatusLabel.Text = "Hardware Locked System (24H Cache)"
     StatusLabel.TextColor3 = Color3.fromRGB(110, 120, 140)
     StatusLabel.TextSize = 12
     StatusLabel.Parent = MainFrame
 
-    -- Nút lấy key (Dành cho bản Thường)
+    -- Nút lấy key: Tự sinh đoạn chuỗi random, ghép vào link authtool và nhớ tạm thời để so sánh
     GetKeyButton.MouseButton1Click:Connect(function()
         pcall(function()
+            local randomPart = generateRandomString(16)
+            currentGeneratedKey = "DUBO-KEY=" .. randomPart
+            local dynamicGetKeyLink = "https://authtool.app/get-key/?result=" .. currentGeneratedKey
+            
             if setclipboard then
-                setclipboard(GET_KEY_LINK)
-                StatusLabel.Text = "Copied Get Key link to clipboard!"
+                setclipboard(dynamicGetKeyLink)
+                StatusLabel.Text = "Copied Get Key link! (Temporary remembered)"
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             else
                 StatusLabel.Text = "Executor does not support clipboard."
@@ -207,7 +232,7 @@ if not keyVerified then
         end)
     end)
 
-    -- Nút Submit chung: Cả khách thường lẫn Premium đều dán key vào đây rồi ấn Summit
+    -- Nút Submit: So sánh với key vừa tạo tạm hoặc check GitHub, nếu đúng thì lưu file workspace dùng 24h
     SubmitButton.MouseButton1Click:Connect(function()
         local inputKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
         if inputKey == "" then
@@ -217,14 +242,29 @@ if not keyVerified then
         end
 
         SubmitButton.Text = "CHECKING..."
-        local isValid, message = validateKeyWithServer(inputKey)
+        
+        local isValid = false
+        local message = ""
+
+        -- Nếu người dùng nhập đúng cái key tạm mà nút GET KEY LINK vừa tạo ra ở phiên này
+        if currentGeneratedKey ~= "" and inputKey == currentGeneratedKey then
+            isValid = true
+            message = "Success (Temporary Key Match)!"
+        else
+            -- Nếu không phải key tạm thì check qua GitHub như bình thường
+            isValid, message = validateKeyWithServer(inputKey)
+        end
 
         if isValid then
             StatusLabel.Text = "SUCCESS!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
             
+            -- Lưu vào workspace kèm mốc thời gian (dùng trong 24 giờ)
             pcall(function()
-                local data = { Key = inputKey }
+                local data = { 
+                    Key = inputKey,
+                    Time = os.time() 
+                }
                 writefile(LOCAL_KEY_FILE, HttpService:JSONEncode(data))
             end)
             
@@ -572,9 +612,6 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ==========================================
--- HÀM HOP SERVER AN TOÀN (LỌC > 6 NGƯỜI, CHỐNG MÃ LỖI 773)
--- ==========================================
 local function hopServer()
     isRunning = false
     StatusLabel.Text = "Finding Good Server..."
