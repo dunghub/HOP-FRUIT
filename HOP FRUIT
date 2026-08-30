@@ -13,8 +13,8 @@ local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- ==================== CẤU HÌNH (THAY LINK CỦA ÔNG VÀO ĐÂY) ====================
-local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
+local KEY_URL = "LINK_GITHUB_RAW_CỦA_FILE_KEY_DUBO"
+local WEBHOOK_URL = "LINK_DISCORD_WEBHOOK_CỦA_ÔNG"
 local CACHE_FILE = "DuboHub_Session.json"
 -- ==============================================================================
 
@@ -27,7 +27,7 @@ local function getHWID()
     return hwid
 end
 
--- Hàm gửi Webhook yêu cầu gán HWID
+-- Hàm gửi Webhook yêu cầu gán HWID (Đã tối ưu copy trên mobile bằng backtick)
 local function sendWebhookNotification(keyInput, currentHWID)
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     local data = {
@@ -38,7 +38,7 @@ local function sendWebhookNotification(keyInput, currentHWID)
             ["fields"] = {
                 {["name"] = "Tài khoản:", ["value"] = player.Name, ["inline"] = false},
                 {["name"] = "Key vừa nhập:", ["value"] = "```fix\n" .. keyInput .. "\n```", ["inline"] = false},
-                {["name"] = "HWID (Copy dán vào sau dấu /):", ["value"] = "```yaml\n" .. currentHWID .. "\n```", ["inline"] = false}
+                {["name"] = "👉 HWID (Copy dán vào sau dấu /):", ["value"] = "`" .. currentHWID .. "`", ["inline"] = false}
             },
             ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")}
         }}
