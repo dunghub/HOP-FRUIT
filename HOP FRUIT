@@ -10,7 +10,7 @@ local player = Players.LocalPlayer
 -- ==================== SYSTEM CONFIGURATION ====================
 local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
 DuboCFG = DuboCFG or {}
-DuboCFG.WebhookURL = "ĐIỀN_WEBHOOK_URL_CỦA_BẠN_VÀO_ĐÂY"
+DuboCFG.WebhookURL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session_24h.json"
 
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
