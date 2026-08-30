@@ -12,13 +12,12 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ==================== CẤU HÌNH (THAY LINK CỦA ÔNG VÀO ĐÂY) ====================
+-- ==================== CẤU HÌNH ĐÃ GÁN SẴN ====================
 local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session.json"
--- ==============================================================================
+-- =============================================================
 
--- Hàm lấy HWID
 local function getHWID()
     local hwid = ""
     pcall(function()
@@ -27,7 +26,6 @@ local function getHWID()
     return hwid
 end
 
--- Hàm gửi Webhook yêu cầu gán HWID (Đã tối ưu copy trên mobile bằng backtick)
 local function sendWebhookNotification(keyInput, currentHWID)
     if not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     local data = {
@@ -51,7 +49,6 @@ local function sendWebhookNotification(keyInput, currentHWID)
     end)
 end
 
--- Kiểm tra Key trên GitHub
 local function verifyKey(inputKey)
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
@@ -80,7 +77,6 @@ local function verifyKey(inputKey)
     return false, "Key không tồn tại!"
 end
 
--- HÀM CHẠY SCRIPT KAITUN CHÍNH SAU KHI XÁC THỰC
 local function runMainScript()
     local remoteComm = nil
     pcall(function()
@@ -222,6 +218,49 @@ local function runMainScript()
         end
     end)
 
+    -- KHUNG AVATAR PROFILE & HIỆU ỨNG BÔNG TUYẾT, TÊN DUBO HUB
+    local AvatarFrame = Instance.new("ImageLabel", MainFrame)
+    AvatarFrame.Size = UDim2.new(0, 90, 0, 90)
+    AvatarFrame.Position = UDim2.new(0.5, -45, 0, 20)
+    AvatarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    AvatarFrame.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
+    local AvatarStroke = Instance.new("UIStroke", AvatarFrame)
+    AvatarStroke.Thickness = 3
+    AvatarStroke.Color = Color3.fromRGB(0, 170, 255)
+
+    local Snowflake1 = Instance.new("TextLabel", MainFrame)
+    Snowflake1.Size = UDim2.new(0, 20, 0, 20)
+    Snowflake1.Position = UDim2.new(0.5, -60, 0, 15)
+    Snowflake1.BackgroundTransparency = 1
+    Snowflake1.Text = "❄️"
+    Snowflake1.TextSize = 16
+
+    local Snowflake2 = Instance.new("TextLabel", MainFrame)
+    Snowflake2.Size = UDim2.new(0, 20, 0, 20)
+    Snowflake2.Position = UDim2.new(0.5, 40, 0, 15)
+    Snowflake2.BackgroundTransparency = 1
+    Snowflake2.Text = "❄️"
+    Snowflake2.TextSize = 16
+
+    local HubTitle = Instance.new("TextLabel", MainFrame)
+    HubTitle.Size = UDim2.new(1, 0, 0, 24)
+    HubTitle.Position = UDim2.new(0, 0, 0, 118)
+    HubTitle.BackgroundTransparency = 1
+    HubTitle.Text = "DUBO HUB"
+    HubTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+    HubTitle.TextSize = 18
+    HubTitle.Font = Enum.Font.GothamBold
+
+    local SubTitle = Instance.new("TextLabel", MainFrame)
+    SubTitle.Size = UDim2.new(1, 0, 0, 18)
+    SubTitle.Position = UDim2.new(0, 0, 0, 140)
+    SubTitle.BackgroundTransparency = 1
+    SubTitle.Text = "DUBO KAITUN FRUIT"
+    SubTitle.TextColor3 = Color3.fromRGB(180, 180, 200)
+    SubTitle.TextSize = 12
+    SubTitle.Font = Enum.Font.GothamBold
+
     local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Size = UDim2.new(1, 0, 1, 0)
     StatusLabel.BackgroundTransparency = 1
@@ -232,7 +271,7 @@ local function runMainScript()
 
     local StatusBox = Instance.new("Frame", MainFrame)
     StatusBox.Size = UDim2.new(0, 250, 0, 48)
-    StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
+    StatusBox.Position = UDim2.new(0.5, -125, 0, 175)
     StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     StatusBox.BorderSizePixel = 0
     Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12)
@@ -361,7 +400,6 @@ local function runMainScript()
     end)
 end
 
--- KIỂM TRA CACHE TRƯỚC (NẾU ĐÃ LƯU THÌ BỎ QUA GIAO DIỆN NHẬP KEY)
 local savedKey = ""
 pcall(function()
     if readfile and isfile and isfile(CACHE_FILE) then
@@ -381,7 +419,6 @@ if savedKey ~= "" then
     end
 end
 
--- GIAO DIỆN NHẬP KEY (CHỈ HIỆN KHI CHƯA CÓ CACHE HOẶC ĐỔI MÁY)
 pcall(function() if CoreGui:FindFirstChild("DuboKeyUI") then CoreGui.DuboKeyUI:Destroy() end end)
 
 local ScreenGui = Instance.new("ScreenGui")
