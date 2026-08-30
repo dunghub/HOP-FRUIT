@@ -10,11 +10,10 @@ local player = Players.LocalPlayer
 -- ==================== SYSTEM CONFIGURATION ====================
 local KEY_URL = "https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/DUBO%20HUB%20KEY"
 DuboCFG = DuboCFG or {}
-DuboCFG.WebhookURL = "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
+DuboCFG.WebhookURL = DuboCFG.WebhookURL or "https://discord.com/api/webhooks/1543495696659906630/ZVzpvB5eZJksHXEqKjdGYxGxUZqG-h1BxdGqejLXINYRhmJo_Onkw_WTAfMzKWSigsCJ"
 local CACHE_FILE = "DuboHub_Session_24h.json"
 
 local TemporaryKeyPool = TemporaryKeyPool or {}
-local Authorized24hPool = Authorized24hPool or {}
 local LAYMA_TOKEN = "912b0053a34556d8ee0ac907d3149f9b"
 -- ==========================================================
 
@@ -48,16 +47,10 @@ local function cleanupExpiredData()
             TemporaryKeyPool[key] = nil
         end
     end
-    for hwid, expireTime in pairs(Authorized24hPool) do
-        if currentTime >= expireTime then
-            Authorized24hPool[hwid] = nil
-        end
-    end
 end
 
--- Hàm kiểm tra xem key hiện tại là Premium trên GitHub hay là 24h thông thường
+-- Kiểm tra kho Key Premium riêng biệt trên GitHub (Vĩnh viễn)
 local function checkIsKeyPremium()
-    local currentHwid = getClientHWID()
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
     end)
@@ -69,8 +62,9 @@ local function checkIsKeyPremium()
                 for part in cleanLine:gmatch("[^/]+") do
                     table.insert(parts, part:match("^%s*(.-)%s*$"))
                 end
-                -- Nếu HWID trùng với dòng trên GitHub thì đích thị là Key Premium cấu hình vĩnh viễn
-                if parts[2] and parts[2] == currentHwid then
+                -- Nếu kho phụ 500s hoặc file github chứa key này mà không cần gán HWID ngặt nghèo
+                -- (Hoặc theo chuẩn file github chứa danh sách key)
+                if parts[1] then
                     return true
                 end
             end
@@ -79,11 +73,22 @@ local function checkIsKeyPremium()
     return false
 end
 
--- Hàm lấy chuỗi hiển thị ở đáy khung script (Phân biệt Premium hay 24h)
+-- Hàm lấy nội dung hiển thị ở đáy khung hoạt động script chính
 local function getActiveFooterText()
-    if checkIsKeyPremium() then
-        return "Trạng thái: Premium (Vĩnh viễn)"
-    end
+    local success, response = pcall(function() return game:HttpGet(KEY_URL) end)
+    -- Nếu đang dùng key trong file GitHub thì hiện vĩnh viễn
+    pcall(function()
+        if success and response then
+            local cachedData = readfile and isfile and isfile(CACHE_FILE) and HttpService:JSONDecode(readfile(CACHE_FILE))
+            if cachedData and cachedData.Key then
+                for line in response:gmatch("[^\r\n]+") do
+                    if line:find(cachedData.Key) then
+                        return "Trạng thái: Premium / Key GitHub (Vĩnh viễn)"
+                    end
+                end
+            end
+        end
+    end)
 
     local currentTime = os.time()
     local sessionTime = 0
@@ -97,10 +102,8 @@ local function getActiveFooterText()
         end
     end)
     
-    local targetTime = sessionTime > 0 and sessionTime or (Authorized24hPool[getClientHWID()] and (Authorized24hPool[getClientHWID()] - 86400) or 0)
-    
-    if targetTime > 0 then
-        local expireTime = targetTime + 86400 -- 24 giờ
+    if sessionTime > 0 then
+        local expireTime = sessionTime + 86400 -- 24 giờ
         local remainingSeconds = expireTime - currentTime
         
         if remainingSeconds > 0 then
@@ -119,7 +122,7 @@ local function registerGeneratedKey(newKey)
     local currentTime = os.time()
     TemporaryKeyPool[newKey] = {
         createdTime = currentTime,
-        expireTime = currentTime + 500
+        expireTime = currentTime + 500 -- Kho phụ 500 giây
     }
 end
 
@@ -145,86 +148,36 @@ local function getLaymaShortLink(targetUrl)
     return targetUrl
 end
 
+-- So sánh key nhập vào kho phụ 500s hoặc check key trong file GitHub
 local function verifyKey(inputKey)
     cleanupExpiredData()
-    local currentHwid = getClientHWID()
-    local currentTime = os.time()
-
-    if Authorized24hPool[currentHwid] then
-        if currentTime < Authorized24hPool[currentHwid] then
-            return true, "Success! (Within 24h)"
-        else
-            Authorized24hPool[currentHwid] = nil
-        end
-    end
-
-    if TemporaryKeyPool[inputKey] then
-        TemporaryKeyPool[inputKey] = nil
-        Authorized24hPool[currentHwid] = currentTime + (24 * 60 * 60)
-        return true, "Success! Key accepted, added to 24h whitelist."
-    end
-
+    
+    -- 1. Check kho file GitHub (Chỉ cần có trong link file key là được coi như hợp lệ/vĩnh viễn)
     local success, response = pcall(function()
         return game:HttpGet(KEY_URL)
     end)
-    if not success then return false, "GitHub Connection Error!" end
-    
-    local keyFound = false
-    local isHwidMatched = false
-    
-    for line in response:gmatch("[^\r\n]+") do
-        local cleanLine = line:match("^%s*(.-)%s*$")
-        if cleanLine ~= "" then
-            local parts = {}
-            for part in cleanLine:gmatch("[^/]+") do
-                table.insert(parts, part:match("^%s*(.-)%s*$"))
-            end
-            if parts[1] == inputKey then
-                keyFound = true
-                if parts[2] and parts[2] == currentHwid then
-                    isHwidMatched = true
+    if success and response then
+        for line in response:gmatch("[^\r\n]+") do
+            local cleanLine = line:match("^%s*(.-)%s*$")
+            if cleanLine ~= "" then
+                local parts = {}
+                for part in cleanLine:gmatch("[^/]+") do
+                    table.insert(parts, part:match("^%s*(.-)%s*$"))
                 end
-                break
+                if parts[1] == inputKey or cleanLine:find(inputKey) then
+                    return true, "Success! (GitHub Key)"
+                end
             end
         end
     end
-    
-    if not keyFound then return false, "Key does not exist or has expired!" end
-    if not isHwidMatched then return false, "Admin has not configured your HWID for this key, please wait!" end
-    
-    return true, "Success! (Permanent Premium Key)"
-end
 
-local function sendKeyWebhook(usedKey)
-    if not DuboCFG or not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
-    local hwid = getClientHWID()
-    local maskedName = "||" .. player.Name .. "||"
-    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+    -- 2. Check kho phụ 500 giây (TemporaryKeyPool)
+    if TemporaryKeyPool[inputKey] then
+        TemporaryKeyPool[inputKey] = nil
+        return true, "Success! Key accepted for 24 hours."
+    end
     
-    local data = {
-        ["content"] = "",
-        ["username"] = "DUBO KEY SYSTEM",
-        ["avatar_url"] = defaultImage,
-        ["embeds"] = {{
-            ["color"] = 16776960,
-            ["fields"] = {
-                {["name"] = "⚠️ Yêu Cầu Gán HWID Mới! (Nếu là Premium)", ["value"] = "**Tài khoản:**\n" .. maskedName, ["inline"] = false},
-                {["name"] = "Key vừa nhập:", ["value"] = "`" .. usedKey .. "`", ["inline"] = false},
-                {["name"] = "HWID:", ["value"] = "`" .. hwid .. "`", ["inline"] = false}
-            },
-            ["footer"] = {["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")}
-        }}
-    }
-    
-    pcall(function()
-        local encodedData = HttpService:JSONEncode(data)
-        local req = request or http_request or syn.request or fluxus.request
-        if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData})
-        else
-            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
-        end
-    end)
+    return false, "Key không tồn tại hoặc đã hết hạn (quá 500 giây)!"
 end
 
 local function runMainScript()
@@ -323,13 +276,12 @@ StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 
--- Dòng hiển thị ở đáy MainFrame: Nếu là Premium sẽ hiện "Trạng thái: Premium (Vĩnh viễn)", ngược lại đếm ngược thời gian
 local ActiveTimerLabel = Instance.new("TextLabel", MainFrame)
 ActiveTimerLabel.Size = UDim2.new(1, 0, 0, 30)
 ActiveTimerLabel.Position = UDim2.new(0, 0, 1, -32)
 ActiveTimerLabel.BackgroundTransparency = 1
-ActiveTimerLabel.Text = "Trạng thái: Premium (Vĩnh viễn)"
-ActiveTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 200)
+ActiveTimerLabel.Text = "Thời hạn key còn lại: Đang tải..."
+ActiveTimerLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
 ActiveTimerLabel.TextSize = 12
 ActiveTimerLabel.Font = Enum.Font.GothamBold
 
@@ -417,7 +369,6 @@ task.spawn(function()
         until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
 
         if not isRunning then break end
-        local scanStart = tick()
         while isRunning do
             autoPickAndStore()
             if not isRunning then break end
@@ -434,7 +385,10 @@ local function checkSavedSession()
     local success, result = pcall(function()
         if readfile and isfile and isfile(CACHE_FILE) then
             local data = HttpService:JSONDecode(readfile(CACHE_FILE))
-            if data and data.Time and (os.time() - data.Time < 86400) then return true end
+            -- Nếu có cache và còn hạn 24h hoặc key nằm trong github
+            if data and data.Time and (os.time() - data.Time < 86400) then 
+                return true 
+            end
         end
     end)
     return success and result or false
@@ -444,6 +398,20 @@ if checkSavedSession() then
     runMainScript()
     return
 end
+
+-- Kiểm tra ngay nếu key đang lưu trong cache khớp với file GitHub thì chạy luôn
+pcall(function()
+    if readfile and isfile and isfile(CACHE_FILE) then
+        local data = HttpService:JSONDecode(readfile(CACHE_FILE))
+        if data and data.Key then
+            local success, response = pcall(function() return game:HttpGet(KEY_URL) end)
+            if success and response and response:find(data.Key) then
+                runMainScript()
+                return
+            end
+        end
+    end
+end)
 
 pcall(function() if CoreGui:FindFirstChild("DuboKeyUI") then CoreGui.DuboKeyUI:Destroy() end end)
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
@@ -513,60 +481,24 @@ Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
 Notification.TextSize = 12
 Notification.Font = Enum.Font.Gotham
 
-local TimeRemainingLabel = Instance.new("TextLabel", MainFrame)
-TimeRemainingLabel.Size = UDim2.new(1, 0, 0, 25)
-TimeRemainingLabel.Position = UDim2.new(0, 0, 0, 215)
-TimeRemainingLabel.BackgroundTransparency = 1
-TimeRemainingLabel.Text = ""
-TimeRemainingLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-TimeRemainingLabel.TextSize = 12
-TimeRemainingLabel.Font = Enum.Font.GothamBold
-
-task.spawn(function()
-    while ScreenGui and ScreenGui.Parent do
-        pcall(function()
-            local currentHwid = getClientHWID()
-            local currentTime = os.time()
-            if Authorized24hPool[currentHwid] then
-                local expireTime = Authorized24hPool[currentHwid]
-                local remainingSeconds = expireTime - currentTime
-                if remainingSeconds > 0 then
-                    local hours = math.floor(remainingSeconds / 3600)
-                    local minutes = math.floor((remainingSeconds % 3600) / 60)
-                    local seconds = remainingSeconds % 60
-                    TimeRemainingLabel.Text = string.format("Thời gian key còn lại: %02d:%02d:%02d", hours, minutes, seconds)
-                else
-                    TimeRemainingLabel.Text = ""
-                end
-            else
-                TimeRemainingLabel.Text = ""
-            end
-        end)
-        task.wait(1)
-    end
-end)
-
 local cachedShortLink = ""
 
 GetKeyBtn.MouseButton1Click:Connect(function()
     pcall(function()
-        if cachedShortLink == "" then
-            GetKeyBtn.Text = "Generating Link..."
-            task.spawn(function()
-                local newKey = generateRandomKey()
-                registerGeneratedKey(newKey)
-                cachedShortLink = getLaymaShortLink("https://authtool.app/get-key/?result=" .. newKey)
-                if setclipboard then setclipboard(cachedShortLink) end
-                GetKeyBtn.Text = "COPY LINK"
-                GetKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
-                Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-                Notification.Text = "Link Generated & Saved!"
-            end)
-        else
+        GetKeyBtn.Text = "Generating Link..."
+        task.spawn(function()
+            local newKey = generateRandomKey()
+            registerGeneratedKey(newKey)
+            
+            TextBox.Text = newKey
+            
+            cachedShortLink = getLaymaShortLink("https://authtool.app/get-key/?result=" .. newKey)
             if setclipboard then setclipboard(cachedShortLink) end
+            GetKeyBtn.Text = "COPY LINK"
+            GetKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
             Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-            Notification.Text = "Link Copied to Clipboard!"
-        end
+            Notification.Text = "Đã tạo key (sống 500s), tự điền và copy link!"
+        end)
     end)
 end)
 
@@ -574,21 +506,20 @@ SubmitBtn.MouseButton1Click:Connect(function()
     local typedKey = TextBox.Text
     if typedKey == "" then
         Notification.TextColor3 = Color3.fromRGB(255, 60, 60)
-        Notification.Text = "Please enter your key!"
+        Notification.Text = "Vui lòng nhập key!"
         return
     end
     
     SubmitBtn.Text = "Checking..."
     task.spawn(function()
-        sendKeyWebhook(typedKey)
         local isValid, msg = verifyKey(typedKey)
         if isValid then
             Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-            Notification.Text = "Success! Loading..."
+            Notification.Text = "Thành công! Đang vào script..."
             pcall(function()
                 if writefile then writefile(CACHE_FILE, HttpService:JSONEncode({Key = typedKey, Time = os.time()})) end
             end)
-            task.wait(1.5)
+            task.wait(1)
             ScreenGui:Destroy()
             runMainScript()
         else
