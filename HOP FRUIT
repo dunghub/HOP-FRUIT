@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - KEY SYSTEM & AUTO HOP FRUIT
+-- DUBO HUB - KEY SYSTEM (ALL ACCEPTED) & AUTO HOP
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -19,7 +19,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- HỆ THỐNG XÁC THỰC KEY (WORKSPACE & 24H)
+-- HỆ THỐNG XÁC THỰC KEY (CHẤP NHẬN MỌI KEY)
 -- ==========================================
 local WorkspaceFile = "dubokey_session.json"
 
@@ -34,27 +34,6 @@ local function generateRandomKey(length)
     return key
 end
 
-local function loadStoredKeyData()
-    if not pcall(function() return readfile(WorkspaceFile) end) then
-        return nil
-    end
-    local success, data = pcall(function()
-        return HttpService:JSONDecode(readfile(WorkspaceFile))
-    end)
-    if success then
-        return data
-    end
-    return nil
-end
-
-local function clearKeyData()
-    pcall(function()
-        if isfile(WorkspaceFile) then
-            delfile(WorkspaceFile)
-        end
-    end)
-end
-
 local function saveKeyData(key)
     local expireTime = os.time() + 86400 -- 24 giờ
     local data = {
@@ -66,24 +45,25 @@ local function saveKeyData(key)
     end)
 end
 
-local function getOrGenerateActiveKey()
-    local data = loadStoredKeyData()
-    local currentTime = os.time()
-
-    if data and data.key and data.expireTime then
-        if currentTime < data.expireTime then
-            return data.key, false
-        else
-            clearKeyData()
-        end
+local function loadStoredKeyData()
+    if not pcall(function() return readfile(WorkspaceFile) end) then
+        local newKey = generateRandomKey(15)
+        saveKeyData(newKey)
     end
-
-    local newKey = generateRandomKey(15)
-    saveKeyData(newKey)
-    return newKey, true
+    local success, data = pcall(function()
+        return HttpService:JSONDecode(readfile(WorkspaceFile))
+    end)
+    if success and data then
+        return data
+    else
+        local newKey = generateRandomKey(15)
+        saveKeyData(newKey)
+        return {key = newKey, expireTime = os.time() + 86400}
+    end
 end
 
-local currentKey, isNew = getOrGenerateActiveKey()
+local currentData = loadStoredKeyData()
+local currentKey = currentData.key
 local targetUrl = "https://authtool.app/get-key/?result=DUBO-KEY=" .. currentKey
 
 -- Tạo bảng Get Key UI
@@ -171,8 +151,8 @@ StatusLabelKey.BackgroundTransparency = 1
 StatusLabelKey.Position = UDim2.new(0, 0, 0, 234)
 StatusLabelKey.Size = UDim2.new(1, 0, 0, 20)
 StatusLabelKey.Font = Enum.Font.Gotham
-StatusLabelKey.Text = "Key does not exist or has expired!"
-StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
+StatusLabelKey.Text = "Enter any key or text to bypass!"
+StatusLabelKey.TextColor3 = Color3.fromRGB(0, 200, 100)
 StatusLabelKey.TextSize = 12
 
 local keyVerified = false
@@ -182,38 +162,26 @@ GetKeyButton.MouseButton1Click:Connect(function()
         setclipboard(targetUrl)
     end)
     StatusLabelKey.TextColor3 = Color3.fromRGB(50, 180, 255)
-    StatusLabelKey.Text = "Copied get key link to clipboard!"
+    StatusLabelKey.Text = "Copied link to clipboard!"
 end)
 
 SubmitButton.MouseButton1Click:Connect(function()
-    local userKey = KeyTextBox.Text
-    local data = loadStoredKeyData()
+    local userKey = KeyTextBox.Text:gsub("^%s*(.-)%s*$", "%1")
     
-    if data and data.key and data.expireTime then
-        if os.time() >= data.expireTime then
-            clearKeyData()
-            StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
-            StatusLabelKey.Text = "Key has expired (24h)!"
-            return
-        end
-        
-        if userKey == data.key then
-            StatusLabelKey.TextColor3 = Color3.fromRGB(50, 220, 50)
-            StatusLabelKey.Text = "Key correct! Loading script..."
-            task.wait(1)
-            KeyScreenGui:Destroy()
-            keyVerified = true
-        else
-            StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
-            StatusLabelKey.Text = "Key does not exist or incorrect!"
-        end
+    -- Chế độ dễ dãi: Bất cứ chuỗi nào người dùng nhập vào (miễn là không để trống) đều được duyệt thành công!
+    if userKey ~= "" then
+        StatusLabelKey.TextColor3 = Color3.fromRGB(50, 220, 50)
+        StatusLabelKey.Text = "Key correct! Loading script..."
+        task.wait(0.8)
+        KeyScreenGui:Destroy()
+        keyVerified = true
     else
         StatusLabelKey.TextColor3 = Color3.fromRGB(220, 50, 50)
-        StatusLabelKey.Text = "Key does not exist or has expired!"
+        StatusLabelKey.Text = "Please enter something!"
     end
 end)
 
--- Dừng chương trình cho đến khi xác thực thành công
+-- Dừng cho đến khi xác thực thành công
 repeat task.wait(0.5) until keyVerified
 
 -- ==========================================
