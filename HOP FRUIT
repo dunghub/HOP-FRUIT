@@ -616,15 +616,20 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ĐÃ FIX HÀM HOP SERVER: Tránh bị kẹt vô thời hạn ở "Finding Good Server..."
 local function hopServer()
     isRunning = false
     StatusLabel.Text = "Finding Good Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
     local foundValidServer = false
+    local attemptCount = 0
     
     while not foundValidServer do
+        attemptCount = attemptCount + 1
         local servers = {}
+        local fallbackServers = {} -- Danh sách dự phòng nếu không tìm đủ server > 6 người
+        
         local success = pcall(function()
             local cursor = ""
             repeat
@@ -635,12 +640,22 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    if s.playing >= 6 and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
-                        table.insert(servers, s.id)
+                    if s.id ~= game.JobId and s.playing < (s.maxPlayers - 1) then
+                        -- Ưu tiên server trên 6 người
+                        if s.playing >= 6 then
+                            table.insert(servers, s.id)
+                        else
+                            table.insert(fallbackServers, s.id)
+                        end
                     end
                 end
-            until #servers >= 20 or cursor == ""
+            until #servers >= 15 or cursor == "" or #fallbackServers >= 30
         end)
+
+        -- Nếu không đủ server > 6 người sau vài lần thử, dùng luôn danh sách dự phòng để không bị đứng im
+        if success and #servers == 0 and #fallbackServers > 0 and attemptCount >= 2 then
+            servers = fallbackServers
+        end
 
         if success and #servers > 0 then
             for i = #servers, 2, -1 do
@@ -649,7 +664,7 @@ local function hopServer()
             end
             
             for _, serverId in ipairs(servers) do
-                StatusLabel.Text = "Connecting (> 6 players)..."
+                StatusLabel.Text = "Connecting Server..."
                 
                 local teleSuccess = pcall(function()
                     TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, Player)
