@@ -229,7 +229,6 @@ local function runMainScript()
     AvatarStroke.Thickness = 3
     AvatarStroke.Color = Color3.fromRGB(0, 170, 255)
 
-    -- Tạo một mảng nhiều bông tuyết với tốc độ và vị trí rải đều khác nhau
     local snowFlakes = {}
     math.randomseed(tick())
     for i = 1, 8 do
@@ -332,10 +331,12 @@ local function runMainScript()
         end)
     end)
 
+    -- FIXED: Đã fix lỗi 773 bằng cách lọc kỹ server hợp lệ và bọc pcall an toàn
     local function hopServer()
         isRunning = false
         StatusLabel.Text = "Hopping Server..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+        
         while true do
             local servers = {}
             pcall(function()
@@ -343,19 +344,35 @@ local function runMainScript()
                 repeat
                     local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
                     if cursor ~= "" then url = url .. "&cursor=" .. cursor end
-                    local response = HttpService:JSONDecode(game:HttpGet(url))
-                    cursor = response.nextCursor or ""
-                    for _, s in ipairs(response.data) do
-                        if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                            table.insert(servers, s.id)
+                    local success, res = pcall(function() return game:HttpGet(url) end)
+                    if success and res then
+                        local response = HttpService:JSONDecode(res)
+                        cursor = response.nextCursor or ""
+                        if response.data then
+                            for _, s in ipairs(response.data) do
+                                if type(s.playing) == "number" and type(s.maxPlayers) == "number" then
+                                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                                        table.insert(servers, s.id)
+                                    end
+                                end
+                            end
                         end
+                    else
+                        break
                     end
-                until #servers >= 30 or cursor == ""
+                until #servers >= 20 or cursor == ""
             end)
+            
             if #servers > 0 then
-                pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], player) end)
+                local randomServerId = servers[math.random(1, #servers)]
+                local tpSuccess, _ = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
+                end)
+                if not tpSuccess then
+                    task.wait(2)
+                end
             end
-            task.wait(3)
+            task.wait(4)
         end
     end
 
