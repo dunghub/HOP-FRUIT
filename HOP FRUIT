@@ -1,5 +1,5 @@
 -- ==========================================
--- DUBO HUB - KEY SYSTEM & AUTO HOP
+-- DUBO HUB - KEY SYSTEM & SMART AUTO HOP (FIX ERROR 773)
 -- ==========================================
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -7,6 +7,7 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 
 -- Xóa UI cũ nếu có
 pcall(function()
@@ -74,7 +75,6 @@ if not keyVerified then
 end
 
 if not keyVerified then
-    -- Tạo bảng Get Key UI
     local KeyScreenGui = Instance.new("ScreenGui")
     KeyScreenGui.Name = "DuboHubKeySystem"
     KeyScreenGui.Parent = CoreGui
@@ -193,7 +193,6 @@ if not keyVerified then
             validFilePath = newFilePath
             remainingTime = KEY_DURATION
             
-            -- Xóa sạch RAM
             cachedGeneratedKey = nil
             userKey = nil
             
@@ -208,17 +207,15 @@ if not keyVerified then
     end)
 end
 
--- Dừng cho đến khi xác thực thành công
 repeat task.wait(0.5) until keyVerified
 
 -- ==========================================
--- PHẦN SCRIPT CHÍNH (AUTO HOP FRUIT)
+-- PHẦN SCRIPT CHÍNH (AUTO HOP & CHỐNG LỖI 773)
 -- ==========================================
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Camera = Workspace.CurrentCamera
 
@@ -325,7 +322,7 @@ MainScreenGui.Parent = CoreGui
 MainScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 290, 0, 395) -- Tăng chiều cao lên chút để chứa khung đồng hồ thời gian key
+MainFrame.Size = UDim2.new(0, 290, 0, 395)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -397,9 +394,7 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- ==========================================
--- KHUNG THỜI GIAN KEY CÒN LẠI (24 GIỜ)
--- ==========================================
+-- Khung hiển thị thời gian key còn lại
 local KeyTimeBox = Instance.new("Frame")
 KeyTimeBox.Size = UDim2.new(0, 250, 0, 28)
 KeyTimeBox.Position = UDim2.new(0.5, -125, 0, 52)
@@ -429,7 +424,7 @@ KeyTimeLabel.Parent = KeyTimeBox
 
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
-CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 86) -- Dời xuống dưới khung thời gian chút
+CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 86)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -550,12 +545,17 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ==========================================
+-- HÀM HOP SERVER AN TOÀN (LỌC > 6 NGƯỜI, CHỐNG MÃ LỖI 773)
+-- ==========================================
 local function hopServer()
     isRunning = false
-    StatusLabel.Text = "Hopping Server..."
+    StatusLabel.Text = "Finding Good Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
-    while true do
+    local foundValidServer = false
+    
+    while not foundValidServer do
         local servers = {}
         local success = pcall(function()
             local cursor = ""
@@ -567,26 +567,40 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    -- ĐIỀU KIỆN LỌC AN TOÀN TRÁNH LỖI 773 & SERVER ĐẦY/LỖI:
+                    -- 1. Phải có trên 6 người chơi (playing >= 6) để tránh server chết, server cô lập hoặc lỗi kết nối.
+                    -- 2. Số lượng người chơi phải nhỏ hơn maxPlayers - 1 để không bị kẹt.
+                    -- 3. Khác JobId hiện tại.
+                    if s.playing >= 6 and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
                 end
-            until #servers >= 30 or cursor == ""
+            until #servers >= 20 or cursor == ""
         end)
 
         if success and #servers > 0 then
-            local randomServerId = servers[math.random(1, #servers)]
-            StatusLabel.Text = "Connecting..."
+            -- Xáo trộn danh sách server ngẫu nhiên để nhảy mượt mà hơn
+            for i = #servers, 2, -1 do
+                local j = math.random(1, i)
+                servers[i], servers[j] = servers[j], servers[i]
+            end
             
-            local teleSuccess = pcall(function()
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, Player)
-            end)
-            
-            if teleSuccess then
-                task.wait(5)
+            for _, serverId in ipairs(servers) do
+                StatusLabel.Text = "Connecting (> 6 players)..."
+                
+                local teleSuccess = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, Player)
+                end)
+                
+                if teleSuccess then
+                    foundValidServer = true
+                    task.wait(8)
+                    break
+                end
             end
         end
         
+        -- Nếu chưa tìm thấy server phù hợp, chờ 2 giây quét lại
         task.wait(2)
     end
 end
@@ -654,7 +668,7 @@ local function autoPickAndStore()
     return found
 end
 
--- Vòng lặp đếm ngược thời gian key và kiểm tra hết hạn
+-- Vòng lặp đếm ngược thời gian key
 task.spawn(function()
     while true do
         task.wait(1)
@@ -674,7 +688,6 @@ task.spawn(function()
                 KeyTimeLabel.Text = "Key Expired! Removed."
                 KeyTimeLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                 
-                -- Xóa file chứa key trong workspace để tránh tích tụ nhiều máy
                 pcall(function()
                     if validFilePath and isfile(validFilePath) then
                         delfile(validFilePath)
