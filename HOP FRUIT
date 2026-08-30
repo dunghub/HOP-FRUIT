@@ -218,7 +218,7 @@ local function runMainScript()
         end
     end)
 
-    -- KHUNG AVATAR PROFILE & HIỆU ỨNG BÔNG TUYẾT RƠI CHẠM ĐÁY KHUNG
+    -- KHUNG AVATAR PROFILE & HIỆU ỨNG NHIỀU BÔNG TUYẾT RƠI
     local AvatarFrame = Instance.new("ImageLabel", MainFrame)
     AvatarFrame.Size = UDim2.new(0, 90, 0, 90)
     AvatarFrame.Position = UDim2.new(0.5, -45, 0, 20)
@@ -229,37 +229,38 @@ local function runMainScript()
     AvatarStroke.Thickness = 3
     AvatarStroke.Color = Color3.fromRGB(0, 170, 255)
 
-    local Snowflake1 = Instance.new("TextLabel", MainFrame)
-    Snowflake1.Size = UDim2.new(0, 20, 0, 20)
-    Snowflake1.Position = UDim2.new(0.5, -60, 0, 15)
-    Snowflake1.BackgroundTransparency = 1
-    Snowflake1.Text = "❄️"
-    Snowflake1.TextSize = 16
+    -- Tạo một mảng nhiều bông tuyết với tốc độ và vị trí rải đều khác nhau
+    local snowFlakes = {}
+    math.randomseed(tick())
+    for i = 1, 8 do
+        local sf = Instance.new("TextLabel", MainFrame)
+        sf.Size = UDim2.new(0, 20, 0, 20)
+        sf.BackgroundTransparency = 1
+        sf.Text = "❄️"
+        sf.TextSize = math.random(12, 18)
+        
+        table.insert(snowFlakes, {
+            Object = sf,
+            XOffset = math.random(-120, 120),
+            YPos = math.random(-50, 250),
+            Speed = math.random(30, 70) / 100,
+            FallSpeed = math.random(35, 65) / 100,
+            RotSpeed = math.random(30, 90)
+        })
+    end
 
-    local Snowflake2 = Instance.new("TextLabel", MainFrame)
-    Snowflake2.Size = UDim2.new(0, 20, 0, 20)
-    Snowflake2.Position = UDim2.new(0.5, 40, 0, 15)
-    Snowflake2.BackgroundTransparency = 1
-    Snowflake2.Text = "❄️"
-    Snowflake2.TextSize = 16
-
-    -- Vòng lặp RenderStepped làm bông tuyết lượn sóng và rơi thẳng xuống chạm đáy khung
-    local snowFall1Y = 15
-    local snowFall2Y = 15
-    
     RunService.RenderStepped:Connect(function()
-        local t = tick() * 3
-        if Snowflake1 and Snowflake1.Parent then
-            Snowflake1.Rotation = t * 60
-            snowFall1Y = snowFall1Y + 0.4
-            if snowFall1Y > 280 then snowFall1Y = -20 end -- Chạm đáy (280) tự động bay vút lên đỉnh
-            Snowflake1.Position = UDim2.new(0.5, -60 + math.sin(t) * 15, 0, snowFall1Y)
-        end
-        if Snowflake2 and Snowflake2.Parent then
-            Snowflake2.Rotation = -t * 60
-            snowFall2Y = snowFall2Y + 0.3
-            if snowFall2Y > 280 then snowFall2Y = -20 end
-            Snowflake2.Position = UDim2.new(0.5, 40 + math.cos(t) * 15, 0, snowFall2Y)
+        local t = tick()
+        for _, snow in ipairs(snowFlakes) do
+            if snow.Object and snow.Object.Parent then
+                snow.YPos = snow.YPos + snow.FallSpeed
+                if snow.YPos > 310 then
+                    snow.YPos = -20
+                    snow.XOffset = math.random(-120, 120)
+                end
+                snow.Object.Rotation = (t * snow.RotSpeed)
+                snow.Object.Position = UDim2.new(0.5, snow.XOffset + math.sin(t * snow.Speed + snow.YPos) * 12, 0, snow.YPos)
+            end
         end
     end)
 
