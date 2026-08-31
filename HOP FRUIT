@@ -182,17 +182,17 @@ else
         errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
         errorLabel.Text = "Generating unique key..."
         
-        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM (Chưa ghi vào workspace)
+        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM
         local randomPart = randomString(15)
         pendingKey = "DUBO-KEY=" .. randomPart
         
-        -- Tự động điền luôn vào ô để người dùng submit cho nhanh
-        textBox.Text = pendingKey
+        -- KHÔNG tự điền vào textBox nữa, để trống cho tụi nó tự dán key vào!
+        textBox.Text = ""
+        textBox.PlaceholderText = "Paste your key here..."
         
         local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
         local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
         
-        -- Gắn chuẩn cả vào url và link_du_phong như ý ông yêu cầu
         local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
         local encodedBackup = HttpService:UrlEncode(formattedAuthTool)
         local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedBackup
@@ -234,11 +234,11 @@ else
 
                 pcall(function() setclipboard(shortLink) end)
                 errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-                errorLabel.Text = "Link copied! Submit when ready."
+                errorLabel.Text = "Link copied! Complete link to get key."
             else
                 pcall(function() setclipboard(formattedAuthTool) end)
                 errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                errorLabel.Text = "API Timeout, fallback raw link copied!"
+                errorLabel.Text = "API Timeout, fallback link copied!"
             end
         end)
     end)
