@@ -5,10 +5,50 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG ANTI-TAMPERING & KEY SYSTEM ====================
+-- ==================== HỆ THỐNG ANTI-TAMPERING & KEY SYSTEM (BÃY NGẦM) ====================
 local fileName = "DuboHub_KeyDatav2_0.json"
 local KEY_DURATION = 24 * 60 * 60          -- 24 tiếng
 local MAX_ALLOWED_DURATION = 25 * 60 * 60  -- Giới hạn tối đa chống gian lận thời gian (25 tiếng)
+
+-- Hàm kiểm tra cấu trúc Key bẫy ngầm đối chiếu ngược
+local function validateKeyPattern(inputString)
+    if type(inputString) ~= "string" or not inputString:match("^DUBO%-KEY=") then
+        return false, "Key phải bắt đầu bằng DUBO-KEY=!"
+    end
+    
+    local key = inputString:sub(10)
+    if #key ~= 15 then
+        return false, "Key không đủ độ dài 15 ký tự!"
+    end
+
+    local c4  = key:sub(4, 4)
+    local c5  = key:sub(5, 5)
+    local c6  = key:sub(6, 6)
+    local c9  = key:sub(9, 9)
+    local c11 = key:sub(11, 11)
+
+    local function isStrictUpper(char)
+        return char == char:upper() and char ~= char:lower()
+    end
+
+    local function isLowerOrNumber(char)
+        if isStrictUpper(char) then
+            return false
+        end
+        return true
+    end
+
+    -- 1. Vị trí 6 và 11: Bắt buộc CHỮ HOA (Cấm tuyệt đối số và chữ thường)
+    if not isStrictUpper(c6) then return false, "Key sai cấu trúc bẫy!" end
+    if not isStrictUpper(c11) then return false, "Key sai cấu trúc bẫy!" end
+
+    -- 2. Vị trí 4, 5, 9: Chỉ cho phép CHỮ THƯỜNG hoặc SỐ (Cấm tuyệt đối chữ hoa)
+    if not isLowerOrNumber(c4) then return false, "Key sai cấu trúc bẫy!" end
+    if not isLowerOrNumber(c5) then return false, "Key sai cấu trúc bẫy!" end
+    if not isLowerOrNumber(c9) then return false, "Key sai cấu trúc bẫy!" end
+
+    return true, "Key hợp lệ!"
+end
 
 local function checkSavedKeyData()
     local success, res = pcall(function()
@@ -16,20 +56,25 @@ local function checkSavedKeyData()
             local rawData = readfile(fileName)
             local data = HttpService:JSONDecode(rawData)
             
-            if data and data.IsAuthenticated == true and data.ExpiryTime then
-                -- Nếu là Master/Admin Key thì miễn nhiễm mọi loại check anti-tampering
+            if data and data.IsAuthenticated == true and data.ExpiryTime and data.Key then
+                -- Nếu là Master/Admin Key thì miễn nhiễm
                 if data.Key == "04012012" or data.Key == "DUBO-KEY=04012012" or tonumber(data.ExpiryTime) > 1900000000 then
                     return true
+                end
+                
+                -- Kiểm tra lại cấu trúc key đã lưu trong file xem có khớp bẫy ngầm không
+                local isValidPattern, _ = validateKeyPattern(data.Key)
+                if not isValidPattern then
+                    if delfile then delfile(fileName) end
+                    return false
                 end
                 
                 local currentTime = os.time()
                 local expiryTime = tonumber(data.ExpiryTime)
                 
-                -- Anti-tampering: Nếu thời gian hiện tại nhỏ hơn hạn dùng VÀ khoảng cách không vượt quá giới hạn an toàn thì cho qua
                 if currentTime < expiryTime and (expiryTime - currentTime) <= MAX_ALLOWED_DURATION then
                     return true 
                 else
-                    -- Phát hiện gian lận chỉnh sửa file -> Tự hủy file ngay lập tức
                     if delfile then delfile(fileName) end
                 end
             end
@@ -42,7 +87,7 @@ end
 if checkSavedKeyData() then
     -- Đã hợp lệ -> Vào thẳng script chính
 else
-    local pendingKey = nil -- Lưu tạm thời trong RAM khi ấn Get Key
+    local pendingKey = nil 
     local keyAccepted = false
 
     local screenGui = Instance.new("ScreenGui")
@@ -127,21 +172,34 @@ else
     errorLabel.TextSize = 13
     errorLabel.Parent = mainFrame
 
-    local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    math.randomseed(os.time())
-    local function randomString(length)
-        local str = ""
-        for i = 1, length do
-            local randomIndex = math.random(1, #charset)
-            str = str .. string.sub(charset, randomIndex, randomIndex)
+    -- Hàm sinh chuỗi 15 ký tự tuân thủ bẫy ngầm
+    local function generateValidKeyString()
+        local allChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        local lowerOrNumChars = "abcdefghijklmnopqrstuvwxyz0123456789"
+        local upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        
+        math.randomseed(tick() + math.random(1000, 99999))
+        local arr = {}
+        for i = 1, 15 do
+            local idx = math.random(1, #allChars)
+            arr[i] = allChars:sub(idx, idx)
         end
-        return str
+        
+        -- Gài bẫy vị trí 4, 5, 9 (Chỉ chữ thường hoặc số)
+        arr[4] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
+        arr[5] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
+        arr[9] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
+        
+        -- Gài bẫy vị trí 6, 11 (Bắt buộc chữ hoa chuẩn)
+        arr[6] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
+        arr[11] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
+        
+        return table.concat(arr)
     end
 
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
         
-        -- Kiểm tra Master/Admin Key hoặc so sánh chính xác với key đã lưu tạm trong RAM
         if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Master Key accepted! Bypassing..."
@@ -155,25 +213,28 @@ else
             screenGui:Destroy()
             pendingKey = nil
             keyAccepted = true
-        elseif pendingKey and userEnteredKey == pendingKey then
-            errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-            errorLabel.Text = "Key correct! Saving to workspace..."
-            
-            pcall(function()
-                if writefile then
-                    local expiryTimestamp = os.time() + KEY_DURATION
-                    local dataToSave = { IsAuthenticated = true, ExpiryTime = expiryTimestamp, Key = pendingKey }
-                    writefile(fileName, HttpService:JSONEncode(dataToSave))
-                end
-            end)
-
-            task.wait(1)
-            screenGui:Destroy()
-            pendingKey = nil
-            keyAccepted = true
         else
-            errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-            errorLabel.Text = "Key sai! Không khớp với key vừa tạo."
+            local isValid, errReason = validateKeyPattern(userEnteredKey)
+            if isValid and (not pendingKey or userEnteredKey == pendingKey) then
+                errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+                errorLabel.Text = "Key correct! Saving to workspace..."
+                
+                pcall(function()
+                    if writefile then
+                        local expiryTimestamp = os.time() + KEY_DURATION
+                        local dataToSave = { IsAuthenticated = true, ExpiryTime = expiryTimestamp, Key = userEnteredKey }
+                        writefile(fileName, HttpService:JSONEncode(dataToSave))
+                    end
+                end)
+
+                task.wait(1)
+                screenGui:Destroy()
+                pendingKey = nil
+                keyAccepted = true
+            else
+                errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+                errorLabel.Text = "Key sai cấu trúc hoặc không khớp!"
+            end
         end
     end)
 
@@ -181,21 +242,17 @@ else
         errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
         errorLabel.Text = "Generating unique key..."
         
-        -- 1. Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM trước
-        local randomPart = randomString(15)
+        local randomPart = generateValidKeyString()
         pendingKey = "DUBO-KEY=" .. randomPart
         
         textBox.Text = ""
         textBox.PlaceholderText = "Paste your key here..."
         
-        -- 2. Gắn vào link authtool.app
         local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
         local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
         
         local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
         local encodedBackup = HttpService:UrlEncode(formattedAuthTool)
-        
-        -- 3. Đem qua link bên thứ 3 (layma.net) để tạo link rút gọn hoàn chỉnh
         local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedBackup
         
         task.spawn(function()
@@ -233,7 +290,6 @@ else
                     shortLink = formattedAuthTool
                 end
 
-                -- 4. Copy link rút gọn hoàn chỉnh vào bộ nhớ tạm
                 pcall(function() setclipboard(shortLink) end)
                 errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
                 errorLabel.Text = "Link copied! Complete link to get key."
