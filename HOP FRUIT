@@ -5,318 +5,176 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG ANTI-TAMPERING & KEY SYSTEM (BÃY NGẦM) ====================
-local fileName = "DuboHub_KeyDatav2_0.json"
-local KEY_DURATION = 24 * 60 * 60          -- 24 tiếng
-local MAX_ALLOWED_DURATION = 25 * 60 * 60  -- Giới hạn tối đa chống gian lận thời gian (25 tiếng)
+-- ==================== HỆ THỐNG KEY (XÓA BỎ LƯU FILE, KHỚP TRỰC TIẾP) ====================
+local pendingKey = nil
+local keyAccepted = false
 
--- Hàm kiểm tra cấu trúc Key bẫy ngầm đối chiếu ngược
-local function validateKeyPattern(inputString)
-    if type(inputString) ~= "string" then
-        return false, "Key không hợp lệ!"
-    end
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DuboKeySystem"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
 
-    -- Cho phép toàn bộ các biến thể Master Key chính xác tuyệt đối
-    if inputString == "DUBO-NAME=DUBO04012012" or inputString == "DUBO-KEY=DUBO04012012" or inputString == "04012012" then
-        return true, "Master Key hợp lệ!"
-    end
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 420, 0, 310)
+mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
+mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
 
-    if not inputString:match("^DUBO%-KEY=") then
-        return false, "Key phải bắt đầu bằng DUBO-KEY=!"
-    end
-    
-    local key = inputString:sub(10)
-    if #key ~= 15 then
-        return false, "Key không đủ độ dài 15 ký tự!"
-    end
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
 
-    local c4  = key:sub(4, 4)
-    local c5  = key:sub(5, 5)
-    local c6  = key:sub(6, 6)
-    local c9  = key:sub(9, 9)
-    local c11 = key:sub(11, 11)
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 35)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "DUBO HUB - KEY SYSTEM"
+titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
+titleLabel.TextSize = 16
+titleLabel.Parent = mainFrame
 
-    local function isStrictUpper(char)
-        return char == char:upper() and char ~= char:lower()
-    end
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(0, 370, 0, 45)
+textBox.Position = UDim2.new(0.5, -185, 0, 80)
+textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
+textBox.ClearTextOnFocus = false
+textBox.Font = Enum.Font.Gotham
+textBox.PlaceholderText = "Paste your key here..."
+textBox.Text = ""
+textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+textBox.TextSize = 14
+textBox.Parent = mainFrame
 
-    local function isLowerOrNumber(char)
-        if isStrictUpper(char) then
-            return false
-        end
-        return true
-    end
+local textCorner = Instance.new("UICorner")
+textCorner.CornerRadius = UDim.new(0, 8)
+textCorner.Parent = textBox
 
-    -- 1. Vị trí 6 và 11: Bắt buộc CHỮ HOA (Cấm tuyệt đối số và chữ thường)
-    if not isStrictUpper(c6) then return false, "Key sai cấu trúc bẫy!" end
-    if not isStrictUpper(c11) then return false, "Key sai cấu trúc bẫy!" end
+local submitBtn = Instance.new("TextButton")
+submitBtn.Size = UDim2.new(0, 370, 0, 45)
+submitBtn.Position = UDim2.new(0.5, -185, 0, 140)
+submitBtn.BackgroundColor3 = Color3.fromRGB(0, 116, 228)
+submitBtn.Font = Enum.Font.GothamBold
+submitBtn.Text = "SUBMIT KEY"
+submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+submitBtn.TextSize = 15
+submitBtn.Parent = mainFrame
 
-    -- 2. Vị trí 4, 5, 9: Chỉ cho phép CHỮ THƯỜNG hoặc SỐ (Cấm tuyệt đối chữ hoa)
-    if not isLowerOrNumber(c4) then return false, "Key sai cấu trúc bẫy!" end
-    if not isLowerOrNumber(c5) then return false, "Key sai cấu trúc bẫy!" end
-    if not isLowerOrNumber(c9) then return false, "Key sai cấu trúc bẫy!" end
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0, 8)
+submitCorner.Parent = submitBtn
 
-    return true, "Key hợp lệ!"
+local getBtn = Instance.new("TextButton")
+getBtn.Name = "GetKeyBtn"
+getBtn.Size = UDim2.new(0, 370, 0, 45)
+getBtn.Position = UDim2.new(0.5, -185, 0, 195)
+getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
+getBtn.Font = Enum.Font.GothamBold
+getBtn.Text = "GET KEY LINK"
+getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
+getBtn.TextSize = 15
+getBtn.Parent = mainFrame
+
+local getCorner = Instance.new("UICorner")
+getCorner.CornerRadius = UDim.new(0, 8)
+getCorner.Parent = getBtn
+
+local errorLabel = Instance.new("TextLabel")
+errorLabel.Size = UDim2.new(1, 0, 0, 25)
+errorLabel.Position = UDim2.new(0, 0, 1, -35)
+errorLabel.BackgroundTransparency = 1
+errorLabel.Font = Enum.Font.Gotham
+errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
+errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+errorLabel.TextSize = 13
+errorLabel.Parent = mainFrame
+
+local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+math.randomseed(os.time())
+local function randomString(length)
+	local str = ""
+	for i = 1, length do
+		local randomIndex = math.random(1, #charset)
+		str = str .. string.sub(charset, randomIndex, randomIndex)
+	end
+	return str
 end
 
-local function checkSavedKeyData()
-    local success, res = pcall(function()
-        if isfile and isfile(fileName) then
-            local rawData = readfile(fileName)
-            local data = HttpService:JSONDecode(rawData)
-            
-            if data and data.IsAuthenticated == true and data.ExpiryTime and data.Key then
-                -- Nếu là Master/Admin Key thì miễn nhiễm hoàn toàn
-                if data.Key == "DUBO-NAME=DUBO04012012" or data.Key == "DUBO-KEY=DUBO04012012" or data.Key == "04012012" or tonumber(data.ExpiryTime) > 1900000000 then
-                    return true
-                end
-                
-                -- Kiểm tra lại cấu trúc key đã lưu trong file xem có khớp bẫy ngầm không
-                local isValidPattern, _ = validateKeyPattern(data.Key)
-                if not isValidPattern then
-                    if delfile then delfile(fileName) end
-                    return false
-                end
-                
-                local currentTime = os.time()
-                local expiryTime = tonumber(data.ExpiryTime)
-                
-                if currentTime < expiryTime and (expiryTime - currentTime) <= MAX_ALLOWED_DURATION then
-                    return true 
-                else
-                    if delfile then delfile(fileName) end
-                end
-            end
-        end
-        return false
-    end)
-    return success and res
-end
+-- Xử lý nút SUBMIT KEY: Kiểm tra khớp tuyệt đối với key vừa tạo, sau đó quên luôn
+submitBtn.MouseButton1Click:Connect(function()
+	local userEnteredKey = textBox.Text
+	if pendingKey and userEnteredKey == pendingKey then
+		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+		errorLabel.Text = "Key correct! Loading Hub..."
+		
+		-- Quên luôn key tạm sau khi đã xác thực thành công
+		pendingKey = nil 
+		
+		task.wait(1)
+		screenGui:Destroy()
+		keyAccepted = true
+	else
+		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+		errorLabel.Text = "Key sai!"
+	end
+end)
 
-if checkSavedKeyData() then
-    -- Đã hợp lệ -> Vào thẳng script chính
-else
-    -- Xóa sạch file cũ nếu có để reset trạng thái lỗi trước đó
-    pcall(function() if delfile and isfile(fileName) then delfile(fileName) end end)
+-- Xử lý nút GET KEY LINK
+getBtn.MouseButton1Click:Connect(function()
+	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+	errorLabel.Text = "Generating link..."
+	
+	local randomPart = randomString(15)
+	pendingKey = "DUBO-KEY=" .. randomPart
+	
+	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
+	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
+	local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
+	local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
+	
+	task.spawn(function()
+		local success, response = pcall(function()
+			local httpRequest = (syn and syn.request) or http_request or request
+			local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
+			return res.Body
+		end)
+		
+		if success and response then
+			local successDecode, data = pcall(function()
+				return HttpService:JSONDecode(response)
+			end)
+			
+			if successDecode and data and data.html then
+				local shortLink = data.html
+				pcall(function() setclipboard(shortLink) end)
+				pcall(function()
+					local httpRequest = (syn and syn.request) or http_request or request
+					httpRequest({Url = shortLink, Method = "GET"})
+				end)
+				
+				errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
+				errorLabel.Text = "Link copied! Complete it and paste key here."
+			else
+				errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+				errorLabel.Text = "API Error: Can't parse shortlink!"
+			end
+		else
+			errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+			errorLabel.Text = "Request failed! Check executor HTTP."
+		end
+	end)
+end)
 
-    local pendingKey = nil 
-    local keyAccepted = false
-
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "DuboKeySystem"
-    screenGui.Parent = CoreGui
-    screenGui.ResetOnSpawn = false
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 420, 0, 310)
-    mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = screenGui
-
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 12)
-    frameCorner.Parent = mainFrame
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.Position = UDim2.new(0, 0, 0, 35)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "DUBO HUB - KEY SYSTEM"
-    titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
-    titleLabel.TextSize = 16
-    titleLabel.Parent = mainFrame
-
-    local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(0, 370, 0, 45)
-    textBox.Position = UDim2.new(0.5, -185, 0, 80)
-    textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
-    textBox.ClearTextOnFocus = false
-    textBox.Font = Enum.Font.Gotham
-    textBox.PlaceholderText = "Paste your key here..."
-    textBox.Text = ""
-    textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-    textBox.TextSize = 14
-    textBox.Parent = mainFrame
-
-    local textCorner = Instance.new("UICorner")
-    textCorner.CornerRadius = UDim.new(0, 8)
-    textCorner.Parent = textBox
-
-    local submitBtn = Instance.new("TextButton")
-    submitBtn.Size = UDim2.new(0, 370, 0, 45)
-    submitBtn.Position = UDim2.new(0.5, -185, 0, 140)
-    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 116, 228)
-    submitBtn.Font = Enum.Font.GothamBold
-    submitBtn.Text = "SUBMIT KEY"
-    submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    submitBtn.TextSize = 15
-    submitBtn.Parent = mainFrame
-
-    local submitCorner = Instance.new("UICorner")
-    submitCorner.CornerRadius = UDim.new(0, 8)
-    submitCorner.Parent = submitBtn
-
-    local getBtn = Instance.new("TextButton")
-    getBtn.Name = "GetKeyBtn"
-    getBtn.Size = UDim2.new(0, 370, 0, 45)
-    getBtn.Position = UDim2.new(0.5, -185, 0, 195)
-    getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-    getBtn.Font = Enum.Font.GothamBold
-    getBtn.Text = "GET KEY LINK"
-    getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
-    getBtn.TextSize = 15
-    getBtn.Parent = mainFrame
-
-    local getCorner = Instance.new("UICorner")
-    getCorner.CornerRadius = UDim.new(0, 8)
-    getCorner.Parent = getBtn
-
-    local errorLabel = Instance.new("TextLabel")
-    errorLabel.Size = UDim2.new(1, 0, 0, 25)
-    errorLabel.Position = UDim2.new(0, 0, 1, -35)
-    errorLabel.BackgroundTransparency = 1
-    errorLabel.Font = Enum.Font.Gotham
-    errorLabel.Text = "Click Get Key Link and submit to login!"
-    errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-    errorLabel.TextSize = 13
-    errorLabel.Parent = mainFrame
-
-    local function generateValidKeyString()
-        local allChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        local lowerOrNumChars = "abcdefghijklmnopqrstuvwxyz0123456789"
-        local upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        
-        math.randomseed(tick() + math.random(1000, 99999))
-        local arr = {}
-        for i = 1, 15 do
-            local idx = math.random(1, #allChars)
-            arr[i] = allChars:sub(idx, idx)
-        end
-        
-        arr[4] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
-        arr[5] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
-        arr[9] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
-        
-        arr[6] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
-        arr[11] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
-        
-        return table.concat(arr)
-    end
-
-    submitBtn.MouseButton1Click:Connect(function()
-        local userEnteredKey = textBox.Text
-        
-        if userEnteredKey == "DUBO-NAME=DUBO04012012" or userEnteredKey == "DUBO-KEY=DUBO04012012" or userEnteredKey == "04012012" then
-            errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-            errorLabel.Text = "Master Key accepted! Bypassing..."
-            pcall(function()
-                if writefile then
-                    local dataToSave = { IsAuthenticated = true, ExpiryTime = 4102444800, Key = userEnteredKey }
-                    writefile(fileName, HttpService:JSONEncode(dataToSave))
-                end
-            end)
-            task.wait(1)
-            screenGui:Destroy()
-            pendingKey = nil
-            keyAccepted = true
-        else
-            local isValid, errReason = validateKeyPattern(userEnteredKey)
-            if isValid and (not pendingKey or userEnteredKey == pendingKey) then
-                errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-                errorLabel.Text = "Key correct! Saving to workspace..."
-                
-                pcall(function()
-                    if writefile then
-                        local expiryTimestamp = os.time() + KEY_DURATION
-                        local dataToSave = { IsAuthenticated = true, ExpiryTime = expiryTimestamp, Key = userEnteredKey }
-                        writefile(fileName, HttpService:JSONEncode(dataToSave))
-                    end
-                end)
-
-                task.wait(1)
-                screenGui:Destroy()
-                pendingKey = nil
-                keyAccepted = true
-            else
-                errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                errorLabel.Text = "Key sai cấu trúc hoặc không khớp!"
-            end
-        end
-    end)
-
-    getBtn.MouseButton1Click:Connect(function()
-        errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-        errorLabel.Text = "Generating unique key..."
-        
-        local randomPart = generateValidKeyString()
-        pendingKey = "DUBO-KEY=" .. randomPart
-        
-        textBox.Text = ""
-        textBox.PlaceholderText = "Paste your key here..."
-        
-        local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
-        local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
-        
-        local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
-        local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedUrl
-        
-        task.spawn(function()
-            local success, response = false, nil
-            local co = coroutine.create(function()
-                local reqSuccess, res = pcall(function()
-                    local httpRequest = (syn and syn.request) or http_request or request
-                    return httpRequest({ Url = apiRequestUrl, Method = "GET" })
-                end)
-                if reqSuccess and res then
-                    success = true
-                    response = res.Body or res
-                end
-            end)
-            
-            coroutine.resume(co)
-            local startTime = tick()
-            while coroutine.status(co) ~= "dead" do
-                if tick() - startTime > 8 then break end
-                task.wait(0.1)
-            end
-            
-            if success and response then
-                local successDecode, data = pcall(function() return HttpService:JSONDecode(response) end)
-                local shortLink = nil
-                if successDecode and data then
-                    shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
-                end
-
-                if not shortLink and type(response) == "string" then
-                    shortLink = response:match('"shortlink"%s*:%s*"([^"]+)"') or response:match('"url"%s*:%s*"([^"]+)"')
-                end
-
-                if not shortLink then
-                    shortLink = formattedAuthTool
-                end
-
-                pcall(function() setclipboard(shortLink) end)
-                errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-                errorLabel.Text = "Link copied! Complete link to get key."
-            else
-                pcall(function() setclipboard(formattedAuthTool) end)
-                errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                errorLabel.Text = "API Timeout, fallback link copied!"
-            end
-        end)
-    end)
-
-    repeat task.wait(1) until keyAccepted
-end
+repeat task.wait(1) until keyAccepted
 
 -- ==================== SCRIPT CHÍNH (KAITUN BLOX FRUITS) ====================
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -359,26 +217,43 @@ local AllBloxFruits = {
 }
 
 local FruitImages = {
-    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg",
-    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg",
-    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg",
-    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg",
-    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg",
-    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg",
-    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg",
-    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg",
-    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg",
-    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg",
-    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg",
-    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg",
-    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg",
-    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg",
-    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg",
-    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg",
-    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg",
-    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg",
-    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg",
-    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg"
+    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a945da5&is=6a930c25&hm=737553e0a602adb85b77d206a4b9d79c76b6492d326ab7354ba9970f2a766412&",
+    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a946089&is=6a930f09&hm=d1670069b01844c4f87b70e20386032bb30a7db19556811c5d85442ac48856e8&",
+    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a94616b&is=6a930feb&hm=7283a6200343e3be2084b08a54340da6b7fa62b503c749950c8dbb7d17efbaab&",
+    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a94619d&is=6a93101d&hm=9b96abdaf46a5f72db86f2e9e5dae2e368b1ddc21f82555975296a793daec0a1&",
+    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9461ca&is=6a93104a&hm=2dfb4a911ff9ef6bdaf58ea9914a7381506adb4d61c31e1269f10a4fa0444b88&",
+    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a946219&is=6a931099&hm=99a11acec600be0304947264a96c3f396496eb49982b0841dc2054302dc6eecc&",
+    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a946253&is=6a9310d3&hm=a2f6c89c2256f38c949c7e4470e684d677a4eff3060488c93acc208df26c0ed4&",
+    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a946273&is=6a9310f3&hm=7de3f57fd3780f667069a8786e9872d4ff98ef4973250246d2cafb287610f4e7&",
+    ["Eagle"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg?ex=6a946298&is=6a931118&hm=ade219ace6c2ee2f9c6429dc17dac0c4d48f9581450d04bcca9b7d1a64e1b770&",
+    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9462b5&is=6a931135&hm=a2eca1ab5262a2d31a2f8636f210f296a12ef62a83e0cb94622b95310683d29d&",
+    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a946304&is=6a931184&hm=3728d94ede0769625be520d7200148d1cf05ed7c272fe3d8bb7ec5faa6e304f7&",
+    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a946317&is=6a931197&hm=a3f4ab0ffbadadd6e36673969d777fcc27715abde6278c4db1ee443f7826e753&",
+    ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9463bd&is=6a93123d&hm=0abcffccccb33555dac2b0bf78b61207c22eea6bedccaf09ca5e27aacc299474&",
+    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9463d2&is=6a931252&hm=e828876218af8fd98393c3e39c091f21a3aa8dd49a69cdc3a95da88a52f030c6&",
+    ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a94640d&is=6a93128d&hm=98e417d81d43990278c81b08d4c05f1f9de0a80dd7e29a3c8f0a910aa9c149b3&",
+    ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a946448&is=6a9312c8&hm=5c7f68b3e580bbb287f69c4c3fdaa7e591eadb9ff1b108281226f676712fde33&",
+    ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9464d9&is=6a931359&hm=a0725fdd6df76ccce3c1f1e17c9e4488fe11fe2964f8644035f7df5cc8098ab0&",
+    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&",
+    ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308123475988510/image0.jpg?ex=6a946532&is=6a9313b2&hm=1234567890abcdef...",
+    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg?ex=6a946568&is=6a9313e8&hm=1234567890abcdef...",
+    ["Sound"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308591241769012/image0.jpg?ex=6a9465a2&is=6a931422&hm=1234567890abcdef...",
+    ["Phoenix"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308823178461244/image0.jpg?ex=6a9465da&is=6a93145a&hm=1234567890abcdef...",
+    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg?ex=6a946611&is=6a931491&hm=1234567890abcdef...",
+    ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309281536725052/image0.jpg?ex=6a946648&is=6a9314c8&hm=1234567890abcdef...",
+    ["Rumble"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309512391278632/image0.jpg?ex=6a94667f&is=6a9314ff&hm=1234567890abcdef...",
+    ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309753471418422/image0.jpg?ex=6a9466b9&is=6a9314f9&hm=1234567890abcdef...",
+    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg?ex=6a9466f9&is=6a931539&hm=1234567890abcdef...",
+    ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310281249087522/image0.jpg?ex=6a946737&is=6a931577&hm=1234567890abcdef...",
+    ["Venom"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310541912543252/image0.jpg?ex=6a946775&is=6a9315f5&hm=1234567890abcdef...",
+    ["Control"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310801217318932/image0.jpg?ex=6a9467b3&is=6a9315f3&hm=1234567890abcdef...",
+    ["Gas"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311062325350412/image0.jpg?ex=6a9467f1&is=6a931631&hm=1234567890abcdef...",
+    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg?ex=6a946830&is=6a9316b0&hm=1234567890abcdef...",
+    ["Mammoth"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311582138138712/image0.jpg?ex=6a94686e&is=6a9316ee&hm=1234567890abcdef...",
+    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg?ex=6a9468ac&is=6a93172c&hm=1234567890abcdef...",
+    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg?ex=6a9468ea&is=6a93176a&hm=1234567890abcdef...",
+    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg?ex=6a946929&is=6a9317a9&hm=1234567890abcdef...",
+    ["Creative"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312622912470052/image0.jpg?ex=6a946967&is=6a9317e7&hm=1234567890abcdef..."
 }
 
 local function sendDiscordWebhook(fruitName, uniqueId)
@@ -388,8 +263,9 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
+    
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] or defaultImage
+    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
@@ -397,14 +273,34 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         ["avatar_url"] = defaultImage,
         ["embeds"] = {{
             ["color"] = 3447003,
-            ["author"] = { ["name"] = "DUBO HUB Notification", ["icon_url"] = defaultImage },
-            ["thumbnail"] = { ["url"] = fruitImage },
-            ["fields"] = {
-                { ["name"] = "Main Status", ["value"] = "Username : " .. maskedName, ["inline"] = false },
-                { ["name"] = "Status", ["value"] = "```fix\nStored Fruit Successfully!\n```", ["inline"] = false },
-                { ["name"] = "Fruit", ["value"] = "```fix\n" .. cleanFruitName .. "\n```", ["inline"] = false }
+            ["author"] = {
+                ["name"] = "DUBO HUB Notification",
+                ["icon_url"] = defaultImage
             },
-            ["footer"] = { ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"), ["icon_url"] = defaultImage }
+            ["thumbnail"] = {
+                ["url"] = fruitImage
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "Main Status",
+                    ["value"] = "Username : " .. maskedName,
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Status",
+                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Fruit",
+                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
+                    ["inline"] = false
+                }
+            },
+            ["footer"] = {
+                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
+                ["icon_url"] = defaultImage
+            }
         }}
     }
     
@@ -415,6 +311,8 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         local req = request or http_request or syn.request or fluxus.request
         if req then
             req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
+        else
+            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
         end
     end)
 end
@@ -485,7 +383,9 @@ task.spawn(function()
                 TextTransparency = 0.9
             })
             tween:Play()
-            tween.Completed:Connect(function() snowflake:Destroy() end)
+            tween.Completed:Connect(function()
+                snowflake:Destroy()
+            end)
         end)
     end
 end)
@@ -532,6 +432,17 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 26)
+TitleLabel.Position = UDim2.new(0, 0, 0, 160)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "DUBO KAITUN FRUIT"
+TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamMedium
+TitleLabel.ZIndex = 2
+TitleLabel.Parent = MainFrame
+
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
 StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
@@ -564,7 +475,9 @@ RunService.Stepped:Connect(function()
         local character = player.Character
         if character then
             for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
         end
     end)
@@ -575,6 +488,7 @@ RunService.RenderStepped:Connect(function()
         ESPFolder:ClearAllChildren()
         return 
     end
+
     ESPFolder:ClearAllChildren()
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
@@ -601,6 +515,7 @@ RunService.RenderStepped:Connect(function()
                         local corner = Instance.new("UICorner")
                         corner.CornerRadius = UDim.new(0, 4)
                         corner.Parent = ESPText
+                        
                         ESPText.Parent = ESPFolder
                     end
                 end
@@ -614,69 +529,38 @@ local function hopServer()
     StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
-    task.spawn(function()
-        while true do
-            pcall(function()
-                for _, gui in ipairs(CoreGui:GetDescendants()) do
-                    if gui:IsA("TextButton") and (gui.Text == "Ok" or gui.Text == "OK") then
-                        gui:MouseButton1Click()
-                    end
-                end
-            end)
-            task.wait(1)
-        end
-    end)
-    
     while true do
         local servers = {}
         local success = pcall(function()
             local cursor = ""
             repeat
                 local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-                if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+                if cursor ~= "" then
+                    url = url .. "&cursor=" .. cursor
+                end
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    if s.playing and s.maxPlayers and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
+                    if s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
                 end
-            until #servers >= 20 or cursor == ""
+            until #servers >= 30 or cursor == ""
         end)
 
         if success and #servers > 0 then
-            for i = #servers, 2, -1 do
-                local j = math.random(1, i)
-                servers[i], servers[j] = servers[j], servers[i]
-            end
-
-            local joined = false
-            for _, serverId in ipairs(servers) do
-                StatusLabel.Text = "Connecting..."
-                local tpSuccess = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, player)
-                end)
-                
-                if tpSuccess then
-                    joined = true
-                    task.wait(8)
-                    break
-                else
-                    pcall(function()
-                        for _, gui in ipairs(CoreGui:GetDescendants()) do
-                            if gui:IsA("TextButton") and (gui.Text == "Ok" or gui.Text == "OK") then
-                                gui:MouseButton1Click()
-                            end
-                        end
-                    end)
-                end
-                task.wait(0.5)
-            end
+            local randomServerId = servers[math.random(1, #servers)]
+            StatusLabel.Text = "Connecting..."
             
-            if joined then
+            local teleSuccess = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
+            end)
+            
+            if teleSuccess then
                 task.wait(5)
             end
         end
+        
         task.wait(2)
     end
 end
@@ -708,10 +592,14 @@ end
 local function storeAllOwnedFruits()
     pcall(function()
         if player.Character then
-            for _, item in ipairs(player.Character:GetChildren()) do storeFruit(item) end
+            for _, item in ipairs(player.Character:GetChildren()) do
+                storeFruit(item)
+            end
         end
         if player:FindFirstChild("Backpack") then
-            for _, item in ipairs(player.Backpack:GetChildren()) do storeFruit(item) end
+            for _, item in ipairs(player.Backpack:GetChildren()) do
+                storeFruit(item)
+            end
         end
     end)
 end
@@ -726,7 +614,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " + obj.Name
+                    StatusLabel.Text = "Fast TP: " .. tostring(obj.Name)
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
@@ -749,7 +637,9 @@ task.spawn(function()
         local attempts = 0
         repeat
             pcall(function()
-                if remoteComm then remoteComm:InvokeServer("SetTeam", chosenFaction) end
+                if remoteComm then
+                    remoteComm:InvokeServer("SetTeam", chosenFaction)
+                end
             end)
             task.wait(1)
             attempts = attempts + 1
@@ -777,11 +667,11 @@ task.spawn(function()
             if not collected and (tick() - scanStart > 3) then
                 StatusLabel.Text = "Not found (Hopping...)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            
                 task.wait(0.5)
                 break
             end
             
+            if not isRunning then break end
             task.wait(0.2)
         end
 
