@@ -5,7 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG KEY (XÓA BỎ LƯU FILE, KHỚP TRỰC TIẾP) ====================
+-- ==================== HỆ THỐNG KEY ====================
 local pendingKey = nil
 local keyAccepted = false
 
@@ -102,14 +102,12 @@ local function randomString(length)
 	return str
 end
 
--- Xử lý nút SUBMIT KEY: Kiểm tra khớp tuyệt đối với key vừa tạo, sau đó quên luôn
 submitBtn.MouseButton1Click:Connect(function()
 	local userEnteredKey = textBox.Text
 	if pendingKey and userEnteredKey == pendingKey then
 		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 		errorLabel.Text = "Key correct! Loading Hub..."
 		
-		-- Quên luôn key tạm sau khi đã xác thực thành công
 		pendingKey = nil 
 		
 		task.wait(1)
@@ -121,7 +119,6 @@ submitBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Xử lý nút GET KEY LINK (Đã sửa lỗi phân tích JSON từ API Layma)
 getBtn.MouseButton1Click:Connect(function()
 	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
 	errorLabel.Text = "Generating link..."
@@ -146,24 +143,17 @@ getBtn.MouseButton1Click:Connect(function()
 				return HttpService:JSONDecode(response)
 			end)
 			
-			-- Xử lý chuẩn cấu trúc JSON trả về của layma.net (thường chứa trường shortlink hoặc url thay vì html)
 			local shortLink = nil
 			if successDecode and data then
 				shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
 			end
 
-			-- Fallback bóc tách bằng string pattern nếu JSONDecode không bắt được key cụ thể
 			if not shortLink and type(response) == "string" then
 				shortLink = response:match('"shortlink"%s*:%s*"([^"]+)"') or response:match('"url"%s*:%s*"([^"]+)"')
 			end
 
 			if shortLink then
 				pcall(function() setclipboard(shortLink) end)
-				pcall(function()
-					local httpRequest = (syn and syn.request) or http_request or request
-					httpRequest({Url = shortLink, Method = "GET"})
-				end)
-				
 				errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
 				errorLabel.Text = "Link copied! Complete it and paste key here."
 			else
@@ -184,7 +174,6 @@ repeat task.wait(1) until keyAccepted
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
-local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -227,43 +216,26 @@ local AllBloxFruits = {
 }
 
 local FruitImages = {
-    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a945da5&is=6a930c25&hm=737553e0a602adb85b77d206a4b9d79c76b6492d326ab7354ba9970f2a766412&",
-    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a946089&is=6a930f09&hm=d1670069b01844c4f87b70e20386032bb30a7db19556811c5d85442ac48856e8&",
-    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a94616b&is=6a930feb&hm=7283a6200343e3be2084b08a54340da6b7fa62b503c749950c8dbb7d17efbaab&",
-    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a94619d&is=6a93101d&hm=9b96abdaf46a5f72db86f2e9e5dae2e368b1ddc21f82555975296a793daec0a1&",
-    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9461ca&is=6a93104a&hm=2dfb4a911ff9ef6bdaf58ea9914a7381506adb4d61c31e1269f10a4fa0444b88&",
-    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a946219&is=6a931099&hm=99a11acec600be0304947264a96c3f396496eb49982b0841dc2054302dc6eecc&",
-    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a946253&is=6a9310d3&hm=a2f6c89c2256f38c949c7e4470e684d677a4eff3060488c93acc208df26c0ed4&",
-    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a946273&is=6a9310f3&hm=7de3f57fd3780f667069a8786e9872d4ff98ef4973250246d2cafb287610f4e7&",
-    ["Eagle"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg?ex=6a946298&is=6a931118&hm=ade219ace6c2ee2f9c6429dc17dac0c4d48f9581450d04bcca9b7d1a64e1b770&",
-    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9462b5&is=6a931135&hm=a2eca1ab5262a2d31a2f8636f210f296a12ef62a83e0cb94622b95310683d29d&",
-    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a946304&is=6a931184&hm=3728d94ede0769625be520d7200148d1cf05ed7c272fe3d8bb7ec5faa6e304f7&",
-    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a946317&is=6a931197&hm=a3f4ab0ffbadadd6e36673969d777fcc27715abde6278c4db1ee443f7826e753&",
-    ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9463bd&is=6a93123d&hm=0abcffccccb33555dac2b0bf78b61207c22eea6bedccaf09ca5e27aacc299474&",
-    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9463d2&is=6a931252&hm=e828876218af8fd98393c3e39c091f21a3aa8dd49a69cdc3a95da88a52f030c6&",
-    ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a94640d&is=6a93128d&hm=98e417d81d43990278c81b08d4c05f1f9de0a80dd7e29a3c8f0a910aa9c149b3&",
-    ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a946448&is=6a9312c8&hm=5c7f68b3e580bbb287f69c4c3fdaa7e591eadb9ff1b108281226f676712fde33&",
-    ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9464d9&is=6a931359&hm=a0725fdd6df76ccce3c1f1e17c9e4488fe11fe2964f8644035f7df5cc8098ab0&",
-    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9464f5&is=6a931375&hm=80e62c77f7b886d9cfefa52dc71408c1c608738103bfaa791b6c1604113cfc37&",
-    ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308123475988510/image0.jpg?ex=6a946532&is=6a9313b2&hm=1234567890abcdef...",
-    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg?ex=6a946568&is=6a9313e8&hm=1234567890abcdef...",
-    ["Sound"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308591241769012/image0.jpg?ex=6a9465a2&is=6a931422&hm=1234567890abcdef...",
-    ["Phoenix"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308823178461244/image0.jpg?ex=6a9465da&is=6a93145a&hm=1234567890abcdef...",
-    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg?ex=6a946611&is=6a931491&hm=1234567890abcdef...",
-    ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309281536725052/image0.jpg?ex=6a946648&is=6a9314c8&hm=1234567890abcdef...",
-    ["Rumble"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309512391278632/image0.jpg?ex=6a94667f&is=6a9314ff&hm=1234567890abcdef...",
-    ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309753471418422/image0.jpg?ex=6a9466b9&is=6a9314f9&hm=1234567890abcdef...",
-    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg?ex=6a9466f9&is=6a931539&hm=1234567890abcdef...",
-    ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310281249087522/image0.jpg?ex=6a946737&is=6a931577&hm=1234567890abcdef...",
-    ["Venom"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310541912543252/image0.jpg?ex=6a946775&is=6a9315f5&hm=1234567890abcdef...",
-    ["Control"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310801217318932/image0.jpg?ex=6a9467b3&is=6a9315f3&hm=1234567890abcdef...",
-    ["Gas"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311062325350412/image0.jpg?ex=6a9467f1&is=6a931631&hm=1234567890abcdef...",
-    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg?ex=6a946830&is=6a9316b0&hm=1234567890abcdef...",
-    ["Mammoth"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311582138138712/image0.jpg?ex=6a94686e&is=6a9316ee&hm=1234567890abcdef...",
-    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg?ex=6a9468ac&is=6a93172c&hm=1234567890abcdef...",
-    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg?ex=6a9468ea&is=6a93176a&hm=1234567890abcdef...",
-    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg?ex=6a946929&is=6a9317a9&hm=1234567890abcdef...",
-    ["Creative"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312622912470052/image0.jpg?ex=6a946967&is=6a9317e7&hm=1234567890abcdef..."
+    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg",
+    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg",
+    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg",
+    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg",
+    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg",
+    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg",
+    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg",
+    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg",
+    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg",
+    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg",
+    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg",
+    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg",
+    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg",
+    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543308350123782164/image0.jpg",
+    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543309051424354314/image0.jpg",
+    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543310021382483982/image0.jpg",
+    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311321978280012/image0.jpg",
+    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543311842369294372/image0.jpg",
+    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312102550134842/image0.jpg",
+    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543312362722880552/image0.jpg"
 }
 
 local function sendDiscordWebhook(fruitName, uniqueId)
@@ -273,9 +245,8 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
+    local fruitImage = FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
@@ -283,46 +254,24 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         ["avatar_url"] = defaultImage,
         ["embeds"] = {{
             ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
+            ["author"] = { ["name"] = "DUBO HUB Notification", ["icon_url"] = defaultImage },
+            ["thumbnail"] = { ["url"] = fruitImage },
             ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                }
+                { ["name"] = "Main Status", ["value"] = "Username : " .. maskedName, ["inline"] = false },
+                { ["name"] = "Status", ["value"] = "```fix\nStored Fruit Successfully!\n```", ["inline"] = false },
+                { ["name"] = "Fruit", ["value"] = "```fix\n" .. cleanFruitName .. "\n```", ["inline"] = false }
             },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
+            ["footer"] = { ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"), ["icon_url"] = defaultImage }
         }}
     }
     
-    local encodedData = HttpService:JSONDecode and HttpService:JSONEncode(data) or ""
+    local encodedData = HttpService:JSONEncode(data)
     local headers = {["Content-Type"] = "application/json"}
     
     pcall(function()
         local req = request or http_request or syn.request or fluxus.request
         if req then
             req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
-        else
-            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
         end
     end)
 end
@@ -393,9 +342,7 @@ task.spawn(function()
                 TextTransparency = 0.9
             })
             tween:Play()
-            tween.Completed:Connect(function()
-                snowflake:Destroy()
-            end)
+            tween.Completed:Connect(function() snowflake:Destroy() end)
         end)
     end
 end)
@@ -442,17 +389,6 @@ local AvatarCircle = Instance.new("UICorner")
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 AvatarCircle.Parent = AvatarImg
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 26)
-TitleLabel.Position = UDim2.new(0, 0, 0, 160)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "DUBO KAITUN FRUIT"
-TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 13
-TitleLabel.Font = Enum.Font.GothamMedium
-TitleLabel.ZIndex = 2
-TitleLabel.Parent = MainFrame
-
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
 StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
@@ -485,9 +421,7 @@ RunService.Stepped:Connect(function()
         local character = player.Character
         if character then
             for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
+                if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
     end)
@@ -498,7 +432,6 @@ RunService.RenderStepped:Connect(function()
         ESPFolder:ClearAllChildren()
         return 
     end
-
     ESPFolder:ClearAllChildren()
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
@@ -525,7 +458,6 @@ RunService.RenderStepped:Connect(function()
                         local corner = Instance.new("UICorner")
                         corner.CornerRadius = UDim.new(0, 4)
                         corner.Parent = ESPText
-                        
                         ESPText.Parent = ESPFolder
                     end
                 end
@@ -545,9 +477,7 @@ local function hopServer()
             local cursor = ""
             repeat
                 local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-                if cursor ~= "" then
-                    url = url .. "&cursor=" .. cursor
-                end
+                if cursor ~= "" then url = url .. "&cursor=" .. cursor end
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
@@ -561,16 +491,11 @@ local function hopServer()
         if success and #servers > 0 then
             local randomServerId = servers[math.random(1, #servers)]
             StatusLabel.Text = "Connecting..."
-            
-            local teleSuccess = pcall(function()
+            pcall(function()
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
             end)
-            
-            if teleSuccess then
-                task.wait(5)
-            end
+            task.wait(5)
         end
-        
         task.wait(2)
     end
 end
@@ -602,14 +527,10 @@ end
 local function storeAllOwnedFruits()
     pcall(function()
         if player.Character then
-            for _, item in ipairs(player.Character:GetChildren()) do
-                storeFruit(item)
-            end
+            for _, item in ipairs(player.Character:GetChildren()) do storeFruit(item) end
         end
         if player:FindFirstChild("Backpack") then
-            for _, item in ipairs(player.Backpack:GetChildren()) do
-                storeFruit(item)
-            end
+            for _, item in ipairs(player.Backpack:GetChildren()) do storeFruit(item) end
         end
     end)
 end
@@ -624,7 +545,8 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " + obj.Name
+                    -- ĐÃ FIX: Đổi dấu + thành dấu .. để nối chuỗi chính xác trong Lua
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
@@ -647,9 +569,7 @@ task.spawn(function()
         local attempts = 0
         repeat
             pcall(function()
-                if remoteComm then
-                    remoteComm:InvokeServer("SetTeam", chosenFaction)
-                end
+                if remoteComm then remoteComm:InvokeServer("SetTeam", chosenFaction) end
             end)
             task.wait(1)
             attempts = attempts + 1
@@ -681,7 +601,6 @@ task.spawn(function()
                 break
             end
             
-            if not isRowRunning and false then break end
             task.wait(0.2)
         end
 
