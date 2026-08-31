@@ -5,10 +5,10 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG LƯU VÀ XÁC THỰC JSON TỪ WORKSPACE ====================
+-- ==================== HỆ THỐNG ANTI-TAMPERING & KEY SYSTEM ====================
 local fileName = "DuboHub_KeyDatav2_0.json"
-local KEY_DURATION = 24 * 60 * 60 -- Thời gian hiệu lực chuẩn: 24 tiếng cho key thường
-local MAX_ALLOWED_DURATION = 25 * 60 * 60 -- Chống sửa lén: Giới hạn tối đa không được vượt quá 25 tiếng
+local KEY_DURATION = 24 * 60 * 60          -- 24 tiếng
+local MAX_ALLOWED_DURATION = 25 * 60 * 60  -- Giới hạn tối đa chống gian lận thời gian (25 tiếng)
 
 local function checkSavedKeyData()
     local success, res = pcall(function()
@@ -17,19 +17,19 @@ local function checkSavedKeyData()
             local data = HttpService:JSONDecode(rawData)
             
             if data and data.IsAuthenticated == true and data.ExpiryTime then
-                local currentTime = os.time()
-                local expiryTime = tonumber(data.ExpiryTime)
-                
-                -- Nếu là key admin (expiry cực lớn > năm 2050) thì cho phép luôn không cần check 25 tiếng
-                if expiryTime > 1900000000 then
+                -- Nếu là Master/Admin Key thì miễn nhiễm mọi loại check anti-tampering
+                if data.Key == "04012012" or data.Key == "DUBO-KEY=04012012" or tonumber(data.ExpiryTime) > 1900000000 then
                     return true
                 end
                 
-                -- Kiểm tra cho key thường: Chưa hết hạn VÀ thời gian còn lại không được vượt quá giới hạn 25 tiếng
+                local currentTime = os.time()
+                local expiryTime = tonumber(data.ExpiryTime)
+                
+                -- Anti-tampering: Nếu thời gian hiện tại nhỏ hơn hạn dùng VÀ khoảng cách không vượt quá giới hạn an toàn thì cho qua
                 if currentTime < expiryTime and (expiryTime - currentTime) <= MAX_ALLOWED_DURATION then
                     return true 
                 else
-                    -- Phát hiện gian lận sửa file hoặc đã hết hạn -> Tự động xóa file rác
+                    -- Phát hiện gian lận chỉnh sửa file -> Tự hủy file ngay lập tức
                     if delfile then delfile(fileName) end
                 end
             end
@@ -39,12 +39,10 @@ local function checkSavedKeyData()
     return success and res
 end
 
--- Nếu file JSON hợp lệ và không bị hack thời gian -> Bỏ qua Get Key, chạy thẳng vào script chính
 if checkSavedKeyData() then
-    -- Đi thẳng xuống dưới chạy code chính
+    -- Đã hợp lệ -> Vào thẳng script chính
 else
-    -- ==================== HỆ THỐNG KEY ====================
-    local pendingKey = nil
+    local pendingKey = nil -- Lưu tạm thời trong RAM khi ấn Get Key
     local keyAccepted = false
 
     local screenGui = Instance.new("ScreenGui")
@@ -124,7 +122,7 @@ else
     errorLabel.Position = UDim2.new(0, 0, 1, -35)
     errorLabel.BackgroundTransparency = 1
     errorLabel.Font = Enum.Font.Gotham
-    errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
+    errorLabel.Text = "Click Get Key Link and submit to login!"
     errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
     errorLabel.TextSize = 13
     errorLabel.Parent = mainFrame
@@ -142,58 +140,52 @@ else
 
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
+        
+        -- Kiểm tra Master/Admin Key
         if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-            errorLabel.Text = "Admin Key accepted! Lifetime session..."
-            
+            errorLabel.Text = "Master Key accepted! Bypassing..."
             pcall(function()
                 if writefile then
-                    local expiryTimestamp = 4102444800 -- Vĩnh viễn đến năm 2099 cho key admin
-                    local dataToSave = {
-                        IsAuthenticated = true,
-                        ExpiryTime = expiryTimestamp,
-                        Key = userEnteredKey
-                    }
+                    local dataToSave = { IsAuthenticated = true, ExpiryTime = 4102444800, Key = userEnteredKey }
                     writefile(fileName, HttpService:JSONEncode(dataToSave))
                 end
             end)
-
-            pendingKey = nil 
             task.wait(1)
             screenGui:Destroy()
             keyAccepted = true
         elseif pendingKey and userEnteredKey == pendingKey then
+            -- So khớp chuẩn với key tạm đang lưu trong RAM -> Ghi file vào workspace kèm thời gian
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-            errorLabel.Text = "Key correct! Saving session & Loading..."
+            errorLabel.Text = "Key correct! Saving to workspace..."
             
             pcall(function()
                 if writefile then
-                    local expiryTimestamp = os.time() + KEY_DURATION -- 24 tiếng cho key thường
-                    local dataToSave = {
-                        IsAuthenticated = true,
-                        ExpiryTime = expiryTimestamp,
-                        Key = userEnteredKey
-                    }
+                    local expiryTimestamp = os.time() + KEY_DURATION
+                    local dataToSave = { IsAuthenticated = true, ExpiryTime = expiryTimestamp, Key = pendingKey }
                     writefile(fileName, HttpService:JSONEncode(dataToSave))
                 end
             end)
 
-            pendingKey = nil 
             task.wait(1)
             screenGui:Destroy()
             keyAccepted = true
         else
             errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-            errorLabel.Text = "Key sai!"
+            errorLabel.Text = "Key sai! Không khớp với key vừa tạo."
         end
     end)
 
     getBtn.MouseButton1Click:Connect(function()
         errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-        errorLabel.Text = "Generating link..."
+        errorLabel.Text = "Generating unique key..."
         
+        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM (Chưa ghi vào workspace)
         local randomPart = randomString(15)
         pendingKey = "DUBO-KEY=" .. randomPart
+        
+        -- Tự động điền luôn vào ô để người dùng submit cho nhanh
+        textBox.Text = pendingKey
         
         local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
         local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
@@ -202,8 +194,6 @@ else
         
         task.spawn(function()
             local success, response = false, nil
-            
-            -- Thêm cơ chế timeout 8 giây chống treo cứng giao diện
             local co = coroutine.create(function()
                 local reqSuccess, res = pcall(function()
                     local httpRequest = (syn and syn.request) or http_request or request
@@ -218,17 +208,12 @@ else
             coroutine.resume(co)
             local startTime = tick()
             while coroutine.status(co) ~= "dead" do
-                if tick() - startTime > 8 then
-                    break
-                end
+                if tick() - startTime > 8 then break end
                 task.wait(0.1)
             end
             
             if success and response then
-                local successDecode, data = pcall(function()
-                    return HttpService:JSONDecode(response)
-                end)
-                
+                local successDecode, data = pcall(function() return HttpService:JSONDecode(response) end)
                 local shortLink = nil
                 if successDecode and data then
                     shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
@@ -241,14 +226,14 @@ else
                 if shortLink then
                     pcall(function() setclipboard(shortLink) end)
                     errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-                    errorLabel.Text = "Link copied! Complete it and paste key here."
+                    errorLabel.Text = "Link copied! Submit when ready."
                 else
                     errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                    errorLabel.Text = "API Error: Can't parse shortlink!"
+                    errorLabel.Text = "API Error, but temporary key is ready!"
                 end
             else
                 errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                errorLabel.Text = "Request timeout/failed! Click Get Key Link again."
+                errorLabel.Text = "Timeout, but temporary key is ready!"
             end
         end)
     end)
