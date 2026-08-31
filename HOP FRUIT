@@ -181,7 +181,7 @@ else
         errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
         errorLabel.Text = "Generating unique key..."
         
-        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM
+        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM (Xóa sạch key cũ nếu lỡ ấn nhiều lần)
         local randomPart = randomString(15)
         pendingKey = "DUBO-KEY=" .. randomPart
         
