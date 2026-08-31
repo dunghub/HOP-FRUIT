@@ -201,11 +201,28 @@ else
         local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
         
         task.spawn(function()
-            local success, response = pcall(function()
-                local httpRequest = (syn and syn.request) or http_request or request
-                local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
-                return res.Body or res
+            local success, response = false, nil
+            
+            -- Thêm cơ chế timeout 8 giây chống treo cứng giao diện
+            local co = coroutine.create(function()
+                local reqSuccess, res = pcall(function()
+                    local httpRequest = (syn and syn.request) or http_request or request
+                    return httpRequest({ Url = apiRequestUrl, Method = "GET" })
+                end)
+                if reqSuccess and res then
+                    success = true
+                    response = res.Body or res
+                end
             end)
+            
+            coroutine.resume(co)
+            local startTime = tick()
+            while coroutine.status(co) ~= "dead" do
+                if tick() - startTime > 8 then
+                    break
+                end
+                task.wait(0.1)
+            end
             
             if success and response then
                 local successDecode, data = pcall(function()
@@ -231,7 +248,7 @@ else
                 end
             else
                 errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-                errorLabel.Text = "Request failed! Check executor HTTP."
+                errorLabel.Text = "Request timeout/failed! Click Get Key Link again."
             end
         end)
     end)
@@ -653,7 +670,6 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " + obj.Name
                     StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
