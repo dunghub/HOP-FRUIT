@@ -16,7 +16,7 @@ local function validateKeyPattern(inputString)
         return false, "Key không hợp lệ!"
     end
 
-    -- Cho phép các dạng Master Key / Admin Key
+    -- Cho phép toàn bộ các biến thể Master Key chính xác tuyệt đối
     if inputString == "DUBO-NAME=DUBO04012012" or inputString == "DUBO-KEY=DUBO04012012" or inputString == "04012012" then
         return true, "Master Key hợp lệ!"
     end
@@ -66,7 +66,7 @@ local function checkSavedKeyData()
             local data = HttpService:JSONDecode(rawData)
             
             if data and data.IsAuthenticated == true and data.ExpiryTime and data.Key then
-                -- Nếu là Master/Admin Key thì miễn nhiễm
+                -- Nếu là Master/Admin Key thì miễn nhiễm hoàn toàn
                 if data.Key == "DUBO-NAME=DUBO04012012" or data.Key == "DUBO-KEY=DUBO04012012" or data.Key == "04012012" or tonumber(data.ExpiryTime) > 1900000000 then
                     return true
                 end
@@ -96,6 +96,9 @@ end
 if checkSavedKeyData() then
     -- Đã hợp lệ -> Vào thẳng script chính
 else
+    -- Xóa sạch file cũ nếu có để reset trạng thái lỗi trước đó
+    pcall(function() if delfile and isfile(fileName) then delfile(fileName) end end)
+
     local pendingKey = nil 
     local keyAccepted = false
 
@@ -115,18 +118,6 @@ else
     local frameCorner = Instance.new("UICorner")
     frameCorner.CornerRadius = UDim.new(0, 12)
     frameCorner.Parent = mainFrame
-
-    -- Thêm logo nhỏ góc trên trái giống ảnh
-    local logoTop = Instance.new("ImageLabel")
-    logoTop.Size = UDim2.new(0, 36, 0, 36)
-    logoTop.Position = UDim2.new(0, 15, 0, 15)
-    logoTop.BackgroundTransparency = 1
-    logoTop.Image = "rbxassetid://0" -- Hoặc link avatar
-    logoTop.Parent = mainFrame
-    
-    local logoCorner = Instance.new("UICorner")
-    logoCorner.CornerRadius = UDim.new(1, 0)
-    logoCorner.Parent = logoTop
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, 0, 0, 30)
