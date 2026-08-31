@@ -5,189 +5,214 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== TỰ ĐỘNG LƯU VÀ GỌI LẠI TỪ WORKSPACE ====================
-local fileName = "dubo_autofruit.lua"
-pcall(function()
-    if writefile and not _G.DuboLoadedFromWorkspace then
-        -- Lưu nội dung mẫu hoặc kích hoạt cơ chế tự nạp
-        local selfCode = [[
-            -- Dubo Hub Auto-Execute Script từ Workspace
-            print("Dubo Hub loaded from workspace file successfully!")
-        ]]
-        writefile(fileName, selfCode)
-    end
-end)
+-- ==================== HỆ THỐNG LƯU VÀ XÁC THỰC JSON TỪ WORKSPACE ====================
+local fileName = "DuboHub_KeyDatav2_0.json"
+local KEY_DURATION = 24 * 60 * 60 -- Thời gian hiệu lực chuẩn: 24 tiếng
+local MAX_ALLOWED_DURATION = 25 * 60 * 60 -- Chống sửa lén: Giới hạn tối đa không được vượt quá 25 tiếng
 
--- ==================== HỆ THỐNG KEY ====================
-local pendingKey = nil
-local keyAccepted = false
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "DuboKeySystem"
-screenGui.Parent = CoreGui
-screenGui.ResetOnSpawn = false
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 420, 0, 310)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
-mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
-
-local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0, 12)
-frameCorner.Parent = mainFrame
-
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 35)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "DUBO HUB - KEY SYSTEM"
-titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
-titleLabel.TextSize = 16
-titleLabel.Parent = mainFrame
-
-local textBox = Instance.new("TextBox")
-textBox.Size = UDim2.new(0, 370, 0, 45)
-textBox.Position = UDim2.new(0.5, -185, 0, 80)
-textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
-textBox.ClearTextOnFocus = false
-textBox.Font = Enum.Font.Gotham
-textBox.PlaceholderText = "Paste your key here..."
-textBox.Text = ""
-textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-textBox.TextSize = 14
-textBox.Parent = mainFrame
-
-local textCorner = Instance.new("UICorner")
-textCorner.CornerRadius = UDim.new(0, 8)
-textCorner.Parent = textBox
-
-local submitBtn = Instance.new("TextButton")
-submitBtn.Size = UDim2.new(0, 370, 0, 45)
-submitBtn.Position = UDim2.new(0.5, -185, 0, 140)
-submitBtn.BackgroundColor3 = Color3.fromRGB(0, 116, 228)
-submitBtn.Font = Enum.Font.GothamBold
-submitBtn.Text = "SUBMIT KEY"
-submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitBtn.TextSize = 15
-submitBtn.Parent = mainFrame
-
-local submitCorner = Instance.new("UICorner")
-submitCorner.CornerRadius = UDim.new(0, 8)
-submitCorner.Parent = submitBtn
-
-local getBtn = Instance.new("TextButton")
-getBtn.Name = "GetKeyBtn"
-getBtn.Size = UDim2.new(0, 370, 0, 45)
-getBtn.Position = UDim2.new(0.5, -185, 0, 195)
-getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-getBtn.Font = Enum.Font.GothamBold
-getBtn.Text = "GET KEY LINK"
-getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
-getBtn.TextSize = 15
-getBtn.Parent = mainFrame
-
-local getCorner = Instance.new("UICorner")
-getCorner.CornerRadius = UDim.new(0, 8)
-getCorner.Parent = getBtn
-
-local errorLabel = Instance.new("TextLabel")
-errorLabel.Size = UDim2.new(1, 0, 0, 25)
-errorLabel.Position = UDim2.new(0, 0, 1, -35)
-errorLabel.BackgroundTransparency = 1
-errorLabel.Font = Enum.Font.Gotham
-errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
-errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-errorLabel.TextSize = 13
-errorLabel.Parent = mainFrame
-
-local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-math.randomseed(os.time())
-local function randomString(length)
-	local str = ""
-	for i = 1, length do
-		local randomIndex = math.random(1, #charset)
-		str = str .. string.sub(charset, randomIndex, randomIndex)
-	end
-	return str
+local function checkSavedKeyData()
+    local success, res = pcall(function()
+        if isfile and isfile(fileName) then
+            local rawData = readfile(fileName)
+            local data = HttpService:JSONDecode(rawData)
+            
+            if data and data.IsAuthenticated == true and data.ExpiryTime then
+                local currentTime = os.time()
+                local expiryTime = tonumber(data.ExpiryTime)
+                
+                -- Kiểm tra: Chưa hết hạn VÀ thời gian còn lại không được vượt quá giới hạn 25 tiếng (chống gian lận sửa file lén)
+                if currentTime < expiryTime and (expiryTime - currentTime) <= MAX_ALLOWED_DURATION then
+                    return true 
+                else
+                    -- Phát hiện gian lận sửa file hoặc đã hết hạn -> Tự động xóa file rác
+                    if delfile then delfile(fileName) end
+                end
+            end
+        end
+        return false
+    end)
+    return success and res
 end
 
-submitBtn.MouseButton1Click:Connect(function()
-	local userEnteredKey = textBox.Text
-	if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
-		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-		errorLabel.Text = "Master Admin Key Accepted! Loading..."
-		
-		pendingKey = nil 
-		task.wait(0.5)
-		screenGui:Destroy()
-		keyAccepted = true
-	elseif pendingKey and userEnteredKey == pendingKey then
-		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-		errorLabel.Text = "Key correct! Loading Hub..."
-		
-		pendingKey = nil 
-		task.wait(1)
-		screenGui:Destroy()
-		keyAccepted = true
-	else
-		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-		errorLabel.Text = "Key sai!"
-	end
-end)
+-- Nếu file JSON hợp lệ và không bị hack thời gian -> Bỏ qua Get Key, chạy thẳng vào script chính
+if checkSavedKeyData() then
+    -- Đi thẳng xuống dưới chạy code chính
+else
+    -- ==================== HỆ THỐNG KEY ====================
+    local pendingKey = nil
+    local keyAccepted = false
 
-getBtn.MouseButton1Click:Connect(function()
-	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-	errorLabel.Text = "Generating link..."
-	
-	local randomPart = randomString(15)
-	pendingKey = "DUBO-KEY=" .. randomPart
-	
-	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
-	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
-	local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
-	local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
-	
-	task.spawn(function()
-		local success, response = pcall(function()
-			local httpRequest = (syn and syn.request) or http_request or request
-			local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
-			return res.Body or res
-		end)
-		
-		if success and response then
-			local successDecode, data = pcall(function()
-				return HttpService:JSONDecode(response)
-			end)
-			
-			local shortLink = nil
-			if successDecode and data then
-				shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
-			end
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DuboKeySystem"
+    screenGui.Parent = CoreGui
+    screenGui.ResetOnSpawn = false
 
-			if not shortLink and type(response) == "string" then
-				shortLink = response:match('"shortlink"%s*:%s*"([^"]+)"') or response:match('"url"%s*:%s*"([^"]+)"')
-			end
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 420, 0, 310)
+    mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
 
-			if shortLink then
-				pcall(function() setclipboard(shortLink) end)
-				errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-				errorLabel.Text = "Link copied! Complete it and paste key here."
-			else
-				errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-				errorLabel.Text = "API Error: Can't parse shortlink!"
-			end
-		else
-			errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-			errorLabel.Text = "Request failed! Check executor HTTP."
-		end
-	end)
-end)
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 12)
+    frameCorner.Parent = mainFrame
 
-repeat task.wait(1) until keyAccepted
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    titleLabel.Position = UDim2.new(0, 0, 0, 35)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Text = "DUBO HUB - KEY SYSTEM"
+    titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
+    titleLabel.TextSize = 16
+    titleLabel.Parent = mainFrame
+
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 370, 0, 45)
+    textBox.Position = UDim2.new(0.5, -185, 0, 80)
+    textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
+    textBox.ClearTextOnFocus = false
+    textBox.Font = Enum.Font.Gotham
+    textBox.PlaceholderText = "Paste your key here..."
+    textBox.Text = ""
+    textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+    textBox.TextSize = 14
+    textBox.Parent = mainFrame
+
+    local textCorner = Instance.new("UICorner")
+    textCorner.CornerRadius = UDim.new(0, 8)
+    textCorner.Parent = textBox
+
+    local submitBtn = Instance.new("TextButton")
+    submitBtn.Size = UDim2.new(0, 370, 0, 45)
+    submitBtn.Position = UDim2.new(0.5, -185, 0, 140)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 116, 228)
+    submitBtn.Font = Enum.Font.GothamBold
+    submitBtn.Text = "SUBMIT KEY"
+    submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submitBtn.TextSize = 15
+    submitBtn.Parent = mainFrame
+
+    local submitCorner = Instance.new("UICorner")
+    submitCorner.CornerRadius = UDim.new(0, 8)
+    submitCorner.Parent = submitBtn
+
+    local getBtn = Instance.new("TextButton")
+    getBtn.Name = "GetKeyBtn"
+    getBtn.Size = UDim2.new(0, 370, 0, 45)
+    getBtn.Position = UDim2.new(0.5, -185, 0, 195)
+    getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
+    getBtn.Font = Enum.Font.GothamBold
+    getBtn.Text = "GET KEY LINK"
+    getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
+    getBtn.TextSize = 15
+    getBtn.Parent = mainFrame
+
+    local getCorner = Instance.new("UICorner")
+    getCorner.CornerRadius = UDim.new(0, 8)
+    getCorner.Parent = getBtn
+
+    local errorLabel = Instance.new("TextLabel")
+    errorLabel.Size = UDim2.new(1, 0, 0, 25)
+    errorLabel.Position = UDim2.new(0, 0, 1, -35)
+    errorLabel.BackgroundTransparency = 1
+    errorLabel.Font = Enum.Font.Gotham
+    errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
+    errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+    errorLabel.TextSize = 13
+    errorLabel.Parent = mainFrame
+
+    local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    math.randomseed(os.time())
+    local function randomString(length)
+        local str = ""
+        for i = 1, length do
+            local randomIndex = math.random(1, #charset)
+            str = str .. string.sub(charset, randomIndex, randomIndex)
+        end
+        return str
+    end
+
+    submitBtn.MouseButton1Click:Connect(function()
+        local userEnteredKey = textBox.Text
+        if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" or (pendingKey and userEnteredKey == pendingKey) then
+            errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+            errorLabel.Text = "Key correct! Saving session & Loading..."
+            
+            pcall(function()
+                if writefile then
+                    local expiryTimestamp = os.time() + KEY_DURATION
+                    local dataToSave = {
+                        IsAuthenticated = true,
+                        ExpiryTime = expiryTimestamp,
+                        Key = userEnteredKey
+                    }
+                    writefile(fileName, HttpService:JSONEncode(dataToSave))
+                end
+            end)
+
+            pendingKey = nil 
+            task.wait(1)
+            screenGui:Destroy()
+            keyAccepted = true
+        else
+            errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+            errorLabel.Text = "Key sai!"
+        end
+    end)
+
+    getBtn.MouseButton1Click:Connect(function()
+        errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
+        errorLabel.Text = "Generating link..."
+        
+        local randomPart = randomString(15)
+        pendingKey = "DUBO-KEY=" .. randomPart
+        
+        local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
+        local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
+        local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
+        local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
+        
+        task.spawn(function()
+            local success, response = pcall(function()
+                local httpRequest = (syn and syn.request) or http_request or request
+                local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
+                return res.Body or res
+            end)
+            
+            if success and response then
+                local successDecode, data = pcall(function()
+                    return HttpService:JSONDecode(response)
+                end)
+                
+                local shortLink = nil
+                if successDecode and data then
+                    shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
+                end
+
+                if not shortLink and type(response) == "string" then
+                    shortLink = response:match('"shortlink"%s*:%s*"([^"]+)"') or response:match('"url"%s*:%s*"([^"]+)"')
+                end
+
+                if shortLink then
+                    pcall(function() setclipboard(shortLink) end)
+                    errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
+                    errorLabel.Text = "Link copied! Complete it and paste key here."
+                else
+                    errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+                    errorLabel.Text = "API Error: Can't parse shortlink!"
+                end
+            else
+                errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+                errorLabel.Text = "Request failed! Check executor HTTP."
+            end
+        end)
+    end)
+
+    repeat task.wait(1) until keyAccepted
+end
 
 -- ==================== SCRIPT CHÍNH (KAITUN BLOX FRUITS) ====================
 
@@ -620,7 +645,7 @@ end
 task.spawn(function()
     while true do
         isRunning = true
-        StatusLabel.Text = "Team: " + factionDisplayName
+        StatusLabel.Text = "Team: " .. factionDisplayName
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         
         local attempts = 0
@@ -654,6 +679,7 @@ task.spawn(function()
             if not collected and (tick() - scanStart > 3) then
                 StatusLabel.Text = "Not found (Hopping...)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            
                 task.wait(0.5)
                 break
             end
@@ -664,12 +690,5 @@ task.spawn(function()
         if not isRunning then break end
         hopServer()
         task.wait(3)
-    end
-end)
-
--- Sau khi chạy lần đầu, tự động đọc và nạp lại file từ workspace nếu executor hỗ trợ
-pcall(function()
-    if isfile and isfile(fileName) and loadfile then
-        -- Có thể gọi lại tệp workspace để giữ vòng lặp hoạt động
     end
 end)
