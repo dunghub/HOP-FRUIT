@@ -5,6 +5,18 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
+-- ==================== TỰ ĐỘNG LƯU VÀO WORKSPACE ====================
+pcall(function()
+    if writefile then
+        local currentScriptContent = [[
+-- DUBO HUB - KAITUN BLOX FRUITS AUTO SAVE
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+-- Bạn có thể chạy lại file này bất cứ lúc nào từ thư mục workspace
+]]
+        writefile("dubo_autofruit.lua", currentScriptContent)
+    end
+end)
+
 -- ==================== HỆ THỐNG KEY ====================
 local pendingKey = nil
 local keyAccepted = false
@@ -102,7 +114,6 @@ local function randomString(length)
 	return str
 end
 
--- Tích hợp Master Key Admin (04012012) kết hợp bấm nút Submit thông thường
 submitBtn.MouseButton1Click:Connect(function()
 	local userEnteredKey = textBox.Text
 	if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
@@ -479,7 +490,6 @@ local function hopServer()
     StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
-    -- Tự động quét và đóng popup lỗi 773 nếu bị kẹt
     task.spawn(function()
         while true do
             pcall(function()
@@ -503,7 +513,6 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    -- Bỏ điều kiện >= 6 người, chỉ cần phòng còn chỗ trống và khác server hiện tại
                     if s.playing and s.maxPlayers and s.playing < (s.maxPlayers - 1) and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
