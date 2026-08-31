@@ -108,7 +108,7 @@ local function generateValidatedKey()
 	local chars = {}
 	
 	for i = 1, 15 do
-		if i >= 4 and i <= 5 or i == 9 then
+		if i == 4 or i == 5 or i == 9 then
 			local idx = math.random(1, #lowerNum)
 			table.insert(chars, string.sub(lowerNum, idx, idx))
 		elseif i >= 6 and i <= 11 then
@@ -130,7 +130,7 @@ local function validateKeyPattern(keyStr)
 	
 	for i = 1, 15 do
 		local c = string.sub(core, i, i)
-		if (i >= 4 and i <= 5) or (i == 9) then
+		if (i == 4 or i == 5 or i == 9) then
 			if not string.match(c, "[%l%d]") then return false end
 		elseif (i >= 6 and i <= 11) then
 			if not string.match(c, "[%u]") then return false end
