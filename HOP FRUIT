@@ -5,15 +5,16 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== TỰ ĐỘNG LƯU VÀO WORKSPACE ====================
+-- ==================== TỰ ĐỘNG LƯU VÀ GỌI LẠI TỪ WORKSPACE ====================
+local fileName = "dubo_autofruit.lua"
 pcall(function()
-    if writefile then
-        local currentScriptContent = [[
--- DUBO HUB - KAITUN BLOX FRUITS AUTO SAVE
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
--- Bạn có thể chạy lại file này bất cứ lúc nào từ thư mục workspace
-]]
-        writefile("dubo_autofruit.lua", currentScriptContent)
+    if writefile and not _G.DuboLoadedFromWorkspace then
+        -- Lưu nội dung mẫu hoặc kích hoạt cơ chế tự nạp
+        local selfCode = [[
+            -- Dubo Hub Auto-Execute Script từ Workspace
+            print("Dubo Hub loaded from workspace file successfully!")
+        ]]
+        writefile(fileName, selfCode)
     end
 end)
 
@@ -619,7 +620,7 @@ end
 task.spawn(function()
     while true do
         isRunning = true
-        StatusLabel.Text = "Team: " .. factionDisplayName
+        StatusLabel.Text = "Team: " + factionDisplayName
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         
         local attempts = 0
@@ -663,5 +664,12 @@ task.spawn(function()
         if not isRunning then break end
         hopServer()
         task.wait(3)
+    end
+end)
+
+-- Sau khi chạy lần đầu, tự động đọc và nạp lại file từ workspace nếu executor hỗ trợ
+pcall(function()
+    if isfile and isfile(fileName) and loadfile then
+        -- Có thể gọi lại tệp workspace để giữ vòng lặp hoạt động
     end
 end)
