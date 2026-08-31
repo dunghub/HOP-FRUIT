@@ -91,7 +91,7 @@ errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 errorLabel.TextSize = 13
 errorLabel.Parent = mainFrame
 
--- Thiết lập bộ lọc ký tự cho 2 kiểu
+-- Thiết lập bộ lọc ký tự cho 2 kiểu bẫy
 local lowercaseAndNums = "abcdefghijklmnopqrstuvwxyz0123456789"
 local uppercaseAndNums = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 local fullCharset       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -104,18 +104,19 @@ end
 
 local function generateSecureKey()
 	local chars = {}
+	-- Random toàn bộ 15 ký tự ban đầu (che mắt)
 	for i = 1, 15 do
 		chars[i] = getRandomChar(fullCharset)
 	end
 	
-	-- Cố định vị trí 4, 7, 9 theo Kiểu 1 (Không có chữ hoa)
-	chars[4] = getRandomChar(lowercaseAndNums)
-	chars[7] = getRandomChar(lowercaseAndNums)
-	chars[9] = getRandomChar(lowercaseAndNums)
+	-- Cố định vị trí 2, 8, 13 theo Kiểu 1 (Không có chữ hoa / chỉ chữ thường hoặc số)
+	chars[2]  = getRandomChar(lowercaseAndNums)
+	chars[8]  = getRandomChar(lowercaseAndNums)
+	chars[13] = getRandomChar(lowercaseAndNums)
 	
-	-- Cố định vị trí 5, 11 theo Kiểu 2 (Không có chữ thường)
-	chars[5] = getRandomChar(uppercaseAndNums)
-	chars[11] = getRandomChar(uppercaseAndNums)
+	-- Cố định vị trí 3, 10 theo Kiểu 2 (Không có chữ thường / chỉ chữ HOA hoặc số)
+	chars[3]  = getRandomChar(uppercaseAndNums)
+	chars[10] = getRandomChar(uppercaseAndNums)
 	
 	return table.concat(chars)
 end
@@ -125,14 +126,14 @@ local function validateKey(enteredText)
 		return false
 	end
 	
-	local c4  = string.sub(enteredText, 4, 4)
-	local c7  = string.sub(enteredText, 7, 7)
-	local c9  = string.sub(enteredText, 9, 9)
-	local c5  = string.sub(enteredText, 5, 5)
-	local c11 = string.sub(enteredText, 11, 11)
+	local c2  = string.sub(enteredText, 2, 2)
+	local c8  = string.sub(enteredText, 8, 8)
+	local c13 = string.sub(enteredText, 13, 13)
+	local c3  = string.sub(enteredText, 3, 3)
+	local c10 = string.sub(enteredText, 10, 10)
 	
-	local isType1Valid = (c4:match("%u") == nil) and (c7:match("%u") == nil) and (c9:match("%u") == nil)
-	local isType2Valid = (c5:match("%l") == nil) and (c11:match("%l") == nil)
+	local isType1Valid = (c2:match("%u") == nil) and (c8:match("%u") == nil) and (c13:match("%u") == nil)
+	local isType2Valid = (c3:match("%l") == nil) and (c10:match("%l") == nil)
 	
 	if isType1Valid and isType2Valid and enteredText == pendingKey then
 		return true
