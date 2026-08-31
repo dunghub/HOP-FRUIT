@@ -102,14 +102,22 @@ local function randomString(length)
 	return str
 end
 
+-- Tích hợp Master Key Admin (04012012) kết hợp bấm nút Submit thông thường
 submitBtn.MouseButton1Click:Connect(function()
 	local userEnteredKey = textBox.Text
-	if pendingKey and userEnteredKey == pendingKey then
+	if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
+		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+		errorLabel.Text = "Master Admin Key Accepted! Loading..."
+		
+		pendingKey = nil 
+		task.wait(0.5)
+		screenGui:Destroy()
+		keyAccepted = true
+	elseif pendingKey and userEnteredKey == pendingKey then
 		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 		errorLabel.Text = "Key correct! Loading Hub..."
 		
 		pendingKey = nil 
-		
 		task.wait(1)
 		screenGui:Destroy()
 		keyAccepted = true
@@ -545,7 +553,6 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    -- ĐÃ FIX: Đổi dấu + thành dấu .. để nối chuỗi chính xác trong Lua
                     StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
