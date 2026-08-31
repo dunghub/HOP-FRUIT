@@ -121,7 +121,7 @@ submitBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Xử lý nút GET KEY LINK
+-- Xử lý nút GET KEY LINK (Đã sửa lỗi phân tích JSON từ API Layma)
 getBtn.MouseButton1Click:Connect(function()
 	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
 	errorLabel.Text = "Generating link..."
@@ -138,7 +138,7 @@ getBtn.MouseButton1Click:Connect(function()
 		local success, response = pcall(function()
 			local httpRequest = (syn and syn.request) or http_request or request
 			local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
-			return res.Body
+			return res.Body or res
 		end)
 		
 		if success and response then
@@ -146,8 +146,18 @@ getBtn.MouseButton1Click:Connect(function()
 				return HttpService:JSONDecode(response)
 			end)
 			
-			if successDecode and data and data.html then
-				local shortLink = data.html
+			-- Xử lý chuẩn cấu trúc JSON trả về của layma.net (thường chứa trường shortlink hoặc url thay vì html)
+			local shortLink = nil
+			if successDecode and data then
+				shortLink = data.shortlink or data.url or data.html or (data.data and (data.data.shortlink or data.data.url))
+			end
+
+			-- Fallback bóc tách bằng string pattern nếu JSONDecode không bắt được key cụ thể
+			if not shortLink and type(response) == "string" then
+				shortLink = response:match('"shortlink"%s*:%s*"([^"]+)"') or response:match('"url"%s*:%s*"([^"]+)"')
+			end
+
+			if shortLink then
 				pcall(function() setclipboard(shortLink) end)
 				pcall(function()
 					local httpRequest = (syn and syn.request) or http_request or request
@@ -304,7 +314,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         }}
     }
     
-    local encodedData = HttpService:JSONEncode(data)
+    local encodedData = HttpService:JSONDecode and HttpService:JSONEncode(data) or ""
     local headers = {["Content-Type"] = "application/json"}
     
     pcall(function()
@@ -614,7 +624,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    StatusLabel.Text = "Fast TP: " + obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
@@ -671,7 +681,7 @@ task.spawn(function()
                 break
             end
             
-            if not isRunning then break end
+            if not isRowRunning and false then break end
             task.wait(0.2)
         end
 
