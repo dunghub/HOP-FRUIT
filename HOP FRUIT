@@ -81,7 +81,7 @@ else
 	textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
 	textBox.ClearTextOnFocus = false
 	textBox.Font = Enum.Font.Gotham
-	textBox.PlaceholderText = "DUBO-KEY=..."
+	textBox.PlaceholderText = "Paste your key here..."
 	textBox.Text = ""
 	textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 	textBox.TextSize = 14
@@ -125,7 +125,7 @@ else
 	errorLabel.Position = UDim2.new(0, 0, 1, -35)
 	errorLabel.BackgroundTransparency = 1
 	errorLabel.Font = Enum.Font.Gotham
-	errorLabel.Text = "Please get link and submit your key!"
+	errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
 	errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 	errorLabel.TextSize = 13
 	errorLabel.Parent = mainFrame
@@ -141,7 +141,7 @@ else
 		return str
 	end
 
-	-- Xử lý nút SUBMIT KEY (Kiểm tra cả key vĩnh viễn và key sinh ra từ hệ thống)
+	-- Xử lý nút SUBMIT KEY (Kiểm tra key do người chơi dán vào)
 	submitBtn.MouseButton1Click:Connect(function()
 		local userEnteredKey = textBox.Text
 		if userEnteredKey == bypassKey then
@@ -164,14 +164,14 @@ else
 		end
 	end)
 
-	-- Xử lý nút GET KEY LINK
+	-- Xử lý nút GET KEY LINK (Không tự điền vào ô trống, giữ ô trống cho người dùng dán key)
 	getBtn.MouseButton1Click:Connect(function()
 		errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
 		errorLabel.Text = "Generating link..."
 		
 		local randomPart = randomString(15)
 		pendingKey = "DUBO-KEY=" .. randomPart
-		textBox.Text = pendingKey
+		-- KHÔNG gán pendingKey vào textBox.Text để ô trống như yêu cầu
 		
 		local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
 		local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
@@ -199,7 +199,7 @@ else
 					end)
 					
 					errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-					errorLabel.Text = "Link copied & opened! Complete link to get key."
+					errorLabel.Text = "Link copied! Complete it and paste key here."
 				else
 					errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 					errorLabel.Text = "API Error: Can't parse shortlink!"
@@ -587,7 +587,6 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    -- Chỉ hóp server trên 6 người và khác server hiện tại
                     if s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
