@@ -16,8 +16,8 @@ local function validateKeyPattern(inputString)
         return false, "Key không hợp lệ!"
     end
 
-    -- Cho phép Master Key mới hoặc Master Key cũ
-    if inputString == "DUBO-NAME=DUBO04012012" or inputString == "04012012" or inputString == "DUBO-KEY=04012012" then
+    -- Cho phép các dạng Master Key / Admin Key
+    if inputString == "DUBO-NAME=DUBO04012012" or inputString == "DUBO-KEY=DUBO04012012" or inputString == "04012012" then
         return true, "Master Key hợp lệ!"
     end
 
@@ -67,7 +67,7 @@ local function checkSavedKeyData()
             
             if data and data.IsAuthenticated == true and data.ExpiryTime and data.Key then
                 -- Nếu là Master/Admin Key thì miễn nhiễm
-                if data.Key == "DUBO-NAME=DUBO04012012" or data.Key == "04012012" or data.Key == "DUBO-KEY=04012012" or tonumber(data.ExpiryTime) > 1900000000 then
+                if data.Key == "DUBO-NAME=DUBO04012012" or data.Key == "DUBO-KEY=DUBO04012012" or data.Key == "04012012" or tonumber(data.ExpiryTime) > 1900000000 then
                     return true
                 end
                 
@@ -115,6 +115,18 @@ else
     local frameCorner = Instance.new("UICorner")
     frameCorner.CornerRadius = UDim.new(0, 12)
     frameCorner.Parent = mainFrame
+
+    -- Thêm logo nhỏ góc trên trái giống ảnh
+    local logoTop = Instance.new("ImageLabel")
+    logoTop.Size = UDim2.new(0, 36, 0, 36)
+    logoTop.Position = UDim2.new(0, 15, 0, 15)
+    logoTop.BackgroundTransparency = 1
+    logoTop.Image = "rbxassetid://0" -- Hoặc link avatar
+    logoTop.Parent = mainFrame
+    
+    local logoCorner = Instance.new("UICorner")
+    logoCorner.CornerRadius = UDim.new(1, 0)
+    logoCorner.Parent = logoTop
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, 0, 0, 30)
@@ -181,7 +193,6 @@ else
     errorLabel.TextSize = 13
     errorLabel.Parent = mainFrame
 
-    -- Hàm sinh chuỗi 15 ký tự tuân thủ bẫy ngầm
     local function generateValidKeyString()
         local allChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         local lowerOrNumChars = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -194,12 +205,10 @@ else
             arr[i] = allChars:sub(idx, idx)
         end
         
-        -- Gài bẫy vị trí 4, 5, 9 (Chỉ chữ thường hoặc số)
         arr[4] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
         arr[5] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
         arr[9] = lowerOrNumChars:sub(math.random(1, #lowerOrNumChars), math.random(1, #lowerOrNumChars))
         
-        -- Gài bẫy vị trí 6, 11 (Bắt buộc chữ hoa chuẩn)
         arr[6] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
         arr[11] = upperChars:sub(math.random(1, #upperChars), math.random(1, #upperChars))
         
@@ -209,7 +218,7 @@ else
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
         
-        if userEnteredKey == "DUBO-NAME=DUBO04012012" or userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
+        if userEnteredKey == "DUBO-NAME=DUBO04012012" or userEnteredKey == "DUBO-KEY=DUBO04012012" or userEnteredKey == "04012012" then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Master Key accepted! Bypassing..."
             pcall(function()
@@ -261,8 +270,7 @@ else
         local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
         
         local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
-        local encodedBackup = HttpService:UrlEncode(formattedAuthTool)
-        local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedBackup
+        local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedUrl
         
         task.spawn(function()
             local success, response = false, nil
