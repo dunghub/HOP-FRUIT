@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 
 -- ==================== HỆ THỐNG LƯU VÀ XÁC THỰC JSON TỪ WORKSPACE ====================
 local fileName = "DuboHub_KeyDatav2_0.json"
-local KEY_DURATION = 24 * 60 * 60 -- Thời gian hiệu lực chuẩn: 24 tiếng
+local KEY_DURATION = 24 * 60 * 60 -- Thời gian hiệu lực chuẩn: 24 tiếng cho key thường
 local MAX_ALLOWED_DURATION = 25 * 60 * 60 -- Chống sửa lén: Giới hạn tối đa không được vượt quá 25 tiếng
 
 local function checkSavedKeyData()
@@ -20,7 +20,12 @@ local function checkSavedKeyData()
                 local currentTime = os.time()
                 local expiryTime = tonumber(data.ExpiryTime)
                 
-                -- Kiểm tra: Chưa hết hạn VÀ thời gian còn lại không được vượt quá giới hạn 25 tiếng (chống gian lận sửa file lén)
+                -- Nếu là key admin (expiry cực lớn > năm 2050) thì cho phép luôn không cần check 25 tiếng
+                if expiryTime > 1900000000 then
+                    return true
+                end
+                
+                -- Kiểm tra cho key thường: Chưa hết hạn VÀ thời gian còn lại không được vượt quá giới hạn 25 tiếng
                 if currentTime < expiryTime and (expiryTime - currentTime) <= MAX_ALLOWED_DURATION then
                     return true 
                 else
@@ -137,13 +142,33 @@ else
 
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
-        if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" or (pendingKey and userEnteredKey == pendingKey) then
+        if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
+            errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+            errorLabel.Text = "Admin Key accepted! Lifetime session..."
+            
+            pcall(function()
+                if writefile then
+                    local expiryTimestamp = 4102444800 -- Vĩnh viễn đến năm 2099 cho key admin
+                    local dataToSave = {
+                        IsAuthenticated = true,
+                        ExpiryTime = expiryTimestamp,
+                        Key = userEnteredKey
+                    }
+                    writefile(fileName, HttpService:JSONEncode(dataToSave))
+                end
+            end)
+
+            pendingKey = nil 
+            task.wait(1)
+            screenGui:Destroy()
+            keyAccepted = true
+        elseif pendingKey and userEnteredKey == pendingKey then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Key correct! Saving session & Loading..."
             
             pcall(function()
                 if writefile then
-                    local expiryTimestamp = os.time() + KEY_DURATION
+                    local expiryTimestamp = os.time() + KEY_DURATION -- 24 tiếng cho key thường
                     local dataToSave = {
                         IsAuthenticated = true,
                         ExpiryTime = expiryTimestamp,
@@ -628,6 +653,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
+                    StatusLabel.Text = "Fast TP: " + obj.Name
                     StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
