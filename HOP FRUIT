@@ -1,40 +1,48 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
+-- Roblox System Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
--- ==================== HỆ THỐNG KEY (XÓA BỎ LƯU FILE, KHỚP TRỰC TIẾP) ====================
+local player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- ==================== HỆ THỐNG KEY (BẪY NGẦM VALIDATE KEY PATTERN) ====================
 local pendingKey = nil
 local keyAccepted = false
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "DuboKeySystem"
-screenGui.Parent = CoreGui
-screenGui.ResetOnSpawn = false
+local keyScreenGui = Instance.new("ScreenGui")
+keyScreenGui.Name = "DuboKeySystem"
+keyScreenGui.Parent = CoreGui
+keyScreenGui.ResetOnSpawn = false
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 420, 0, 310)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
-mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
+local mainFrameKey = Instance.new("Frame")
+mainFrameKey.Name = "MainFrame"
+mainFrameKey.Size = UDim2.new(0, 420, 0, 310)
+mainFrameKey.Position = UDim2.new(0.5, -210, 0.5, -155)
+mainFrameKey.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
+mainFrameKey.BorderSizePixel = 0
+mainFrameKey.Parent = keyScreenGui
 
 local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
-frameCorner.Parent = mainFrame
+frameCorner.Parent = mainFrameKey
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 35)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "DUBO HUB - KEY SYSTEM"
-titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
-titleLabel.TextSize = 16
-titleLabel.Parent = mainFrame
+local titleLabelKey = Instance.new("TextLabel")
+titleLabelKey.Size = UDim2.new(1, 0, 0, 30)
+titleLabelKey.Position = UDim2.new(0, 0, 0, 35)
+titleLabelKey.BackgroundTransparency = 1
+titleLabelKey.Font = Enum.Font.GothamBold
+titleLabelKey.Text = "DUBO HUB - KEY SYSTEM"
+titleLabelKey.TextColor3 = Color3.fromRGB(30, 144, 255)
+titleLabelKey.TextSize = 16
+titleLabelKey.Parent = mainFrameKey
 
 local textBox = Instance.new("TextBox")
 textBox.Size = UDim2.new(0, 370, 0, 45)
@@ -46,7 +54,7 @@ textBox.PlaceholderText = "Paste your key here..."
 textBox.Text = ""
 textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 textBox.TextSize = 14
-textBox.Parent = mainFrame
+textBox.Parent = mainFrameKey
 
 local textCorner = Instance.new("UICorner")
 textCorner.CornerRadius = UDim.new(0, 8)
@@ -60,7 +68,7 @@ submitBtn.Font = Enum.Font.GothamBold
 submitBtn.Text = "SUBMIT KEY"
 submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 submitBtn.TextSize = 15
-submitBtn.Parent = mainFrame
+submitBtn.Parent = mainFrameKey
 
 local submitCorner = Instance.new("UICorner")
 submitCorner.CornerRadius = UDim.new(0, 8)
@@ -75,7 +83,7 @@ getBtn.Font = Enum.Font.GothamBold
 getBtn.Text = "GET KEY LINK"
 getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
 getBtn.TextSize = 15
-getBtn.Parent = mainFrame
+getBtn.Parent = mainFrameKey
 
 local getCorner = Instance.new("UICorner")
 getCorner.CornerRadius = UDim.new(0, 8)
@@ -89,45 +97,68 @@ errorLabel.Font = Enum.Font.Gotham
 errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
 errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 errorLabel.TextSize = 13
-errorLabel.Parent = mainFrame
+errorLabel.Parent = mainFrameKey
 
-local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-math.randomseed(os.time())
-local function randomString(length)
-	local str = ""
-	for i = 1, length do
-		local randomIndex = math.random(1, #charset)
-		str = str .. string.sub(charset, randomIndex, randomIndex)
+local function generateValidatedKey()
+	local lowerNum = "abcdefghijklmnopqrstuvwxyz0123456789"
+	local upperSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	local fullSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	
+	math.randomseed(os.time() + tick())
+	local chars = {}
+	
+	for i = 1, 15 do
+		if i >= 4 and i <= 5 or i == 9 then
+			local idx = math.random(1, #lowerNum)
+			table.insert(chars, string.sub(lowerNum, idx, idx))
+		elseif i >= 6 and i <= 11 then
+			local idx = math.random(1, #upperSet)
+			table.insert(chars, string.sub(upperSet, idx, idx))
+		else
+			local idx = math.random(1, #fullSet)
+			table.insert(chars, string.sub(fullSet, idx, idx))
+		end
 	end
-	return str
+	return "DUBO-" .. table.concat(chars)
 end
 
--- Xử lý nút SUBMIT KEY: Kiểm tra khớp tuyệt đối với key vừa tạo, sau đó quên luôn
+local function validateKeyPattern(keyStr)
+	if not keyStr or type(keyStr) ~= "string" then return false end
+	if not string.match(keyStr, "^DUBO%-") then return false end
+	local core = string.sub(keyStr, 6)
+	if #core ~= 15 then return false end
+	
+	for i = 1, 15 do
+		local c = string.sub(core, i, i)
+		if (i >= 4 and i <= 5) or (i == 9) then
+			if not string.match(c, "[%l%d]") then return false end
+		elseif (i >= 6 and i <= 11) then
+			if not string.match(c, "[%u]") then return false end
+		end
+	end
+	return true
+end
+
 submitBtn.MouseButton1Click:Connect(function()
 	local userEnteredKey = textBox.Text
-	if pendingKey and userEnteredKey == pendingKey then
+	if pendingKey and userEnteredKey == pendingKey and validateKeyPattern(userEnteredKey) then
 		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 		errorLabel.Text = "Key correct! Loading Hub..."
-		
-		-- Quên luôn key tạm sau khi đã xác thực thành công
 		pendingKey = nil 
-		
 		task.wait(1)
-		screenGui:Destroy()
+		keyScreenGui:Destroy()
 		keyAccepted = true
 	else
 		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-		errorLabel.Text = "Key sai!"
+		errorLabel.Text = "Key sai cấu trúc bẫy ngầm hoặc không khớp!"
 	end
 end)
 
--- Xử lý nút GET KEY LINK
 getBtn.MouseButton1Click:Connect(function()
 	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
 	errorLabel.Text = "Generating link..."
 	
-	local randomPart = randomString(15)
-	pendingKey = "DUBO-KEY=" .. randomPart
+	pendingKey = generateValidatedKey()
 	
 	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
 	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
@@ -169,16 +200,7 @@ end)
 
 repeat task.wait(1) until keyAccepted
 
--- ==================== SCRIPT CHÍNH (KAITUN BLOX FRUITS) ====================
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local TeleportService = game:GetService("TeleportService")
-local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-
-local Camera = Workspace.CurrentCamera
+-- ==================== SCRIPT CHÍNH (GIỮ NGUYÊN 100%) ====================
 
 local remoteComm = nil
 pcall(function()
@@ -541,7 +563,7 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    if s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
                 end
@@ -614,7 +636,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. tostring(obj.Name)
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
