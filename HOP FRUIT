@@ -153,10 +153,9 @@ else
             end)
             task.wait(1)
             screenGui:Destroy()
-            pendingKey = nil -- Xóa sạch biến tạm trong RAM sau khi submit thành công
+            pendingKey = nil
             keyAccepted = true
         elseif pendingKey and userEnteredKey == pendingKey then
-            -- So khớp chuẩn với key tạm đang lưu trong RAM -> Ghi file vào workspace kèm thời gian
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Key correct! Saving to workspace..."
             
@@ -170,7 +169,7 @@ else
 
             task.wait(1)
             screenGui:Destroy()
-            pendingKey = nil -- Xóa sạch biến tạm trong RAM sau khi submit thành công
+            pendingKey = nil
             keyAccepted = true
         else
             errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
@@ -186,7 +185,7 @@ else
         local randomPart = randomString(15)
         pendingKey = "DUBO-KEY=" .. randomPart
         
-        -- KHÔNG tự điền vào textBox nữa, để trống cho tụi nó tự dán key vào!
+        -- Xóa trắng ô nhập, bắt người dùng phải tự dán key vào
         textBox.Text = ""
         textBox.PlaceholderText = "Paste your key here..."
         
