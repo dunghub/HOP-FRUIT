@@ -12,7 +12,16 @@ local MAX_ALLOWED_DURATION = 25 * 60 * 60  -- Giới hạn tối đa chống gia
 
 -- Hàm kiểm tra cấu trúc Key bẫy ngầm đối chiếu ngược
 local function validateKeyPattern(inputString)
-    if type(inputString) ~= "string" or not inputString:match("^DUBO%-KEY=") then
+    if type(inputString) ~= "string" then
+        return false, "Key không hợp lệ!"
+    end
+
+    -- Cho phép Master Key mới hoặc Master Key cũ
+    if inputString == "DUBO-NAME=DUBO04012012" or inputString == "04012012" or inputString == "DUBO-KEY=04012012" then
+        return true, "Master Key hợp lệ!"
+    end
+
+    if not inputString:match("^DUBO%-KEY=") then
         return false, "Key phải bắt đầu bằng DUBO-KEY=!"
     end
     
@@ -58,7 +67,7 @@ local function checkSavedKeyData()
             
             if data and data.IsAuthenticated == true and data.ExpiryTime and data.Key then
                 -- Nếu là Master/Admin Key thì miễn nhiễm
-                if data.Key == "04012012" or data.Key == "DUBO-KEY=04012012" or tonumber(data.ExpiryTime) > 1900000000 then
+                if data.Key == "DUBO-NAME=DUBO04012012" or data.Key == "04012012" or data.Key == "DUBO-KEY=04012012" or tonumber(data.ExpiryTime) > 1900000000 then
                     return true
                 end
                 
@@ -200,7 +209,7 @@ else
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
         
-        if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
+        if userEnteredKey == "DUBO-NAME=DUBO04012012" or userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Master Key accepted! Bypassing..."
             pcall(function()
@@ -718,7 +727,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    StatusLabel.Text = "Fast TP: " + obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
