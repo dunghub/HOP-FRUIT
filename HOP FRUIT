@@ -5,8 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG KEY (XÓA BỎ LƯU FILE, KHỚP TRỰC TIẾP) ====================
-local pendingKey = nil
+-- ==================== HỆ THỐNG KEY (CHỈ DÙNG KEY RIÊNG CỦA BẠN) ====================
 local keyAccepted = false
 
 local screenGui = Instance.new("ScreenGui")
@@ -42,7 +41,7 @@ textBox.Position = UDim2.new(0.5, -185, 0, 80)
 textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
 textBox.ClearTextOnFocus = false
 textBox.Font = Enum.Font.Gotham
-textBox.PlaceholderText = "Paste your key here..."
+textBox.PlaceholderText = "Nhập key riêng của bạn..."
 textBox.Text = ""
 textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 textBox.TextSize = 14
@@ -66,51 +65,22 @@ local submitCorner = Instance.new("UICorner")
 submitCorner.CornerRadius = UDim.new(0, 8)
 submitCorner.Parent = submitBtn
 
-local getBtn = Instance.new("TextButton")
-getBtn.Name = "GetKeyBtn"
-getBtn.Size = UDim2.new(0, 370, 0, 45)
-getBtn.Position = UDim2.new(0.5, -185, 0, 195)
-getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-getBtn.Font = Enum.Font.GothamBold
-getBtn.Text = "GET KEY LINK"
-getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
-getBtn.TextSize = 15
-getBtn.Parent = mainFrame
-
-local getCorner = Instance.new("UICorner")
-getCorner.CornerRadius = UDim.new(0, 8)
-getCorner.Parent = getBtn
-
 local errorLabel = Instance.new("TextLabel")
 errorLabel.Size = UDim2.new(1, 0, 0, 25)
-errorLabel.Position = UDim2.new(0, 0, 1, -35)
+errorLabel.Position = UDim2.new(0, 0, 1, -55)
 errorLabel.BackgroundTransparency = 1
 errorLabel.Font = Enum.Font.Gotham
-errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
-errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+errorLabel.Text = "Nhập key riêng rồi bấm Submit để vào Hub!"
+errorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 errorLabel.TextSize = 13
 errorLabel.Parent = mainFrame
 
-local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-math.randomseed(os.time())
-local function randomString(length)
-	local str = ""
-	for i = 1, length do
-		local randomIndex = math.random(1, #charset)
-		str = str .. string.sub(charset, randomIndex, randomIndex)
-	end
-	return str
-end
-
--- Xử lý nút SUBMIT KEY: Kiểm tra khớp tuyệt đối với key vừa tạo, sau đó quên luôn
+-- Xử lý nút SUBMIT KEY: Kiểm tra trực tiếp key riêng
 submitBtn.MouseButton1Click:Connect(function()
 	local userEnteredKey = textBox.Text
-	if pendingKey and userEnteredKey == pendingKey then
+	if userEnteredKey == "DUBO-KEY=04012012" then
 		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-		errorLabel.Text = "Key correct! Loading Hub..."
-		
-		-- Quên luôn key tạm sau khi đã xác thực thành công
-		pendingKey = nil 
+		errorLabel.Text = "Key đúng! Đang tải Hub..."
 		
 		task.wait(1)
 		screenGui:Destroy()
@@ -119,52 +89,6 @@ submitBtn.MouseButton1Click:Connect(function()
 		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 		errorLabel.Text = "Key sai!"
 	end
-end)
-
--- Xử lý nút GET KEY LINK
-getBtn.MouseButton1Click:Connect(function()
-	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-	errorLabel.Text = "Generating link..."
-	
-	local randomPart = randomString(15)
-	pendingKey = "DUBO-KEY=" .. randomPart
-	
-	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
-	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
-	local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
-	local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
-	
-	task.spawn(function()
-		local success, response = pcall(function()
-			local httpRequest = (syn and syn.request) or http_request or request
-			local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
-			return res.Body
-		end)
-		
-		if success and response then
-			local successDecode, data = pcall(function()
-				return HttpService:JSONDecode(response)
-			end)
-			
-			if successDecode and data and data.html then
-				local shortLink = data.html
-				pcall(function() setclipboard(shortLink) end)
-				pcall(function()
-					local httpRequest = (syn and syn.request) or http_request or request
-					httpRequest({Url = shortLink, Method = "GET"})
-				end)
-				
-				errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-				errorLabel.Text = "Link copied! Complete it and paste key here."
-			else
-				errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-				errorLabel.Text = "API Error: Can't parse shortlink!"
-			end
-		else
-			errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-			errorLabel.Text = "Request failed! Check executor HTTP."
-		end
-	end)
 end)
 
 repeat task.wait(1) until keyAccepted
