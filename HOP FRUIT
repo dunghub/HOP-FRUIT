@@ -141,7 +141,7 @@ else
     submitBtn.MouseButton1Click:Connect(function()
         local userEnteredKey = textBox.Text
         
-        -- Kiểm tra Master/Admin Key
+        -- Kiểm tra Master/Admin Key hoặc so sánh chính xác với key đã lưu tạm trong RAM
         if userEnteredKey == "04012012" or userEnteredKey == "DUBO-KEY=04012012" then
             errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
             errorLabel.Text = "Master Key accepted! Bypassing..."
@@ -181,19 +181,21 @@ else
         errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
         errorLabel.Text = "Generating unique key..."
         
-        -- Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM (Xóa sạch key cũ nếu lỡ ấn nhiều lần)
+        -- 1. Tạo key ngẫu nhiên và lưu TẠM THỜI TRONG RAM trước
         local randomPart = randomString(15)
         pendingKey = "DUBO-KEY=" .. randomPart
         
-        -- Xóa trắng ô nhập, bắt người dùng phải tự dán key vào
         textBox.Text = ""
         textBox.PlaceholderText = "Paste your key here..."
         
+        -- 2. Gắn vào link authtool.app
         local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
         local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
         
         local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
         local encodedBackup = HttpService:UrlEncode(formattedAuthTool)
+        
+        -- 3. Đem qua link bên thứ 3 (layma.net) để tạo link rút gọn hoàn chỉnh
         local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong=" .. encodedBackup
         
         task.spawn(function()
@@ -231,6 +233,7 @@ else
                     shortLink = formattedAuthTool
                 end
 
+                -- 4. Copy link rút gọn hoàn chỉnh vào bộ nhớ tạm
                 pcall(function() setclipboard(shortLink) end)
                 errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
                 errorLabel.Text = "Link copied! Complete link to get key."
