@@ -1,48 +1,40 @@
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+repeat task.wait(1) until game:IsLoaded() and game.Players.LocalPlayer
 
--- Roblox System Services
+-- ==================== HỆ THỐNG KEY (GIAO DIỆN & BẢO MẬT 2 KIỂU) ====================
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
 
--- ==================== HỆ THỐNG KEY (BẪY NGẦM VALIDATE KEY PATTERN) ====================
 local pendingKey = nil
 local keyAccepted = false
 
-local keyScreenGui = Instance.new("ScreenGui")
-keyScreenGui.Name = "DuboKeySystem"
-keyScreenGui.Parent = CoreGui
-keyScreenGui.ResetOnSpawn = false
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DuboKeySystem"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
 
-local mainFrameKey = Instance.new("Frame")
-mainFrameKey.Name = "MainFrame"
-mainFrameKey.Size = UDim2.new(0, 420, 0, 310)
-mainFrameKey.Position = UDim2.new(0.5, -210, 0.5, -155)
-mainFrameKey.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
-mainFrameKey.BorderSizePixel = 0
-mainFrameKey.Parent = keyScreenGui
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 420, 0, 310)
+mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
+mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
 
 local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
-frameCorner.Parent = mainFrameKey
+frameCorner.Parent = mainFrame
 
-local titleLabelKey = Instance.new("TextLabel")
-titleLabelKey.Size = UDim2.new(1, 0, 0, 30)
-titleLabelKey.Position = UDim2.new(0, 0, 0, 35)
-titleLabelKey.BackgroundTransparency = 1
-titleLabelKey.Font = Enum.Font.GothamBold
-titleLabelKey.Text = "DUBO HUB - KEY SYSTEM"
-titleLabelKey.TextColor3 = Color3.fromRGB(30, 144, 255)
-titleLabelKey.TextSize = 16
-titleLabelKey.Parent = mainFrameKey
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 35)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "DUBO HUB - KEY SYSTEM"
+titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
+titleLabel.TextSize = 16
+titleLabel.Parent = mainFrame
 
 local textBox = Instance.new("TextBox")
 textBox.Size = UDim2.new(0, 370, 0, 45)
@@ -54,7 +46,7 @@ textBox.PlaceholderText = "Paste your key here..."
 textBox.Text = ""
 textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 textBox.TextSize = 14
-textBox.Parent = mainFrameKey
+textBox.Parent = mainFrame
 
 local textCorner = Instance.new("UICorner")
 textCorner.CornerRadius = UDim.new(0, 8)
@@ -68,7 +60,7 @@ submitBtn.Font = Enum.Font.GothamBold
 submitBtn.Text = "SUBMIT KEY"
 submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 submitBtn.TextSize = 15
-submitBtn.Parent = mainFrameKey
+submitBtn.Parent = mainFrame
 
 local submitCorner = Instance.new("UICorner")
 submitCorner.CornerRadius = UDim.new(0, 8)
@@ -83,7 +75,7 @@ getBtn.Font = Enum.Font.GothamBold
 getBtn.Text = "GET KEY LINK"
 getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
 getBtn.TextSize = 15
-getBtn.Parent = mainFrameKey
+getBtn.Parent = mainFrame
 
 local getCorner = Instance.new("UICorner")
 getCorner.CornerRadius = UDim.new(0, 8)
@@ -97,60 +89,73 @@ errorLabel.Font = Enum.Font.Gotham
 errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
 errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
 errorLabel.TextSize = 13
-errorLabel.Parent = mainFrameKey
+errorLabel.Parent = mainFrame
 
-local function generateValidatedKey()
-	local lowerNum = "abcdefghijklmnopqrstuvwxyz0123456789"
-	local upperSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	local fullSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	
-	math.randomseed(os.time() + tick())
-	local chars = {}
-	
-	for i = 1, 15 do
-		if i == 4 or i == 5 or i == 9 then
-			local idx = math.random(1, #lowerNum)
-			table.insert(chars, string.sub(lowerNum, idx, idx))
-		elseif i >= 6 and i <= 11 then
-			local idx = math.random(1, #upperSet)
-			table.insert(chars, string.sub(upperSet, idx, idx))
-		else
-			local idx = math.random(1, #fullSet)
-			table.insert(chars, string.sub(fullSet, idx, idx))
-		end
-	end
-	return "DUBO-" .. table.concat(chars)
+-- Thiết lập bộ lọc ký tự cho 2 kiểu
+local lowercaseAndNums = "abcdefghijklmnopqrstuvwxyz0123456789"
+local uppercaseAndNums = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+local fullCharset       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+math.randomseed(os.time())
+
+local function getRandomChar(charset)
+	return string.sub(charset, math.random(1, #charset), math.random(1, #charset))
 end
 
-local function validateKeyPattern(keyStr)
-	if not keyStr or type(keyStr) ~= "string" then return false end
-	if not string.match(keyStr, "^DUBO%-") then return false end
-	local core = string.sub(keyStr, 6)
-	if #core ~= 15 then return false end
-	
+local function generateSecureKey()
+	local chars = {}
 	for i = 1, 15 do
-		local c = string.sub(core, i, i)
-		if (i == 4 or i == 5 or i == 9) then
-			if not string.match(c, "[%l%d]") then return false end
-		elseif (i >= 6 and i <= 11) then
-			if not string.match(c, "[%u]") then return false end
-		end
+		chars[i] = getRandomChar(fullCharset)
 	end
-	return true
+	
+	-- Cố định vị trí 4, 7, 9 theo Kiểu 1 (Không có chữ hoa)
+	chars[4] = getRandomChar(lowercaseAndNums)
+	chars[7] = getRandomChar(lowercaseAndNums)
+	chars[9] = getRandomChar(lowercaseAndNums)
+	
+	-- Cố định vị trí 5, 11 theo Kiểu 2 (Không có chữ thường)
+	chars[5] = getRandomChar(uppercaseAndNums)
+	chars[11] = getRandomChar(uppercaseAndNums)
+	
+	return table.concat(chars)
+end
+
+local function validateKey(enteredText)
+	if #enteredText ~= 15 then
+		return false
+	end
+	
+	local c4  = string.sub(enteredText, 4, 4)
+	local c7  = string.sub(enteredText, 7, 7)
+	local c9  = string.sub(enteredText, 9, 9)
+	local c5  = string.sub(enteredText, 5, 5)
+	local c11 = string.sub(enteredText, 11, 11)
+	
+	local isType1Valid = (c4:match("%u") == nil) and (c7:match("%u") == nil) and (c9:match("%u") == nil)
+	local isType2Valid = (c5:match("%l") == nil) and (c11:match("%l") == nil)
+	
+	if isType1Valid and isType2Valid and enteredText == pendingKey then
+		return true
+	end
+	
+	return false
 end
 
 submitBtn.MouseButton1Click:Connect(function()
-	local userEnteredKey = textBox.Text
-	if pendingKey and userEnteredKey == pendingKey and validateKeyPattern(userEnteredKey) then
+	local rawText = textBox.Text
+	local userEnteredKey = rawText:match("DUBO%-KEY=(%S+)") or rawText
+	
+	if pendingKey and validateKey(userEnteredKey) then
 		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 		errorLabel.Text = "Key correct! Loading Hub..."
+		
 		pendingKey = nil 
 		task.wait(1)
-		keyScreenGui:Destroy()
+		screenGui:Destroy()
 		keyAccepted = true
 	else
 		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-		errorLabel.Text = "Key sai cấu trúc bẫy ngầm hoặc không khớp!"
+		errorLabel.Text = "Key sai cấu trúc hoặc không đúng!"
 	end
 end)
 
@@ -158,9 +163,10 @@ getBtn.MouseButton1Click:Connect(function()
 	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
 	errorLabel.Text = "Generating link..."
 	
-	pendingKey = generateValidatedKey()
+	local randomPart = generateSecureKey()
+	pendingKey = randomPart
 	
-	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
+	local formattedAuthTool = "https://authtool.app/get-key/?result=DUBO-KEY=" .. pendingKey
 	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
 	local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
 	local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
@@ -200,7 +206,16 @@ end)
 
 repeat task.wait(1) until keyAccepted
 
--- ==================== SCRIPT CHÍNH (GIỮ NGUYÊN 100%) ====================
+-- ==================== SCRIPT CHÍNH (KAITUN BLOX FRUITS) ====================
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Camera = Workspace.CurrentCamera
 
 local remoteComm = nil
 pcall(function()
