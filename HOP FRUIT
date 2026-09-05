@@ -1,5 +1,10 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
+DuboCFG = DuboCFG or {}
+DuboCFG.WebhookURL = DuboCFG.WebhookURL or ""
+DuboCFG.Team = DuboCFG.Team or "Pirates"
+DuboCFG.Move = DuboCFG.Move or "Teleport"
+
 -- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,7 +26,6 @@ end)
 local isRunning = true
 local storedFruitsCache = {}
 
-DuboCFG = DuboCFG or {}
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = ""
 
@@ -256,7 +260,7 @@ AvatarImg.Size = UDim2.new(0, 84, 0, 84)
 AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
-AvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png?ex=6a9d0684&is=6a9bb504&hm=2a79544bbd7d1670bccdfd2a203a040b7f42acec98f0ce998affd5d3b00b3acc&"
+AvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png?ex=6a9d0684&is=6a9bb504&hm=2a79544bbd7d1670bccdfd2a203a040b7f42acec98f0ce998affd5d3b00b3acc"
 AvatarImg.Parent = CircleAvatarBg
 
 local AvatarCircle = Instance.new("UICorner")
@@ -435,6 +439,36 @@ local function storeAllOwnedFruits()
     end)
 end
 
+local function moveToTarget(targetCFrame)
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+
+    local moveMethod = string.lower(tostring(DuboCFG.Move))
+    if moveMethod == "tween" then
+        local distance = (hrp.Position - targetCFrame.Position).Magnitude
+        local speed = 300
+        local timeTaken = distance / speed
+        
+        local tweenInfo = TweenInfo.new(timeTaken, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+        tween:Play()
+        
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
+                tween:Cancel()
+                if connection then connection:Disconnect() end
+            end
+        end)
+        
+        tween.Completed:Wait()
+        if connection then connection:Disconnect() end
+    else
+        hrp.CFrame = targetCFrame
+    end
+end
+
 local function autoPickAndStore()
     storeAllOwnedFruits()
     local found = false
@@ -445,9 +479,11 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    local moveMethod = string.lower(tostring(DuboCFG.Move))
+                    StatusLabel.Text = (moveMethod == "tween") and "Tween: " .. obj.Name or "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                    character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
+                    
+                    moveToTarget(handle.CFrame + Vector3.new(0, 3, 0))
                     task.wait(0.15)
                     storeAllOwnedFruits()
                     found = true
