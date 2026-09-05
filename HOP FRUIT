@@ -4,36 +4,30 @@ local CoreGui = game:GetService("CoreGui")
 
 local SERVER_URL = "https://sever-dubo-hub.vercel.app/api/check-key"
 local AUTH_TOKEN = "DUBO-KEY-04/01/2012"
-local SECRET_SALT = "DUBO_ANTI_CHEAT_SECRET_2026" -- Khóa bí mật dùng để kiểm tra chữ ký
+local SECRET_SALT = "DUBO_ANTI_CHEAT_SECRET_2026"
 local HWID = "HWID_" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
 
--- Hàm tạo mã băm đơn giản chống làm giả session
 local function generateSignature(hwid, expiresAt)
     return HttpService:GenerateGUID(false) .. "_" .. tostring(hwid) .. "_" .. tostring(expiresAt) .. "_" .. string.sub(HttpService:JSONEncode({hwid, expiresAt, SECRET_SALT}), 1, 10)
 end
 
--- Hàm kiểm tra tính hợp lệ của session (Anti-Tamper Scan)
 local function checkSavedSession()
     local savedFolder = Workspace:FindFirstChild("DuboHubSession")
     if savedFolder and savedFolder:FindFirstChild("Data") then
         local rawData = savedFolder.Data.Value
         
-        -- Quét xem chuỗi lưu trữ có phải là chuỗi giả mạo hoặc dạng số thô hay không
-        -- Nếu không chứa đủ cấu trúc hoặc thiếu chữ ký bí mật -> Hủy ngay lập tức
         if type(rawData) ~= "string" or not string.find(rawData, HWID) then
-            print("[ANTI-CHEAT] Phát hiện dữ liệu session bị làm giả hoặc sửa đổi thô! Bắt buộc lấy key lại.")
+            print("[ANTI-CHEAT] Phát hiện dữ liệu session bị làm giả hoặc sửa đổi thô!")
             savedFolder:Destroy()
             return false
         end
 
-        -- Tách và kiểm tra thời hạn từ chuỗi đã mã hóa an toàn
         local success, decoded = pcall(function()
-            -- Giải mã logic thời gian nằm bên trong chuỗi token
             local parts = {}
             for part in string.gmatch(rawData, "[^_]+") do
                 table.insert(parts, part)
             end
-            return tonumber(parts[3]) -- Lấy mốc thời gian expiresAt được nhúng ngầm
+            return tonumber(parts[3])
         end)
 
         if success and decoded then
@@ -46,7 +40,7 @@ local function checkSavedSession()
                 savedFolder:Destroy()
             end
         else
-            print("[ANTI-CHEAT] Lỗi cấu trúc chữ ký dữ liệu! Đã vô hiệu hóa.")
+            print("[ANTI-CHEAT] Lỗi cấu trúc chữ ký dữ liệu!")
             savedFolder:Destroy()
         end
     end
@@ -55,14 +49,11 @@ end
 
 local function startMainScript()
     print("Khởi chạy script chính thành công!")
-    -- Đặt code Hub/Script chính của bạn vào đây
 end
 
--- Thực hiện quét bảo mật session trước khi cho phép chạy Hub
 if checkSavedSession() then
     startMainScript()
 else
-    -- Xóa bảng cũ nếu lỡ bật nhiều lần
     if CoreGui:FindFirstChild("DuboKeySystem") then
         CoreGui.DuboKeySystem:Destroy()
     end
@@ -144,7 +135,7 @@ else
                     Method = "POST",
                     Headers = {
                         ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " + AUTH_TOKEN
+                        ["Authorization"] = "Bearer " .. AUTH_TOKEN -- Đã sửa dấu + thành dấu ..
                     },
                     Body = HttpService:JSONEncode({
                         action = "get_key",
@@ -195,7 +186,7 @@ else
                     Method = "POST",
                     Headers = {
                         ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " + AUTH_TOKEN
+                        ["Authorization"] = "Bearer " .. AUTH_TOKEN -- Đã sửa dấu + thành dấu ..
                     },
                     Body = HttpService:JSONEncode({
                         action = "submit_key",
@@ -213,14 +204,12 @@ else
                 if parseSuccess and data and data.success then
                     SubmitBtn.Text = "Thành công!"
                     
-                    -- Lưu chuỗi đã được tạo chữ ký chống giả mạo xuống Workspace
                     local folder = Instance.new("Folder")
                     folder.Name = "DuboHubSession"
                     folder.Parent = Workspace
 
                     local val = Instance.new("StringValue")
                     val.Name = "Data"
-                    -- Gọi hàm sinh chữ ký băm bảo mật thay vì lưu số thô
                     val.Value = generateSignature(data.hwid, data.expiresAt)
                     val.Parent = folder
 
