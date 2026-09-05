@@ -89,7 +89,7 @@ else
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 40)
     Title.BackgroundTransparency = 1
-    Title.Text = "DUBO HUB - SECURE KEY SYSTEM"
+    Title.Text = "DUBO HUB - KEY SYSTEM"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.TextSize = 18
     Title.Font = Enum.Font.GothamBold
@@ -113,7 +113,7 @@ else
     KeyBox.Size = UDim2.new(0.85, 0, 0, 40)
     KeyBox.Position = UDim2.new(0.075, 0, 0, 105)
     KeyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    KeyBox.PlaceholderText = "Nhập key của bạn vào đây..."
+    KeyBox.PlaceholderText = "Nhập Key vào đây..."
     KeyBox.Text = ""
     KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     KeyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
@@ -129,7 +129,7 @@ else
     SubmitBtn.Size = UDim2.new(0.85, 0, 0, 40)
     SubmitBtn.Position = UDim2.new(0.075, 0, 0, 155)
     SubmitBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 64)
-    SubmitBtn.Text = "SUBMIT KEY"
+    SubmitBtn.Text = "Xác Nhận Key"
     SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SubmitBtn.TextSize = 14
     SubmitBtn.Font = Enum.Font.GothamBold
@@ -139,7 +139,6 @@ else
     BtnCorner2.CornerRadius = UDim.new(0, 6)
     BtnCorner2.Parent = SubmitBtn
 
-    -- Tách biệt luồng chạy mạng bằng task.spawn để tuyệt đối không bị đứng game
     GetKeyBtn.MouseButton1Click:Connect(function()
         if GetKeyBtn.Text == "Đang tạo link..." then return end
         GetKeyBtn.Text = "Đang tạo link..."
@@ -159,25 +158,35 @@ else
                 })
             end)
 
-            if success and response and response.Success then
+            if success and response then
+                local rawBody = response.Body or response.Data or tostring(response)
                 local parseSuccess, resData = pcall(function()
-                    return HttpService:JSONDecode(response.Body)
+                    return HttpService:JSONDecode(rawBody)
                 end)
                 
-                if parseSuccess and resData and resData.success and resData.html then
-                    GetKeyBtn.Text = "Đã Copy Link vào Clipboard!"
+                local finalLink = nil
+                if parseSuccess and resData then
+                    finalLink = resData.html or resData.url or resData.link or resData.shortlink
+                end
+
+                if not finalLink and type(rawBody) == "string" then
+                    finalLink = string.match(rawBody, 'https?://[^\%s<>"]+')
+                end
+
+                if finalLink then
+                    GetKeyBtn.Text = "Đã Copy Link Layma!"
                     if setclipboard then
-                        setclipboard(resData.html)
+                        setclipboard(finalLink)
                     end
                     task.wait(2.5)
                     GetKeyBtn.Text = "GET KEY"
                 else
-                    GetKeyBtn.Text = "Lỗi phản hồi Layma!"
+                    GetKeyBtn.Text = "Lỗi phản hồi API!"
                     task.wait(2)
                     GetKeyBtn.Text = "GET KEY"
                 end
             else
-                GetKeyBtn.Text = "Lỗi kết nối API!"
+                GetKeyBtn.Text = "Lỗi kết nối Layma!"
                 task.wait(2)
                 GetKeyBtn.Text = "GET KEY"
             end
@@ -189,7 +198,7 @@ else
         if userKey == "" then
             SubmitBtn.Text = "Vui lòng nhập key!"
             task.wait(1.5)
-            SubmitBtn.Text = "SUBMIT KEY"
+            SubmitBtn.Text = "Xác Nhận Key"
             return
         end
 
@@ -216,7 +225,7 @@ else
         else
             SubmitBtn.Text = "Sai Key hoặc chưa Get Key!"
             task.wait(2)
-            SubmitBtn.Text = "SUBMIT KEY"
+            SubmitBtn.Text = "Xác Nhận Key"
         end
     end)
 end
