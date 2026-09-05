@@ -2,45 +2,73 @@ local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
-local SERVER_URL = "https://sever-dubo-hub.vercel.app/api/check-key"
-local AUTH_TOKEN = "DUBO-KEY-04/01/2012"
-local SECRET_SALT = "DUBO_ANTI_CHEAT_SECRET_2026"
 local HWID = "HWID_" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+local SECRET_SALT = "DUBO_SECRET_LOCK_2026" -- Khóa nội bộ để tự dịch mã hóa
 
-local function generateSignature(hwid, expiresAt)
-    return HttpService:GenerateGUID(false) .. "_" .. tostring(hwid) .. "_" .. tostring(expiresAt) .. "_" .. string.sub(HttpService:JSONEncode({hwid, expiresAt, SECRET_SALT}), 1, 10)
+-- Hàm mã hóa chung (dùng cho cả mã hóa key chờ submit và mã hóa session sau khi submit)
+local function encryptData(plainText)
+    local combined = plainText .. "||" .. SECRET_SALT
+    return HttpService:JSONEncode({payload = HttpService:Base64Encode(combined)})
 end
 
+-- Hàm giải mã (bắt buộc phải dịch được, nếu ai tự bịa chuỗi giả mạo dịch không ra sẽ trả về nil)
+local function decryptData(encryptedStr)
+    local success, jsonDecoded = pcall(function()
+        return HttpService:JSONDecode(encryptedStr)
+    end)
+    if not success or not jsonDecoded or not jsonDecoded.payload then return nil end
+
+    local successDecode, rawText = pcall(function()
+        return HttpService:Base64Decode(jsonDecoded.payload)
+    end)
+    if not successDecode or not rawText then return nil end
+
+    -- Kiểm tra xem có khớp chữ ký nội bộ không (chống user tự nhập bừa chuỗi giả)
+    if not string.find(rawText, SECRET_SALT) then return nil end
+
+    -- Tách lấy phần nội dung trước vạch ngăn cách
+    local separatorPos = string.find(rawText, "||" .. SECRET_SALT)
+    if not separatorPos then return nil end
+
+    return string.sub(rawText, 1, separatorPos - 1)
+end
+
+-- Biến lưu trữ bản mã hóa của key đang chờ submit
+local encryptedTargetKey = nil
+local rawTargetKeyForLink = nil
+
+-- Quét phiên làm việc mỗi khi khởi động lại script hoặc đổi server
 local function checkSavedSession()
     local savedFolder = Workspace:FindFirstChild("DuboHubSession")
     if savedFolder and savedFolder:FindFirstChild("Data") then
-        local rawData = savedFolder.Data.Value
+        local encryptedSession = savedFolder.Data.Value
         
-        if type(rawData) ~= "string" or not string.find(rawData, HWID) then
-            print("[ANTI-CHEAT] Phát hiện dữ liệu session bị làm giả hoặc sửa đổi thô!")
+        -- Tự dịch dãy mã hóa phiên trong Workspace ra
+        local decryptedSessionText = decryptData(encryptedSession)
+        
+        -- Nếu dịch không ra (do kẽ gian tự bịa dãy số tào lao dán vào) -> Vô hiệu hóa, bắt get key lại
+        if not decryptedSessionText then
+            print("[SECURITY] Phát hiện dữ liệu giả mạo hoặc lỗi giải mã! Bắt buộc lấy key lại.")
             savedFolder:Destroy()
             return false
         end
 
-        local success, decoded = pcall(function()
-            local parts = {}
-            for part in string.gmatch(rawData, "[^_]+") do
-                table.insert(parts, part)
-            end
-            return tonumber(parts[3])
-        end)
+        -- Tách HWID và thời gian hết hạn từ chuỗi đã giải mã
+        local savedHwid = string.match(decryptedSessionText, "hwid=([^&]+)")
+        local savedExp = tonumber(string.match(decryptedSessionText, "exp=(%d+)"))
 
-        if success and decoded then
-            local timeLeft = (decoded / 1000) - os.time()
+        -- So khớp HWID và kiểm tra thời gian 24 giờ
+        if savedHwid == HWID and savedExp then
+            local timeLeft = (savedExp / 1000) - os.time()
             if timeLeft > 0 then
-                print("Session hợp lệ! Thời gian còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
+                print("Session hợp lệ! Thời gian hoạt động còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
                 return true
             else
-                print("Session đã hết hạn.")
+                print("Session đã hết hạn 24 giờ.")
                 savedFolder:Destroy()
             end
         else
-            print("[ANTI-CHEAT] Lỗi cấu trúc chữ ký dữ liệu!")
+            print("[SECURITY] Sai HWID thiết bị hoặc cấu trúc session không khớp!")
             savedFolder:Destroy()
         end
     end
@@ -48,7 +76,7 @@ local function checkSavedSession()
 end
 
 local function startMainScript()
-    print("Khởi chạy script chính thành công!")
+    print("Khởi chạy Hub chính thành công!")
 end
 
 if checkSavedSession() then
@@ -126,49 +154,52 @@ else
     BtnCorner2.CornerRadius = UDim.new(0, 6)
     BtnCorner2.Parent = SubmitBtn
 
+    -- Bấm Get Key: Tạo key, mã hóa cất giấu dạng bùa chú, rồi quăng qua layma.net
     GetKeyBtn.MouseButton1Click:Connect(function()
         GetKeyBtn.Text = "Đang tạo link..."
         task.spawn(function()
+            local randomCode = string.sub(HttpService:GenerateGUID(false), 1, 8)
+            rawTargetKeyForLink = "DUBO-KEY=" .. randomCode
+            
+            -- Mã hóa key ngầm để bảo vệ bên trong script
+            encryptedTargetKey = encryptData(rawTargetKeyForLink)
+
+            local targetUrl = "https://authtool.app/get-key/?result=" .. rawTargetKeyForLink
+            local apiLaymaUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(targetUrl) .. "&link_du_phong=" .. HttpService:UrlEncode(targetUrl)
+
             local success, response = pcall(function()
                 return request({
-                    Url = SERVER_URL,
-                    Method = "POST",
-                    Headers = {
-                        ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " .. AUTH_TOKEN -- Đã sửa dấu + thành dấu ..
-                    },
-                    Body = HttpService:JSONEncode({
-                        action = "get_key",
-                        hwid = HWID
-                    })
+                    Url = apiLaymaUrl,
+                    Method = "GET"
                 })
             end)
 
             if success and response and response.Success then
-                local parseSuccess, data = pcall(function()
+                local parseSuccess, resData = pcall(function()
                     return HttpService:JSONDecode(response.Body)
                 end)
                 
-                if parseSuccess and data and data.success then
+                if parseSuccess and resData and resData.success and resData.html then
                     GetKeyBtn.Text = "Đã Copy Link vào Clipboard!"
                     if setclipboard then
-                        setclipboard(data.link)
+                        setclipboard(resData.html)
                     end
                     task.wait(2.5)
                     GetKeyBtn.Text = "GET KEY"
                 else
-                    GetKeyBtn.Text = "Lỗi phản hồi từ Server!"
+                    GetKeyBtn.Text = "Lỗi phản hồi Layma!"
                     task.wait(2)
                     GetKeyBtn.Text = "GET KEY"
                 end
             else
-                GetKeyBtn.Text = "Lỗi kết nối Server!"
+                GetKeyBtn.Text = "Lỗi kết nối API!"
                 task.wait(2)
                 GetKeyBtn.Text = "GET KEY"
             end
         end)
     end)
 
+    -- Bấm Submit: Kiểm tra giải mã key, nếu đúng thì gom HWID + Thời gian mã hóa xuống Workspace
     SubmitBtn.MouseButton1Click:Connect(function()
         local userKey = KeyBox.Text
         if userKey == "" then
@@ -178,54 +209,32 @@ else
             return
         end
 
-        SubmitBtn.Text = "Đang kiểm tra..."
-        task.spawn(function()
-            local success, response = pcall(function()
-                return request({
-                    Url = SERVER_URL,
-                    Method = "POST",
-                    Headers = {
-                        ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " .. AUTH_TOKEN -- Đã sửa dấu + thành dấu ..
-                    },
-                    Body = HttpService:JSONEncode({
-                        action = "submit_key",
-                        key = userKey,
-                        hwid = HWID
-                    })
-                })
-            end)
+        -- Giải mã lại đoạn key đang ẩn giấu để so sánh với key người dùng vừa nhập
+        local decryptedKey = encryptedTargetKey and decryptData(encryptedTargetKey)
 
-            if success and response and response.Success then
-                local parseSuccess, data = pcall(function()
-                    return HttpService:JSONDecode(response.Body)
-                end)
+        if decryptedKey and userKey == decryptedKey then
+            SubmitBtn.Text = "Thành công!"
+            
+            local folder = Instance.new("Folder")
+            folder.Name = "DuboHubSession"
+            folder.Parent = Workspace
 
-                if parseSuccess and data and data.success then
-                    SubmitBtn.Text = "Thành công!"
-                    
-                    local folder = Instance.new("Folder")
-                    folder.Name = "DuboHubSession"
-                    folder.Parent = Workspace
+            local val = Instance.new("StringValue")
+            val.Name = "Data"
+            
+            -- Đóng gói và mã hóa trọn bộ: HWID + Mốc thời gian sống 24 giờ
+            local expiresAt = os.time() * 1000 + (24 * 60 * 60 * 1000)
+            local sessionPayload = "hwid=" .. HWID .. "&exp=" .. tostring(expiresAt)
+            val.Value = encryptData(sessionPayload)
+            val.Parent = folder
 
-                    local val = Instance.new("StringValue")
-                    val.Name = "Data"
-                    val.Value = generateSignature(data.hwid, data.expiresAt)
-                    val.Parent = folder
-
-                    task.wait(1)
-                    ScreenGui:Destroy()
-                    startMainScript()
-                else
-                    SubmitBtn.Text = (data and data.message) or "Sai Key!"
-                    task.wait(2)
-                    SubmitBtn.Text = "SUBMIT KEY"
-                end
-            else
-                SubmitBtn.Text = "Lỗi kết nối Server!"
-                task.wait(2)
-                SubmitBtn.Text = "SUBMIT KEY"
-            end
-        end)
+            task.wait(1)
+            ScreenGui:Destroy()
+            startMainScript()
+        else
+            SubmitBtn.Text = "Sai Key hoặc chưa Get Key!"
+            task.wait(2)
+            SubmitBtn.Text = "SUBMIT KEY"
+        end
     end)
 end
