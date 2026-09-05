@@ -1,262 +1,236 @@
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
-
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local player = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
 
--- ================= CẤU HÌNH KẾT NỐI SERVER =================
-local SERVER_URL = "https://duo-link-api.onrender.com/api/key" -- (Thay URL server của bạn vào đây)
-local SECRET_AUTH_TOKEN = "YOUR_SECRET_AUTH_TOKEN_CUA_BAN" -- (Thay token bảo mật bạn đặt ở biến môi trường vào đây)
+-- Cấu hình kết nối chính xác theo link Vercel của bạn
+local SERVER_URL = "https://sever-dubo-hub.vercel.app/api/check-key"
+local AUTH_TOKEN = "DUBO-KEY-04/01/2012"
+local HWID = "HWID_" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
 
--- Tên file lưu session mã hóa ở Workspace
-local SESSION_FILE = "dubohub_session.dat"
+-- Hàm mã hóa và giải mã dữ liệu cục bộ
+local function encodeData(data)
+    return HttpService:JSONEncode(data)
+end
 
--- Hàm lấy HWID chuẩn của Executor
-local function getHWID()
-    local success, hwid = pcall(function()
-        return gethwid and gethwid() or rbxgenguid and rbxgenguid() or "UNKNOWN_HWID"
+local function decodeData(str)
+    local success, res = pcall(function()
+        return HttpService:JSONDecode(str)
     end)
-    return success and hwid or "UNKNOWN_HWID"
+    if success then return res else return nil end
 end
 
--- Hàm mã hóa đơn giản chống nhìn lén file local (Base64 + XOR key nhẹ)
-local function encryptData(data)
-    local encoded = HttpService:JSONEncode(data)
-    return syn and syn.crypt and syn.crypt.base64.encode(encoded) or crypt and crypt.base64encode(encoded) or game:GetService("HttpService"):JSONEncode(encoded)
-end
-
--- Hàm giải mã dữ liệu từ file local
-local function decryptData(encryptedStr)
-    local success, result = pcall(function()
-        local decoded = syn and syn.crypt and syn.crypt.base64.decode(encryptedStr) or crypt and crypt.base64decode(encryptedStr)
-        return HttpService:JSONDecode(decoded)
-    end)
-    return success and result or nil
-end
-
--- ================= KIỂM TRA SESSION CŨ (CHỐNG LẶP LẠI) =================
-local function checkExistingSession()
-    if pcall(function() return readfile(SESSION_FILE) end) then
-        local fileContent = readfile(SESSION_FILE)
-        local decrypted = decryptData(fileContent)
-        if decrypted and decrypted.expireAt and decrypted.hwid == getHWID() then
-            -- So sánh thời gian hiện tại với thời gian hết hạn (os.time() tính bằng giây)
-            if os.time() < decrypted.expireAt then
-                return true -- Vẫn còn hạn 24h, cho qua luôn không cần hiện bảng key!
+-- Kiểm tra xem đã có session hợp lệ lưu trong Workspace chưa
+local function checkSavedSession()
+    local savedFolder = Workspace:FindFirstChild("DuboHubSession")
+    if savedFolder and savedFolder:FindFirstChild("Data") then
+        local data = decodeData(savedFolder.Data.Value)
+        if data and data.hwid == HWID then
+            local timeLeft = (data.expiresAt / 1000) - os.time()
+            if timeLeft > 0 then
+                print("Key còn hạn! Thời gian sử dụng còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
+                return true
+            else
+                print("Key đã hết hạn! Vui lòng lấy lại key.")
+                savedFolder:Destroy()
             end
         end
     end
     return false
 end
 
-if checkExistingSession() then
-    print("Key vẫn còn hạn, khởi chạy Hub trực tiếp...")
-    -- ================= THÊM SCRIPT CHÍNH CỦA BẠN VÀO ĐÂY =================
-    return
+-- Hàm khởi chạy tính năng chính sau khi vượt key thành công
+local function startMainScript()
+    print("Khởi chạy script chính thành công!")
+    -- Đặt code Hub/Script chính của bạn vào đây
 end
 
--- ================= GIAO DIỆN KEY SYSTEM =================
-local KeyScreen = Instance.new("ScreenGui")
-KeyScreen.Name = "DuboKeySystem"
-KeyScreen.Parent = CoreGui
-KeyScreen.ResetOnSpawn = false
-
-local KeyMain = Instance.new("Frame")
-KeyMain.Size = UDim2.new(0, 320, 0, 180)
-KeyMain.Position = UDim2.new(0.5, -160, 0.5, -90)
-KeyMain.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-KeyMain.BorderSizePixel = 0
-KeyMain.Active = true
-KeyMain.Draggable = true
-KeyMain.Parent = KeyScreen
-
-local KeyCorner = Instance.new("UICorner")
-KeyCorner.CornerRadius = UDim.new(0, 14)
-KeyCorner.Parent = KeyMain
-
-local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Thickness = 3
-KeyStroke.Color = Color3.fromRGB(0, 170, 255)
-KeyStroke.Parent = KeyMain
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, 0, 0, 40)
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
-KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-KeyTitle.TextSize = 16
-KeyTitle.Font = Enum.Font.GothamBold
-KeyTitle.Parent = KeyMain
-
-local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(0, 270, 0, 38)
-TextBox.Position = UDim2.new(0.5, -135, 0, 50)
-TextBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-TextBox.BorderSizePixel = 0
-TextBox.PlaceholderText = "Nhập Key vào đây..."
-TextBox.Text = ""
-TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
-TextBox.TextSize = 14
-TextBox.Font = Enum.Font.Gotham
-TextBox.Parent = KeyMain
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 8)
-BoxCorner.Parent = TextBox
-
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0, 130, 0, 35)
-SubmitBtn.Position = UDim2.new(0.08, 0, 0, 115)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-SubmitBtn.BorderSizePixel = 0
-SubmitBtn.Text = "Xác Nhận Key"
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.TextSize = 13
-SubmitBtn.Font = Enum.Font.GothamBold
-SubmitBtn.Parent = KeyMain
-
-local SubCorner = Instance.new("UICorner")
-SubCorner.CornerRadius = UDim.new(0, 8)
-SubCorner.Parent = SubmitBtn
-
-local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0, 130, 0, 35)
-GetKeyBtn.Position = UDim2.new(0.52, 0, 0, 115)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-GetKeyBtn.BorderSizePixel = 0
-GetKeyBtn.Text = "Lấy Link Key"
-GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetKeyBtn.TextSize = 13
-GetKeyBtn.Font = Enum.Font.GothamBold
-GetKeyBtn.Parent = KeyMain
-
-local GetCorner = Instance.new("UICorner")
-GetCorner.CornerRadius = UDim.new(0, 8)
-GetCorner.Parent = GetKeyBtn
-
-local keyPassed = false
-local isCooldown = false
-
--- ================= HÀNH ĐỘNG: LẤY LINK (GENERATE) =================
-GetKeyBtn.MouseButton1Click:Connect(function()
-    if isCooldown then return end
-    isCooldown = true
-
-    GetKeyBtn.Text = "Đang tạo link..."
-    
-    local req = request or http_request or syn.request or fluxus.request
-    if req then
-        local success, res = pcall(function()
-            return req({
-                Url = SERVER_URL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Authorization"] = "Bearer " .. SECRET_AUTH_TOKEN
-                },
-                Body = HttpService:JSONEncode({
-                    action = "generate",
-                    hwid = getHWID()
-                })
-            })
-        end)
-
-        if success and res and res.Body then
-            local data = HttpService:JSONDecode(res.Body)
-            if data.status == "success" and data.shortLink then
-                pcall(function() setclipboard(data.shortLink) end)
-                GetKeyBtn.Text = "Đã Copy Link!"
-            else
-                GetKeyBtn.Text = "Lỗi Server!"
-            end
-        else
-            GetKeyBtn.Text = "Không Kết Nối Được!"
-        end
+-- Nếu đã có session hợp lệ thì chạy luôn, khỏi hiện bảng key
+if checkSavedSession() then
+    startMainScript()
+else
+    -- Xóa bảng cũ nếu lỡ bật nhiều lần
+    if CoreGui:FindFirstChild("DuboKeySystem") then
+        CoreGui.DuboKeySystem:Destroy()
     end
 
-    -- Chống spam cooldown 60 giây
-    task.spawn(function()
-        for i = 60, 1, -1 do
-            GetKeyBtn.Text = "Chờ " .. i .. "s";
-            task.wait(1)
-        end
-        GetKeyBtn.Text = "Lấy Link Key"
-        isCooldown = false
-    end)
-end)
+    -- Tạo giao diện bảng Key System trực tiếp
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "DuboKeySystem"
+    ScreenGui.Parent = CoreGui
 
--- ================= HÀNH ĐỘNG: XÁC THỰC KEY (SUBMIT) =================
-SubmitBtn.MouseButton1Click:Connect(function()
-    local enteredKey = TextBox.Text
-    if enteredKey == "" then
-        SubmitBtn.Text = "Chưa Nhập Key!"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-        task.wait(1.5)
-        SubmitBtn.Text = "Xác Nhận Key"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-        return
-    end
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 400, 0, 220)
+    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -110)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
 
-    SubmitBtn.Text = "Đang Kiểm Tra..."
-    SubmitBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = MainFrame
 
-    local req = request or http_request or syn.request or fluxus.request
-    local success, res = pcall(function()
-        if req then
-            return req({
-                Url = SERVER_URL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Authorization"] = "Bearer " .. SECRET_AUTH_TOKEN
-                },
-                Body = HttpService:JSONEncode({
-                    action = "submit",
-                    hwid = getHWID(),
-                    key = enteredKey
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundTransparency = 1
+    Title.Text = "DUBO HUB - KEY SYSTEM"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 18
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = MainFrame
+
+    -- Nút Get Key
+    local GetKeyBtn = Instance.new("TextButton")
+    GetKeyBtn.Size = UDim2.new(0.85, 0, 0, 40)
+    GetKeyBtn.Position = UDim2.new(0.075, 0, 0, 55)
+    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
+    GetKeyBtn.Text = "GET KEY"
+    GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    GetKeyBtn.TextSize = 14
+    GetKeyBtn.Font = Enum.Font.GothamBold
+    GetKeyBtn.Parent = MainFrame
+
+    local BtnCorner1 = Instance.new("UICorner")
+    BtnCorner1.CornerRadius = UDim.new(0, 6)
+    BtnCorner1.Parent = GetKeyBtn
+
+    -- Ô nhập Key
+    local KeyBox = Instance.new("TextBox")
+    KeyBox.Size = UDim2.new(0.85, 0, 0, 40)
+    KeyBox.Position = UDim2.new(0.075, 0, 0, 105)
+    KeyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    KeyBox.PlaceholderText = "Nhập key của bạn vào đây..."
+    KeyBox.Text = ""
+    KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    KeyBox.TextSize = 14
+    KeyBox.Font = Enum.Font.Gotham
+    KeyBox.Parent = MainFrame
+
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 6)
+    BoxCorner.Parent = KeyBox
+
+    -- Nút Submit
+    local SubmitBtn = Instance.new("TextButton")
+    SubmitBtn.Size = UDim2.new(0.85, 0, 0, 40)
+    SubmitBtn.Position = UDim2.new(0.075, 0, 0, 155)
+    SubmitBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 64)
+    SubmitBtn.Text = "SUBMIT KEY"
+    SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SubmitBtn.TextSize = 14
+    SubmitBtn.Font = Enum.Font.GothamBold
+    SubmitBtn.Parent = MainFrame
+
+    local BtnCorner2 = Instance.new("UICorner")
+    BtnCorner2.CornerRadius = UDim.new(0, 6)
+    BtnCorner2.Parent = SubmitBtn
+
+    -- Logic nút Get Key: Gửi HWID, gọi layma.net và tự copy link vào clipboard
+    GetKeyBtn.MouseButton1Click:Connect(function()
+        GetKeyBtn.Text = "Đang tạo link..."
+        task.spawn(function()
+            local success, response = pcall(function()
+                return request({
+                    Url = SERVER_URL,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json",
+                        ["Authorization"] = "Bearer " .. AUTH_TOKEN
+                    },
+                    Body = HttpService:JSONEncode({
+                        action = "get_key",
+                        hwid = HWID
+                    })
                 })
-            })
-        end
-    end)
-
-    if success and res and res.Body then
-        local data = HttpService:JSONDecode(res.Body)
-        if data.status == "success" and data.expireTimestamp then
-            -- Mã hóa thời gian hạn sử dụng và HWID rồi lưu xuống file local
-            local sessionData = {
-                hwid = getHWID(),
-                expireAt = data.expireTimestamp
-            }
-            pcall(function()
-                writefile(SESSION_FILE, encryptData(sessionData))
             end)
 
-            SubmitBtn.Text = "Thành Công!"
-            SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-            task.wait(1)
-            keyPassed = true
-            KeyScreen:Destroy()
-            
-            -- ================= GỌI SCRIPT CHÍNH Ở ĐÂY =================
-            print("Đã xác thực key thành công, khởi chạy Script chính!")
-        else
-            SubmitBtn.Text = "Key Sai Hoặc Hết Hạn!"
-            SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-            task.wait(1.5)
-            SubmitBtn.Text = "Xác Nhận Key"
-            SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-        end
-    else
-        SubmitBtn.Text = "Lỗi Kết Nối Server!"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        task.wait(1.5)
-        SubmitBtn.Text = "Xác Nhận Key"
-        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    end
-end)
+            if success and response and response.Success then
+                local parseSuccess, data = pcall(function()
+                    return HttpService:JSONDecode(response.Body)
+                end)
+                
+                if parseSuccess and data and data.success then
+                    GetKeyBtn.Text = "Đã Copy Link vào Clipboard!"
+                    if setclipboard then
+                        setclipboard(data.link)
+                    end
+                    task.wait(2.5)
+                    GetKeyBtn.Text = "GET KEY"
+                else
+                    GetKeyBtn.Text = "Lỗi phản hồi từ Server!"
+                    task.wait(2)
+                    GetKeyBtn.Text = "GET KEY"
+                end
+            else
+                GetKeyBtn.Text = "Lỗi kết nối Server!"
+                task.wait(2)
+                GetKeyBtn.Text = "GET KEY"
+            end
+        end)
+    end)
 
-while not keyPassed do
-    task.wait(0.5)
+    -- Logic nút Submit Key: Gửi key và HWID lên server so sánh
+    SubmitBtn.MouseButton1Click:Connect(function()
+        local userKey = KeyBox.Text
+        if userKey == "" then
+            SubmitBtn.Text = "Vui lòng nhập key!"
+            task.wait(1.5)
+            SubmitBtn.Text = "SUBMIT KEY"
+            return
+        end
+
+        SubmitBtn.Text = "Đang kiểm tra..."
+        task.spawn(function()
+            local success, response = pcall(function()
+                return request({
+                    Url = SERVER_URL,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json",
+                        ["Authorization"] = "Bearer " .. AUTH_TOKEN
+                    },
+                    Body = HttpService:JSONEncode({
+                        action = "submit_key",
+                        key = userKey,
+                        hwid = HWID
+                    })
+                })
+            end)
+
+            if success and response and response.Success then
+                local parseSuccess, data = pcall(function()
+                    return HttpService:JSONDecode(response.Body)
+                end)
+
+                if parseSuccess and data and data.success then
+                    SubmitBtn.Text = "Thành công!"
+                    
+                    -- Lưu dữ liệu mã hóa thời gian và HWID xuống Workspace
+                    local folder = Instance.new("Folder")
+                    folder.Name = "DuboHubSession"
+                    folder.Parent = Workspace
+
+                    local val = Instance.new("StringValue")
+                    val.Name = "Data"
+                    val.Value = encodeData({
+                        hwid = data.hwid,
+                        expiresAt = data.expiresAt
+                    })
+                    val.Parent = folder
+
+                    task.wait(1)
+                    ScreenGui:Destroy()
+                    startMainScript()
+                else
+                    SubmitBtn.Text = (data and data.message) or "Sai Key!"
+                    task.wait(2)
+                    SubmitBtn.Text = "SUBMIT KEY"
+                end
+            else
+                SubmitBtn.Text = "Lỗi kết nối Server!"
+                task.wait(2)
+                SubmitBtn.Text = "SUBMIT KEY"
+            end
+        end)
+    end)
 end
