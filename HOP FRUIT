@@ -151,8 +151,17 @@ else
             local targetUrl = "https://authtool.app/get-key/?result=" .. rawTargetKeyForLink
             local apiLaymaUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(targetUrl) .. "&link_du_phong=" .. HttpService:UrlEncode(targetUrl)
 
+            local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request or (fluxus and fluxus.request)
+            
+            if not httpRequest then
+                GetKeyBtn.Text = "Executor không hỗ trợ!"
+                task.wait(2)
+                GetKeyBtn.Text = "GET KEY"
+                return
+            end
+
             local success, response = pcall(function()
-                return request({
+                return httpRequest({
                     Url = apiLaymaUrl,
                     Method = "GET"
                 })
@@ -160,13 +169,14 @@ else
 
             if success and response then
                 local rawBody = response.Body or response.Data or tostring(response)
+                
                 local parseSuccess, resData = pcall(function()
                     return HttpService:JSONDecode(rawBody)
                 end)
                 
                 local finalLink = nil
                 if parseSuccess and resData then
-                    finalLink = resData.html or resData.url or resData.link or resData.shortlink
+                    finalLink = resData.shortlink or resData.url or resData.link or resData.data or resData.result
                 end
 
                 if not finalLink and type(rawBody) == "string" then
@@ -174,11 +184,16 @@ else
                 end
 
                 if finalLink then
-                    GetKeyBtn.Text = "Đã Copy Link Layma!"
+                    GetKeyBtn.Text = "Đã Copy Link!"
                     if setclipboard then
-                        setclipboard(finalLink)
+                        pcall(function() setclipboard(tostring(finalLink)) end)
+                    elseif toclipboard then
+                        pcall(function() toclipboard(tostring(finalLink)) end)
                     end
-                    task.wait(2.5)
+                    
+                    print("Link Layma của bạn: " .. tostring(finalLink))
+                    
+                    task.wait(3)
                     GetKeyBtn.Text = "GET KEY"
                 else
                     GetKeyBtn.Text = "Lỗi phản hồi API!"
@@ -186,7 +201,7 @@ else
                     GetKeyBtn.Text = "GET KEY"
                 end
             else
-                GetKeyBtn.Text = "Lỗi kết nối Layma!"
+                GetKeyBtn.Text = "Lỗi kết nối mạng!"
                 task.wait(2)
                 GetKeyBtn.Text = "GET KEY"
             end
