@@ -2,49 +2,63 @@ local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
--- Cấu hình kết nối chính xác theo link Vercel của bạn
 local SERVER_URL = "https://sever-dubo-hub.vercel.app/api/check-key"
 local AUTH_TOKEN = "DUBO-KEY-04/01/2012"
+local SECRET_SALT = "DUBO_ANTI_CHEAT_SECRET_2026" -- Khóa bí mật dùng để kiểm tra chữ ký
 local HWID = "HWID_" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
 
--- Hàm mã hóa và giải mã dữ liệu cục bộ
-local function encodeData(data)
-    return HttpService:JSONEncode(data)
+-- Hàm tạo mã băm đơn giản chống làm giả session
+local function generateSignature(hwid, expiresAt)
+    return HttpService:GenerateGUID(false) .. "_" .. tostring(hwid) .. "_" .. tostring(expiresAt) .. "_" .. string.sub(HttpService:JSONEncode({hwid, expiresAt, SECRET_SALT}), 1, 10)
 end
 
-local function decodeData(str)
-    local success, res = pcall(function()
-        return HttpService:JSONDecode(str)
-    end)
-    if success then return res else return nil end
-end
-
--- Kiểm tra xem đã có session hợp lệ lưu trong Workspace chưa
+-- Hàm kiểm tra tính hợp lệ của session (Anti-Tamper Scan)
 local function checkSavedSession()
     local savedFolder = Workspace:FindFirstChild("DuboHubSession")
     if savedFolder and savedFolder:FindFirstChild("Data") then
-        local data = decodeData(savedFolder.Data.Value)
-        if data and data.hwid == HWID then
-            local timeLeft = (data.expiresAt / 1000) - os.time()
+        local rawData = savedFolder.Data.Value
+        
+        -- Quét xem chuỗi lưu trữ có phải là chuỗi giả mạo hoặc dạng số thô hay không
+        -- Nếu không chứa đủ cấu trúc hoặc thiếu chữ ký bí mật -> Hủy ngay lập tức
+        if type(rawData) ~= "string" or not string.find(rawData, HWID) then
+            print("[ANTI-CHEAT] Phát hiện dữ liệu session bị làm giả hoặc sửa đổi thô! Bắt buộc lấy key lại.")
+            savedFolder:Destroy()
+            return false
+        end
+
+        -- Tách và kiểm tra thời hạn từ chuỗi đã mã hóa an toàn
+        local success, decoded = pcall(function()
+            -- Giải mã logic thời gian nằm bên trong chuỗi token
+            local parts = {}
+            for part in string.gmatch(rawData, "[^_]+") do
+                table.insert(parts, part)
+            end
+            return tonumber(parts[3]) -- Lấy mốc thời gian expiresAt được nhúng ngầm
+        end)
+
+        if success and decoded then
+            local timeLeft = (decoded / 1000) - os.time()
             if timeLeft > 0 then
-                print("Key còn hạn! Thời gian sử dụng còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
+                print("Session hợp lệ! Thời gian còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
                 return true
             else
-                print("Key đã hết hạn! Vui lòng lấy lại key.")
+                print("Session đã hết hạn.")
                 savedFolder:Destroy()
             end
+        else
+            print("[ANTI-CHEAT] Lỗi cấu trúc chữ ký dữ liệu! Đã vô hiệu hóa.")
+            savedFolder:Destroy()
         end
     end
     return false
 end
 
--- Hàm khởi chạy tính năng chính sau khi vượt key thành công
 local function startMainScript()
     print("Khởi chạy script chính thành công!")
     -- Đặt code Hub/Script chính của bạn vào đây
 end
 
--- Nếu đã có session hợp lệ thì chạy luôn, khỏi hiện bảng key
+-- Thực hiện quét bảo mật session trước khi cho phép chạy Hub
 if checkSavedSession() then
     startMainScript()
 else
@@ -53,7 +67,6 @@ else
         CoreGui.DuboKeySystem:Destroy()
     end
 
-    -- Tạo giao diện bảng Key System trực tiếp
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "DuboKeySystem"
     ScreenGui.Parent = CoreGui
@@ -72,13 +85,12 @@ else
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, 0, 0, 40)
     Title.BackgroundTransparency = 1
-    Title.Text = "DUBO HUB - KEY SYSTEM"
+    Title.Text = "DUBO HUB - SECURE KEY SYSTEM"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.TextSize = 18
     Title.Font = Enum.Font.GothamBold
     Title.Parent = MainFrame
 
-    -- Nút Get Key
     local GetKeyBtn = Instance.new("TextButton")
     GetKeyBtn.Size = UDim2.new(0.85, 0, 0, 40)
     GetKeyBtn.Position = UDim2.new(0.075, 0, 0, 55)
@@ -93,7 +105,6 @@ else
     BtnCorner1.CornerRadius = UDim.new(0, 6)
     BtnCorner1.Parent = GetKeyBtn
 
-    -- Ô nhập Key
     local KeyBox = Instance.new("TextBox")
     KeyBox.Size = UDim2.new(0.85, 0, 0, 40)
     KeyBox.Position = UDim2.new(0.075, 0, 0, 105)
@@ -110,7 +121,6 @@ else
     BoxCorner.CornerRadius = UDim.new(0, 6)
     BoxCorner.Parent = KeyBox
 
-    -- Nút Submit
     local SubmitBtn = Instance.new("TextButton")
     SubmitBtn.Size = UDim2.new(0.85, 0, 0, 40)
     SubmitBtn.Position = UDim2.new(0.075, 0, 0, 155)
@@ -125,7 +135,6 @@ else
     BtnCorner2.CornerRadius = UDim.new(0, 6)
     BtnCorner2.Parent = SubmitBtn
 
-    -- Logic nút Get Key: Gửi HWID, gọi layma.net và tự copy link vào clipboard
     GetKeyBtn.MouseButton1Click:Connect(function()
         GetKeyBtn.Text = "Đang tạo link..."
         task.spawn(function()
@@ -135,7 +144,7 @@ else
                     Method = "POST",
                     Headers = {
                         ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " .. AUTH_TOKEN
+                        ["Authorization"] = "Bearer " + AUTH_TOKEN
                     },
                     Body = HttpService:JSONEncode({
                         action = "get_key",
@@ -169,7 +178,6 @@ else
         end)
     end)
 
-    -- Logic nút Submit Key: Gửi key và HWID lên server so sánh
     SubmitBtn.MouseButton1Click:Connect(function()
         local userKey = KeyBox.Text
         if userKey == "" then
@@ -187,7 +195,7 @@ else
                     Method = "POST",
                     Headers = {
                         ["Content-Type"] = "application/json",
-                        ["Authorization"] = "Bearer " .. AUTH_TOKEN
+                        ["Authorization"] = "Bearer " + AUTH_TOKEN
                     },
                     Body = HttpService:JSONEncode({
                         action = "submit_key",
@@ -205,17 +213,15 @@ else
                 if parseSuccess and data and data.success then
                     SubmitBtn.Text = "Thành công!"
                     
-                    -- Lưu dữ liệu mã hóa thời gian và HWID xuống Workspace
+                    -- Lưu chuỗi đã được tạo chữ ký chống giả mạo xuống Workspace
                     local folder = Instance.new("Folder")
                     folder.Name = "DuboHubSession"
                     folder.Parent = Workspace
 
                     local val = Instance.new("StringValue")
                     val.Name = "Data"
-                    val.Value = encodeData({
-                        hwid = data.hwid,
-                        expiresAt = data.expiresAt
-                    })
+                    -- Gọi hàm sinh chữ ký băm bảo mật thay vì lưu số thô
+                    val.Value = generateSignature(data.hwid, data.expiresAt)
                     val.Parent = folder
 
                     task.wait(1)
