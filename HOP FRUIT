@@ -1,183 +1,165 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
-local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
--- ==================== HỆ THỐNG KEY (XÓA BỎ LƯU FILE, KHỚP TRỰC TIẾP) ====================
-local pendingKey = nil
-local keyAccepted = false
+-- ================= KEY SYSTEM (GỬI LÊN SERVER DUYỆT) =================
+local KeyScreen = Instance.new("ScreenGui")
+KeyScreen.Name = "DuboKeySystem"
+KeyScreen.Parent = CoreGui
+KeyScreen.ResetOnSpawn = false
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "DuboKeySystem"
-screenGui.Parent = CoreGui
-screenGui.ResetOnSpawn = false
+local KeyMain = Instance.new("Frame")
+KeyMain.Size = UDim2.new(0, 320, 0, 180)
+KeyMain.Position = UDim2.new(0.5, -160, 0.5, -90)
+KeyMain.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+KeyMain.BorderSizePixel = 0
+KeyMain.Active = true
+KeyMain.Draggable = true
+KeyMain.Parent = KeyScreen
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 420, 0, 310)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -155)
-mainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 31)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
+local KeyCorner = Instance.new("UICorner")
+KeyCorner.CornerRadius = UDim.new(0, 14)
+KeyCorner.Parent = KeyMain
 
-local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0, 12)
-frameCorner.Parent = mainFrame
+local KeyStroke = Instance.new("UIStroke")
+KeyStroke.Thickness = 3
+KeyStroke.Color = Color3.fromRGB(0, 170, 255)
+KeyStroke.Parent = KeyMain
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 35)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "DUBO HUB - KEY SYSTEM"
-titleLabel.TextColor3 = Color3.fromRGB(30, 144, 255)
-titleLabel.TextSize = 16
-titleLabel.Parent = mainFrame
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Size = UDim2.new(1, 0, 0, 40)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
+KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+KeyTitle.TextSize = 16
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.Parent = KeyMain
 
-local textBox = Instance.new("TextBox")
-textBox.Size = UDim2.new(0, 370, 0, 45)
-textBox.Position = UDim2.new(0.5, -185, 0, 80)
-textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
-textBox.ClearTextOnFocus = false
-textBox.Font = Enum.Font.Gotham
-textBox.PlaceholderText = "Paste your key here..."
-textBox.Text = ""
-textBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-textBox.TextSize = 14
-textBox.Parent = mainFrame
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 270, 0, 38)
+TextBox.Position = UDim2.new(0.5, -135, 0, 50)
+TextBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TextBox.BorderSizePixel = 0
+TextBox.PlaceholderText = "Nhập Key vào đây..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 140)
+TextBox.TextSize = 14
+TextBox.Font = Enum.Font.Gotham
+TextBox.Parent = KeyMain
 
-local textCorner = Instance.new("UICorner")
-textCorner.CornerRadius = UDim.new(0, 8)
-textCorner.Parent = textBox
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 8)
+BoxCorner.Parent = TextBox
 
-local submitBtn = Instance.new("TextButton")
-submitBtn.Size = UDim2.new(0, 370, 0, 45)
-submitBtn.Position = UDim2.new(0.5, -185, 0, 140)
-submitBtn.BackgroundColor3 = Color3.fromRGB(0, 116, 228)
-submitBtn.Font = Enum.Font.GothamBold
-submitBtn.Text = "SUBMIT KEY"
-submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitBtn.TextSize = 15
-submitBtn.Parent = mainFrame
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Size = UDim2.new(0, 130, 0, 35)
+SubmitBtn.Position = UDim2.new(0.08, 0, 0, 115)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+SubmitBtn.BorderSizePixel = 0
+SubmitBtn.Text = "Xác Nhận Key"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextSize = 13
+SubmitBtn.Font = Enum.Font.GothamBold
+SubmitBtn.Parent = KeyMain
 
-local submitCorner = Instance.new("UICorner")
-submitCorner.CornerRadius = UDim.new(0, 8)
-submitCorner.Parent = submitBtn
+local SubCorner = Instance.new("UICorner")
+SubCorner.CornerRadius = UDim.new(0, 8)
+SubCorner.Parent = SubmitBtn
 
-local getBtn = Instance.new("TextButton")
-getBtn.Name = "GetKeyBtn"
-getBtn.Size = UDim2.new(0, 370, 0, 45)
-getBtn.Position = UDim2.new(0.5, -185, 0, 195)
-getBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-getBtn.Font = Enum.Font.GothamBold
-getBtn.Text = "GET KEY LINK"
-getBtn.TextColor3 = Color3.fromRGB(46, 204, 113)
-getBtn.TextSize = 15
-getBtn.Parent = mainFrame
+local GetKeyBtn = Instance.new("TextButton")
+GetKeyBtn.Size = UDim2.new(0, 130, 0, 35)
+GetKeyBtn.Position = UDim2.new(0.52, 0, 0, 115)
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+GetKeyBtn.BorderSizePixel = 0
+GetKeyBtn.Text = "Lấy Link Key"
+GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetKeyBtn.TextSize = 13
+GetKeyBtn.Font = Enum.Font.GothamBold
+GetKeyBtn.Parent = KeyMain
 
-local getCorner = Instance.new("UICorner")
-getCorner.CornerRadius = UDim.new(0, 8)
-getCorner.Parent = getBtn
+local GetCorner = Instance.new("UICorner")
+GetCorner.CornerRadius = UDim.new(0, 8)
+GetCorner.Parent = GetKeyBtn
 
-local errorLabel = Instance.new("TextLabel")
-errorLabel.Size = UDim2.new(1, 0, 0, 25)
-errorLabel.Position = UDim2.new(0, 0, 1, -35)
-errorLabel.BackgroundTransparency = 1
-errorLabel.Font = Enum.Font.Gotham
-errorLabel.Text = "Click Get Key Link, complete link and paste key to login!"
-errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-errorLabel.TextSize = 13
-errorLabel.Parent = mainFrame
+local LinkGetKey = "https://link4m.com/..." -- Thay link get key của bạn ở đây
 
-local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-math.randomseed(os.time())
-local function randomString(length)
-	local str = ""
-	for i = 1, length do
-		local randomIndex = math.random(1, #charset)
-		str = str .. string.sub(charset, randomIndex, randomIndex)
-	end
-	return str
+GetKeyBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        setclipboard(LinkGetKey)
+        GetKeyBtn.Text = "Đã Copy Link!"
+        task.wait(1.5)
+        GetKeyBtn.Text = "Lấy Link Key"
+    end)
+end)
+
+local keyPassed = false
+
+SubmitBtn.MouseButton1Click:Connect(function()
+    local enteredKey = TextBox.Text
+    if enteredKey == "" then
+        SubmitBtn.Text = "Chưa Nhập Key!"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+        task.wait(1.5)
+        SubmitBtn.Text = "Xác Nhận Key"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        return
+    end
+
+    SubmitBtn.Text = "Đang Kiểm Tra..."
+    SubmitBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+
+    -- Gửi key lên server để duyệt (Thay URL API duyệt key của bạn vào đây)
+    local success, response = pcall(function()
+        local req = request or http_request or syn.request or fluxus.request
+        if req then
+            local res = req({
+                Url = "https://your-key-api-endpoint.com/verify", -- Thay API backend duyệt key của bạn
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode({user = player.Name, userid = player.UserId, key = enteredKey})
+            })
+            if res and res.Body then
+                local data = HttpService:JSONDecode(res.Body)
+                return data.success or data.status == "approved"
+            end
+        end
+        return false
+    end)
+
+    if success and response then
+        keyPassed = true
+        KeyScreen:Destroy()
+    else
+        SubmitBtn.Text = "Key Sai Hoặc Chưa Duyệt!"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        task.wait(1.5)
+        SubmitBtn.Text = "Xác Nhận Key"
+        SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    end
+end)
+
+while not keyPassed do
+    task.wait(0.5)
 end
 
--- Xử lý nút SUBMIT KEY: Kiểm tra khớp tuyệt đối với key vừa tạo, sau đó quên luôn
-submitBtn.MouseButton1Click:Connect(function()
-	local userEnteredKey = textBox.Text
-	if pendingKey and userEnteredKey == pendingKey then
-		errorLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-		errorLabel.Text = "Key correct! Loading Hub..."
-		
-		-- Quên luôn key tạm sau khi đã xác thực thành công
-		pendingKey = nil 
-		
-		task.wait(1)
-		screenGui:Destroy()
-		keyAccepted = true
-	else
-		errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-		errorLabel.Text = "Key sai!"
-	end
-end)
+-- ================= SCRIPT CHÍNH (KAITUN FRUIT) =================
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Xử lý nút GET KEY LINK
-getBtn.MouseButton1Click:Connect(function()
-	errorLabel.TextColor3 = Color3.fromRGB(241, 196, 15)
-	errorLabel.Text = "Generating link..."
-	
-	local randomPart = randomString(15)
-	pendingKey = "DUBO-KEY=" .. randomPart
-	
-	local formattedAuthTool = "https://authtool.app/get-key/?result=" .. pendingKey
-	local tokenUser = "912b0053a34556d8ee0ac907d3149f9b"
-	local encodedUrl = HttpService:UrlEncode(formattedAuthTool)
-	local apiRequestUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=" .. tokenUser .. "&format=json&url=" .. encodedUrl .. "&link_du_phong="
-	
-	task.spawn(function()
-		local success, response = pcall(function()
-			local httpRequest = (syn and syn.request) or http_request or request
-			local res = httpRequest({ Url = apiRequestUrl, Method = "GET" })
-			return res.Body
-		end)
-		
-		if success and response then
-			local successDecode, data = pcall(function()
-				return HttpService:JSONDecode(response)
-			end)
-			
-			if successDecode and data and data.html then
-				local shortLink = data.html
-				pcall(function() setclipboard(shortLink) end)
-				pcall(function()
-					local httpRequest = (syn and syn.request) or http_request or request
-					httpRequest({Url = shortLink, Method = "GET"})
-				end)
-				
-				errorLabel.TextColor3 = Color3.fromRGB(52, 152, 219)
-				errorLabel.Text = "Link copied! Complete it and paste key here."
-			else
-				errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-				errorLabel.Text = "API Error: Can't parse shortlink!"
-			end
-		else
-			errorLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
-			errorLabel.Text = "Request failed! Check executor HTTP."
-		end
-	end)
-end)
-
-repeat task.wait(1) until keyAccepted
-
--- ==================== SCRIPT CHÍNH (KAITUN BLOX FRUITS) ====================
-
+-- Roblox System Services
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 local remoteComm = nil
@@ -510,6 +492,7 @@ RunService.RenderStepped:Connect(function()
                         ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
                         ESPText.TextSize = 13
                         ESPText.Font = Enum.Font.GothamBold
+                        -- Đã vứt icon táo ở đây:
                         ESPText.Text = obj.Name .. " (" .. distance .. "m)"
                         
                         local corner = Instance.new("UICorner")
@@ -541,7 +524,7 @@ local function hopServer()
                 local response = HttpService:JSONDecode(game:HttpGet(url))
                 cursor = response.nextCursor or ""
                 for _, s in ipairs(response.data) do
-                    if s.playing >= 6 and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
                         table.insert(servers, s.id)
                     end
                 end
@@ -614,7 +597,7 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    StatusLabel.Text = "Fast TP: " + obj.Name
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
                     StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                     character.HumanoidRootPart.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.15)
