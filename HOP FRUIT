@@ -256,7 +256,7 @@ AvatarImg.Size = UDim2.new(0, 84, 0, 84)
 AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
-AvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png?ex=6a9d0684&is=6a9bb504&hm=2a79544bbd7d1670bccdfd2a203a040b7f42acec98f0ce998affd5d3b00b3acc"
+AvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png?ex=6a9d0684&is=6a9bb504&hm=2a79544bbd7d1670bccdfd2a203a040b7f42acec98f0ce998affd5d3b00b3acc&"
 AvatarImg.Parent = CircleAvatarBg
 
 local AvatarCircle = Instance.new("UICorner")
