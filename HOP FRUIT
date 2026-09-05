@@ -3,15 +3,13 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
 local HWID = "HWID_" .. tostring(game:GetService("RbxAnalyticsService"):GetClientId())
-local SECRET_SALT = "DUBO_SECRET_LOCK_2026" -- Khóa nội bộ để tự dịch mã hóa
+local SECRET_SALT = "DUBO_SECRET_LOCK_2026"
 
--- Hàm mã hóa chung (dùng cho cả mã hóa key chờ submit và mã hóa session sau khi submit)
 local function encryptData(plainText)
     local combined = plainText .. "||" .. SECRET_SALT
     return HttpService:JSONEncode({payload = HttpService:Base64Encode(combined)})
 end
 
--- Hàm giải mã (bắt buộc phải dịch được, nếu ai tự bịa chuỗi giả mạo dịch không ra sẽ trả về nil)
 local function decryptData(encryptedStr)
     local success, jsonDecoded = pcall(function()
         return HttpService:JSONDecode(encryptedStr)
@@ -23,52 +21,39 @@ local function decryptData(encryptedStr)
     end)
     if not successDecode or not rawText then return nil end
 
-    -- Kiểm tra xem có khớp chữ ký nội bộ không (chống user tự nhập bừa chuỗi giả)
     if not string.find(rawText, SECRET_SALT) then return nil end
 
-    -- Tách lấy phần nội dung trước vạch ngăn cách
     local separatorPos = string.find(rawText, "||" .. SECRET_SALT)
     if not separatorPos then return nil end
 
     return string.sub(rawText, 1, separatorPos - 1)
 end
 
--- Biến lưu trữ bản mã hóa của key đang chờ submit
 local encryptedTargetKey = nil
 local rawTargetKeyForLink = nil
 
--- Quét phiên làm việc mỗi khi khởi động lại script hoặc đổi server
 local function checkSavedSession()
     local savedFolder = Workspace:FindFirstChild("DuboHubSession")
     if savedFolder and savedFolder:FindFirstChild("Data") then
         local encryptedSession = savedFolder.Data.Value
-        
-        -- Tự dịch dãy mã hóa phiên trong Workspace ra
         local decryptedSessionText = decryptData(encryptedSession)
         
-        -- Nếu dịch không ra (do kẽ gian tự bịa dãy số tào lao dán vào) -> Vô hiệu hóa, bắt get key lại
         if not decryptedSessionText then
-            print("[SECURITY] Phát hiện dữ liệu giả mạo hoặc lỗi giải mã! Bắt buộc lấy key lại.")
             savedFolder:Destroy()
             return false
         end
 
-        -- Tách HWID và thời gian hết hạn từ chuỗi đã giải mã
         local savedHwid = string.match(decryptedSessionText, "hwid=([^&]+)")
         local savedExp = tonumber(string.match(decryptedSessionText, "exp=(%d+)"))
 
-        -- So khớp HWID và kiểm tra thời gian 24 giờ
         if savedHwid == HWID and savedExp then
             local timeLeft = (savedExp / 1000) - os.time()
             if timeLeft > 0 then
-                print("Session hợp lệ! Thời gian hoạt động còn lại: " .. math.floor(timeLeft / 60) .. " phút.")
                 return true
             else
-                print("Session đã hết hạn 24 giờ.")
                 savedFolder:Destroy()
             end
         else
-            print("[SECURITY] Sai HWID thiết bị hoặc cấu trúc session không khớp!")
             savedFolder:Destroy()
         end
     end
@@ -154,14 +139,14 @@ else
     BtnCorner2.CornerRadius = UDim.new(0, 6)
     BtnCorner2.Parent = SubmitBtn
 
-    -- Bấm Get Key: Tạo key, mã hóa cất giấu dạng bùa chú, rồi quăng qua layma.net
+    -- Tách biệt luồng chạy mạng bằng task.spawn để tuyệt đối không bị đứng game
     GetKeyBtn.MouseButton1Click:Connect(function()
+        if GetKeyBtn.Text == "Đang tạo link..." then return end
         GetKeyBtn.Text = "Đang tạo link..."
+        
         task.spawn(function()
             local randomCode = string.sub(HttpService:GenerateGUID(false), 1, 8)
             rawTargetKeyForLink = "DUBO-KEY=" .. randomCode
-            
-            -- Mã hóa key ngầm để bảo vệ bên trong script
             encryptedTargetKey = encryptData(rawTargetKeyForLink)
 
             local targetUrl = "https://authtool.app/get-key/?result=" .. rawTargetKeyForLink
@@ -199,7 +184,6 @@ else
         end)
     end)
 
-    -- Bấm Submit: Kiểm tra giải mã key, nếu đúng thì gom HWID + Thời gian mã hóa xuống Workspace
     SubmitBtn.MouseButton1Click:Connect(function()
         local userKey = KeyBox.Text
         if userKey == "" then
@@ -209,7 +193,6 @@ else
             return
         end
 
-        -- Giải mã lại đoạn key đang ẩn giấu để so sánh với key người dùng vừa nhập
         local decryptedKey = encryptedTargetKey and decryptData(encryptedTargetKey)
 
         if decryptedKey and userKey == decryptedKey then
@@ -222,7 +205,6 @@ else
             local val = Instance.new("StringValue")
             val.Name = "Data"
             
-            -- Đóng gói và mã hóa trọn bộ: HWID + Mốc thời gian sống 24 giờ
             local expiresAt = os.time() * 1000 + (24 * 60 * 60 * 1000)
             local sessionPayload = "hwid=" .. HWID .. "&exp=" .. tostring(expiresAt)
             val.Value = encryptData(sessionPayload)
