@@ -80,13 +80,15 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
     
+    -- Avatar mới của bot trên Discord
+    local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
     local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
         ["username"] = "DUBO HUB",
-        ["avatar_url"] = defaultImage,
+        ["avatar_url"] = botAvatarUrl,
         ["embeds"] = {{
             ["color"] = 3447003,
             ["author"] = {
@@ -430,7 +432,7 @@ local function autoPickAndStore()
                             
                             local startCFrame = hrp.CFrame
                             local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-                            local speed = 300 -- Tốc độ bay thẳng
+                            local speed = 300
                             local duration = distance / speed
                             local startTime = tick()
                             
@@ -441,7 +443,6 @@ local function autoPickAndStore()
                                     return
                                 end
                                 
-                                -- Noclip xuyên tường liên tục khi đang bay
                                 for _, part in ipairs(character:GetDescendants()) do
                                     if part:IsA("BasePart") then
                                         part.CanCollide = false
@@ -465,7 +466,6 @@ local function autoPickAndStore()
                             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         end
                     else
-                        -- Logic Teleport cũ
                         StatusLabel.Text = "Fast TP: " .. obj.Name
                         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         character.HumanoidRootPart.CFrame = targetCFrame
