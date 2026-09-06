@@ -22,8 +22,8 @@ local isRunning = true
 local storedFruitsCache = {}
 
 DuboCFG = DuboCFG or {}
--- Thêm cấu hình Move: "teleport" hoặc "tween" (mặc định là "teleport" nếu chưa set)
-DuboCFG.Move = DuboCFG.Move or "teleport"
+-- Tự động chuyển về chữ thường để người dùng ghi "Tween", "tween", "TEleport" gì cũng nhận hết
+local moveType = tostring(DuboCFG.Move or "teleport"):lower()
 
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = ""
@@ -452,20 +452,19 @@ local function autoPickAndStore()
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
                     local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     
-                    if DuboCFG.Move == "tween" then
+                    if moveType == "tween" then
                         StatusLabel.Text = "Tween: " .. obj.Name
                         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         
                         local hrp = character.HumanoidRootPart
                         local distance = (hrp.Position - targetCFrame.Position).Magnitude
-                        local speed = 300 -- Tốc độ 300 như yêu cầu
+                        local speed = 300 -- Tốc độ 300
                         local duration = distance / speed
                         
                         local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
                         local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
                         tween:Play()
                         
-                        -- Đợi tween chạy xong hoặc ngắt nếu isRunning false
                         local conn
                         conn = RunService.Stepped:Connect(function()
                             if not isRunning then
@@ -496,7 +495,6 @@ end
 task.spawn(function()
     while true do
         isRunning = true
-        StatusLabel.Text = "Team: " + factionDisplayName -- Sửa lại cộng chuỗi bên dưới cho chuẩn
         StatusLabel.Text = "Team: " .. factionDisplayName
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         
