@@ -1,6 +1,5 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Roblox System Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -9,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local AnalyticsService = game:GetService("RbxAnalyticsService")
 
 local player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -18,7 +18,7 @@ pcall(function()
     remoteComm = ReplicatedStorage.Remotes.CommF_
 end)
 
-local isRunning = true
+local isRunning = false
 local storedFruitsCache = {}
 
 DuboCFG = DuboCFG or {}
@@ -72,6 +72,37 @@ local FruitImages = {
     ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg"
 }
 
+-- Hàm mã hóa và giải mã chống sửa đổi
+local function encryptData(str)
+    local result = ""
+    for i = 1, #str do
+        local b = string.byte(str, i)
+        result = result .. string.format("%02X", b + 15)
+    end
+    return result
+end
+
+local function decryptData(str)
+    local result = ""
+    pcall(function()
+        for i = 1, #str, 2 do
+            local hex = string.sub(str, i, i + 1)
+            local b = tonumber(hex, 16)
+            if b then
+                result = result .. string.char(b - 15)
+            end
+        end
+    end)
+    return result
+end
+
+local function getHWID()
+    local success, id = pcall(function()
+        return AnalyticsService:GetClientId()
+    end)
+    return success and id or "UnknownHWID"
+end
+
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
@@ -80,7 +111,6 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
     
-    -- Avatar mới của bot trên Discord
     local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
     local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
@@ -146,14 +176,111 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- GIAO DIỆN KEY SYSTEM
+local KeySystemFrame = Instance.new("Frame")
+KeySystemFrame.Size = UDim2.new(0, 420, 0, 260)
+KeySystemFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
+KeySystemFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+KeySystemFrame.BorderSizePixel = 0
+KeySystemFrame.Active = true
+KeySystemFrame.Draggable = true
+KeySystemFrame.Parent = ScreenGui
+
+local KeyFrameCorner = Instance.new("UICorner")
+KeyFrameCorner.CornerRadius = UDim.new(0, 12)
+KeyFrameCorner.Parent = KeySystemFrame
+
+local KeyFrameStroke = Instance.new("UIStroke")
+KeyFrameStroke.Thickness = 2
+KeyFrameStroke.Color = Color3.fromRGB(0, 120, 255)
+KeyFrameStroke.Parent = KeySystemFrame
+
+local KeyIconBg = Instance.new("Frame")
+KeyIconBg.Size = UDim2.new(0, 42, 0, 42)
+KeyIconBg.Position = UDim2.new(0, 16, 0, 16)
+KeyIconBg.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+KeyIconBg.Parent = KeySystemFrame
+Instance.new("UICorner", KeyIconBg).CornerRadius = UDim.new(0, 8)
+local KeyIconStroke = Instance.new("UIStroke", KeyIconBg)
+KeyIconStroke.Color = Color3.fromRGB(0, 120, 255)
+KeyIconStroke.Thickness = 1.5
+
+local KeyIconImg = Instance.new("ImageLabel")
+KeyIconImg.Size = UDim2.new(0, 32, 0, 32)
+KeyIconImg.Position = UDim2.new(0.5, -16, 0.5, -16)
+KeyIconImg.BackgroundTransparency = 1
+KeyIconImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+KeyIconImg.Parent = KeyIconBg
+
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Size = UDim2.new(1, -80, 0, 42)
+KeyTitle.Position = UDim2.new(0, 70, 0, 16)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
+KeyTitle.TextColor3 = Color3.fromRGB(0, 170, 255)
+KeyTitle.TextSize = 18
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
+KeyTitle.Parent = KeySystemFrame
+
+local KeyInputBox = Instance.new("TextBox")
+KeyInputBox.Size = UDim2.new(0, 380, 0, 42)
+KeyInputBox.Position = UDim2.new(0.5, -190, 0, 75)
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+KeyInputBox.BorderSizePixel = 0
+KeyInputBox.PlaceholderText = "Paste your key here..."
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
+KeyInputBox.Text = ""
+KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInputBox.TextSize = 14
+KeyInputBox.Font = Enum.Font.GothamMedium
+KeyInputBox.Parent = KeySystemFrame
+Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
+
+local SubmitBtn = Instance.new("TextButton")
+SubmitBtn.Size = UDim2.new(0, 380, 0, 42)
+SubmitBtn.Position = UDim2.new(0.5, -190, 0, 125)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+SubmitBtn.BorderSizePixel = 0
+SubmitBtn.Text = "SUBMIT KEY"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.TextSize = 14
+SubmitBtn.Font = Enum.Font.GothamBold
+SubmitBtn.Parent = KeySystemFrame
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
+
+local GetKeyBtn = Instance.new("TextButton")
+GetKeyBtn.Size = UDim2.new(0, 380, 0, 42)
+GetKeyBtn.Position = UDim2.new(0.5, -190, 0, 175)
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+GetKeyBtn.BorderSizePixel = 0
+GetKeyBtn.Text = "GET KEY LINK"
+GetKeyBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
+GetKeyBtn.TextSize = 14
+GetKeyBtn.Font = Enum.Font.GothamBold
+GetKeyBtn.Parent = KeySystemFrame
+Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
+
+local KeyStatus = Instance.new("TextLabel")
+KeyStatus.Size = UDim2.new(1, 0, 0, 20)
+KeyStatus.Position = UDim2.new(0, 0, 0, 225)
+KeyStatus.BackgroundTransparency = 1
+KeyStatus.Text = "Status: Waiting for key input..."
+KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
+KeyStatus.TextSize = 12
+KeyStatus.Font = Enum.Font.Gotham
+KeyStatus.Parent = KeySystemFrame
+
+-- GIAO DIỆN CHÍNH (Được kéo dài thêm chiều cao để chứa khung thời gian key)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 290, 0, 350)
+MainFrame.Size = UDim2.new(0, 290, 0, 395)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -193,7 +320,7 @@ task.spawn(function()
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 370)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 415)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -263,7 +390,7 @@ TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 250, 0, 48)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 202)
+StatusBox.Position = UDim2.new(0.5, -125, 0, 192)
 StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
@@ -282,6 +409,34 @@ StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
+
+-- KHUNG HIỂN THỊ THỜI GIAN SỐNG CỦA KEY (Đếm ngược từ 24h về 00:00:00)
+local KeyTimerBox = Instance.new("Frame")
+KeyTimerBox.Size = UDim2.new(0, 250, 0, 38)
+KeyTimerBox.Position = UDim2.new(0.5, -125, 0, 248)
+KeyTimerBox.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+KeyTimerBox.BorderSizePixel = 0
+KeyTimerBox.ZIndex = 2
+KeyTimerBox.Parent = MainFrame
+
+local KeyTimerCorner = Instance.new("UICorner")
+KeyTimerCorner.CornerRadius = UDim.new(0, 10)
+KeyTimerCorner.Parent = KeyTimerBox
+
+local KeyTimerStroke = Instance.new("UIStroke")
+KeyTimerStroke.Color = Color3.fromRGB(0, 170, 255)
+KeyTimerStroke.Thickness = 1.2
+KeyTimerStroke.Parent = KeyTimerBox
+
+local KeyTimerLabel = Instance.new("TextLabel")
+KeyTimerLabel.Size = UDim2.new(1, 0, 1, 0)
+KeyTimerLabel.BackgroundTransparency = 1
+KeyTimerLabel.Text = "Key Expires: 24h 00m 00s"
+KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+KeyTimerLabel.TextSize = 12
+KeyTimerLabel.Font = Enum.Font.GothamBold
+KeyTimerLabel.ZIndex = 2
+KeyTimerLabel.Parent = KeyTimerBox
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
@@ -482,55 +637,252 @@ local function autoPickAndStore()
     return found
 end
 
+-- VÒNG LẶP CẬP NHẬT THỜI GIAN HẾT HẠN TRÊN GIAO DIỆN CHÍNH
+local expireTimestamp = 0
 task.spawn(function()
     while true do
-        isRunning = true
-        StatusLabel.Text = "Team: " .. factionDisplayName
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        
-        local attempts = 0
-        repeat
-            pcall(function()
-                if remoteComm then
-                    remoteComm:InvokeServer("SetTeam", chosenFaction)
+        if MainFrame.Visible and expireTimestamp > 0 then
+            local timeLeft = expireTimestamp - os.time()
+            if timeLeft > 0 then
+                local hours = math.floor(timeLeft / 3600)
+                local minutes = math.floor((timeLeft % 3600) / 60)
+                local seconds = timeLeft % 60
+                
+                KeyTimerLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, minutes, seconds)
+                
+                -- Đổi màu cảnh báo khi dưới 2 tiếng hoặc dưới 30 phút
+                if timeLeft <= 1800 then
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50) -- Đỏ (Sắp hết hạn nghiêm trọng)
+                elseif timeLeft <= 7200 then
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 165, 0) -- Vàng cam (Chuẩn bị tinh thần)
+                else
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120) -- Xanh an toàn
                 end
-            end)
-            task.wait(1)
-            attempts = attempts + 1
-        until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
-
-        if not isRunning then break end
-
-        StatusLabel.Text = "Ready!"
-        task.wait(0.5)
-
-        local scanStart = tick()
-        while isRunning do
-            StatusLabel.Text = "Scanning..."
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            
-            local collected = false
-            pcall(function()
-                collected = autoPickAndStore()
-            end)
-            
-            if collected then
-                scanStart = tick()
-            end
-            
-            if not collected and (tick() - scanStart > 3) then
-                StatusLabel.Text = "Not found (Hopping...)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                task.wait(0.5)
+            else
+                KeyTimerLabel.Text = "Key Expired! Re-locking..."
+                KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                task.wait(1)
+                pcall(function()
+                    if delfile and isfile("dubo_session_S.txt") then
+                        delfile("dubo_session_S.txt")
+                    end
+                end)
+                game:GetService("TeleportService"):Teleport(game.PlaceId, player)
                 break
             end
-            
-            if not isRunning then break end
-            task.wait(0.2)
         end
+        task.wait(1)
+    end
+end)
 
-        if not isRunning then break end
-        hopServer()
-        task.wait(3)
+local function launchMainScript(targetExpireTime)
+    if targetExpireTime then
+        expireTimestamp = targetExpireTime
+    end
+    KeySystemFrame.Visible = false
+    MainFrame.Visible = true
+    isRunning = true
+    
+    task.spawn(function()
+        while true do
+            isRunning = true
+            StatusLabel.Text = "Team: " .. factionDisplayName
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            
+            local attempts = 0
+            repeat
+                pcall(function()
+                    if remoteComm then
+                        remoteComm:InvokeServer("SetTeam", chosenFaction)
+                    end
+                end)
+                task.wait(1)
+                attempts = attempts + 1
+            until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
+
+            if not isRunning then break end
+
+            StatusLabel.Text = "Ready!"
+            task.wait(0.5)
+
+            local scanStart = tick()
+            while isRunning do
+                StatusLabel.Text = "Scanning..."
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                
+                local collected = false
+                pcall(function()
+                    collected = autoPickAndStore()
+                end)
+                
+                if collected then
+                    scanStart = tick()
+                end
+                
+                if not collected and (tick() - scanStart > 3) then
+                    StatusLabel.Text = "Not found (Hopping...)"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    task.wait(0.5)
+                    break
+                end
+                
+                if not isRunning then break end
+                task.wait(0.2)
+            end
+
+            if not isRunning then break end
+            hopServer()
+            task.wait(3)
+        end
+    end)
+end
+
+-- TỰ ĐỘNG KIỂM TRA & TỰ HỦY FILE S NẾU HẾT HẠN HOẶC BỊ LỖI/CHẾ BỪA
+task.spawn(function()
+    pcall(function()
+        if isfile and readfile then
+            if isfile("dubo_session_S.txt") then
+                local content = readfile("dubo_session_S.txt")
+                local parts = {}
+                for part in string.gmatch(content, "[^|]+") do
+                    table.insert(parts, part)
+                end
+                
+                local isValid = false
+                local targetTime = 0
+                if #parts >= 3 then
+                    local savedKey = decryptData(parts[1])
+                    local savedHWID = decryptData(parts[2])
+                    local savedTime = tonumber(decryptData(parts[3])) or 0
+                    
+                    if savedHWID == getHWID() and os.time() < savedTime and string.sub(savedKey, 1, 9) == "DUBO-KEY=" then
+                        isValid = true
+                        targetTime = savedTime
+                    end
+                end
+                
+                if isValid then
+                    launchMainScript(targetTime)
+                else
+                    pcall(function()
+                        if delfile then
+                            delfile("dubo_session_S.txt")
+                        end
+                    end)
+                end
+            end
+        end
+    end)
+end)
+
+-- XỬ LÝ NÚT GET KEY LINK
+GetKeyBtn.MouseButton1Click:Connect(function()
+    KeyStatus.Text = "Generating secure key..."
+    KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
+    
+    pcall(function()
+        if delfile and isfile then
+            for i = 1, 10 do
+                local oldK = "dubo_temp_K_" .. i .. ".txt"
+                if isfile(oldK) then delfile(oldK) end
+            end
+            if isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end
+        end
+    end)
+    
+    local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    local randStr = ""
+    math.randomseed(tick())
+    for i = 1, 20 do
+        local randIdx = math.random(1, #chars)
+        randStr = randStr .. string.sub(chars, randIdx, randIdx)
+    end
+    
+    local fullKey = "DUBO-KEY=" .. randStr
+    local encodedKey = encryptData(fullKey)
+    
+    pcall(function()
+        if writefile then
+            writefile("dubo_temp_K.txt", encodedKey)
+        end
+    end)
+    
+    local authtoolLink = "https://authtool.app/get-key/?result=" .. fullKey
+    local laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink) .. "&link_du_phong=" .. HttpService:UrlEncode(authtoolLink)
+    
+    local success, response = pcall(function()
+        return game:HttpGet(laymaApiUrl)
+    end)
+    
+    if success and response then
+        local decodeSuccess, decoded = pcall(function()
+            return HttpService:JSONDecode(response)
+        end)
+        
+        if decodeSuccess and decoded and decoded.success and decoded.html then
+            local shortlink = decoded.html
+            pcall(function()
+                setclipboard(shortlink)
+            end)
+            
+            KeyStatus.Text = "Shortlink copied! Complete link to get key."
+            KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
+        else
+            KeyStatus.Text = "API Error! Failed to parse response."
+            KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    else
+        KeyStatus.Text = "Network Error! Could not reach Layma API."
+        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+-- XỬ LÝ NÚT SUBMIT KEY
+SubmitBtn.MouseButton1Click:Connect(function()
+    local enteredKey = KeyInputBox.Text
+    if enteredKey == "" then
+        KeyStatus.Text = "Please enter your key!"
+        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
+        return
+    end
+    
+    local isValid = false
+    pcall(function()
+        if isfile and readfile then
+            if isfile("dubo_temp_K.txt") then
+                local decryptedTempKey = decryptData(readfile("dubo_temp_K.txt"))
+                if enteredKey == decryptedTempKey then
+                    isValid = true
+                end
+            end
+        end
+    end)
+    
+    if isValid then
+        pcall(function()
+            if delfile and isfile("dubo_temp_K.txt") then
+                delfile("dubo_temp_K.txt")
+            end
+        end)
+        
+        local calculatedExpireTime = os.time() + 86400
+        pcall(function()
+            if writefile then
+                local encKey = encryptData(enteredKey)
+                local encHWID = encryptData(getHWID())
+                local encTime = encryptData(tostring(calculatedExpireTime))
+                
+                local finalSessionData = encKey .. "|" .. encHWID .. "|" .. encTime
+                writefile("dubo_session_S.txt", finalSessionData)
+            end
+        end)
+        
+        KeyStatus.Text = "Key verified successfully!"
+        KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
+        task.wait(0.8)
+        launchMainScript(calculatedExpireTime)
+    else
+        KeyStatus.Text = "Invalid key or temporary file missing!"
+        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
     end
 end)
