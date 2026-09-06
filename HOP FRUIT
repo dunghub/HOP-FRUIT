@@ -1,903 +1,1084 @@
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local AnalyticsService = game:GetService("RbxAnalyticsService")
-
-local player = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
-
-local remoteComm = nil
+repeat
+	task.wait();
+until game:IsLoaded() and game.Players.LocalPlayer 
+local Players = game:GetService("Players");
+local ReplicatedStorage = game:GetService("ReplicatedStorage");
+local Workspace = game:GetService("Workspace");
+local TeleportService = game:GetService("TeleportService");
+local HttpService = game:GetService("HttpService");
+local CoreGui = game:GetService("CoreGui");
+local RunService = game:GetService("RunService");
+local TweenService = game:GetService("TweenService");
+local AnalyticsService = game:GetService("RbxAnalyticsService");
+local player = Players.LocalPlayer;
+local Camera = Workspace.CurrentCamera;
+local remoteComm = nil;
 pcall(function()
-    remoteComm = ReplicatedStorage.Remotes.CommF_
-end)
-
-local isRunning = false
-local storedFruitsCache = {}
-
-DuboCFG = DuboCFG or {}
-local moveType = tostring(DuboCFG.Move or "teleport"):lower()
-
-local Factions = {"Pirates", "Marines"}
-local chosenFaction = ""
-
-if DuboCFG.Team == "Pirates" or DuboCFG.Team == "Marines" then
-    chosenFaction = DuboCFG.Team
+	remoteComm = ReplicatedStorage.Remotes.CommF_;
+end);
+local isRunning = false;
+local storedFruitsCache = {};
+DuboCFG = DuboCFG or {};
+local moveType = tostring(DuboCFG.Move or "teleport"):lower();
+local Factions = {"Pirates","Marines"};
+local chosenFaction = "";
+if ((DuboCFG.Team == "Pirates") or (DuboCFG.Team == "Marines")) then
+	chosenFaction = DuboCFG.Team;
 else
-    chosenFaction = Factions[math.random(1, #Factions)]
+	chosenFaction = Factions[math.random(1, #Factions)];
 end
-
-local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
-
-local AllBloxFruits = {
-    ["Rocket"] = "Rocket-Rocket", ["Spin"] = "Spin-Spin", ["Blade"] = "Blade-Blade",
-    ["Spring"] = "Spring-Spring", ["Bomb"] = "Bomb-Bomb", ["Smoke"] = "Smoke-Smoke",
-    ["Spike"] = "Spike-Spike", ["Flame"] = "Flame-Flame", ["Falcon"] = "Falcon-Falcon",
-    ["Eagle"] = "Eagle-Eagle", ["Ice"] = "Ice-Ice", ["Sand"] = "Sand-Sand", ["Dark"] = "Dark-Dark",
-    ["Diamond"] = "Diamond-Diamond", ["Light"] = "Light-Light", ["Rubber"] = "Rubber-Rubber", ["Creation"] = "Creation-Creation", ["Ghost"] = "Ghost-Ghost",
-    ["Magma"] = "Magma-Magma", ["Quake"] = "Quake-Quake", ["Buddha"] = "Buddha-Buddha",
-    ["Love"] = "Love-Love", ["Spider"] = "Spider-Spider", ["Sound"] = "Sound-Sound",
-    ["Phoenix"] = "Phoenix-Phoenix", ["Portal"] = "Portal-Portal", ["Lightning"] = "Lightning-Linghtning",
-    ["Pain"] = "Pain-Pain", ["Blizzard"] = "Blizzard-Blizzard", ["Gravity"] = "Gravity-Gravity",
-    ["Dough"] = "Dough-Dough", ["Shadow"] = "Shadow-Shadow", ["Venom"] = "Venom-Venom",
-    ["Control"] = "Control-Control", ["Spirit"] = "Spirit-Spirit", ["Dragon"] = "Dragon-Dragon",
-    ["Tiger"] = "Tiger-Tiger", ["T-Rex"] = "T-Rex-T-Rex", ["Mammoth"] = "Mammoth-Mammoth",
-    ["Kitsune"] = "Kitsune-Kitsune", ["Yeti"] = "Yeti-Yeti", ["Gas"] = "Gas-Gas",
-    ["Magnet"] = "Magnet-Magnet"
-}
-
-local FruitImages = {
-    -- Common & Uncommon
-    ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a9e40e5&is=6a9cef65&hm=031aa2e0ade47e3fdc70f3689f43592e35971641c12bdfec8f640f3412ccdb86&",
-    ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a9e43c9&is=6a9cf249&hm=bed4c12238047831987c91261bf23056f0e046aa4ee142bbfcbc859120944ccc&",
-    ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a9e44ab&is=6a9cf32b&hm=ece8925100b75bf581be0a487fc63d86a964ed8c8d989d11876ad4bfe3afd776&",
-    ["Spring"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a9e44dd&is=6a9cf35d&hm=3075c83bbf5cc3f26bbc02e866cb48baa1fb26670a7cfd97abc75ec5d23dc37b&",
-    ["Bomb"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9e450a&is=6a9cf38a&hm=dad0519b736f0f76fb1e6a5c74d61823af787d693a0d280a40df3b1e0b07e658&",
-    ["Smoke"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a9e4559&is=6a9cf3d9&hm=68aa768cf4d565604fc85abd48014470c5a6501e53b2e72cab859fe92568b95f&",
-    ["Spike"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a9e4593&is=6a9cf413&hm=94cac410a13c492a5d78633a0f9319111c561935333153f9cda1fb550a331742&",
-    ["Flame"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a9e45b3&is=6a9cf433&hm=49fed45375767db0a9c8705b4b51d15fb3b804e56e696688d37a0e19f90b22ee&",
-    ["Eagle"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg?ex=6a9e45d8&is=6a9cf458&hm=571f9983bb092297914f72ec3c5037cde8d2c786d2de766672ae40c263f1527b&",
-    ["Ice"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9e45f5&is=6a9cf475&hm=7cf41a36c618b1c9a222650c4a76c3fa0109dfd5da4266a2f88f3344bb17d140&",
-    ["Sand"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a9e4644&is=6a9cf4c4&hm=0ccc7c4fcc2e36df006e01b137b7687380247d7995b000b8849ccf527dcc2fde&",
-    ["Dark"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a9e4657&is=6a9cf4d7&hm=eb1d44c9908773c91f250b533c2df978e4d70b710255b23d6af025a3e9ac3824&",
-    ["Diamond"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9e46fd&is=6a9cf57d&hm=cc3f9f7582113ebb07c1ae052aaa89140a78c41c48d805214b845fc13de701e3&",
-    ["Light"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9e4712&is=6a9cf592&hm=95490943b6349ed9029a45fee44dfdf5f882c3d3e7a8f51d3ccb07cec783c0ab&",
-    ["Rubber"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a9e474d&is=6a9cf5cd&hm=613dcba37af74114abfdab2850ccf8b3ad41de932134a971206a08c14966904b&",
-    ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a9e4788&is=6a9cf608&hm=8d59460d75890ef103e287f41b11f52362ce73f872046e5ac6040889616008fe&",
-    ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9e4819&is=6a9cf699&hm=c076f00e48259b71db4aaa06766ec4cfce1319083e7acaf7c411c0d2859ea2e3&",
-    ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9e4835&is=6a9cf6b5&hm=c362e1feed5537f894386cade48d468e8ee599a6801e8c4d85ace0212b042edf&",
-
-    -- Rare
-    ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546079320672436366/image0.jpg?ex=6a9e7a12&is=6a9d2892&hm=3d7939ca7add5d596cbb12ece038c6b5d528806e420c93e7f2ab6aaa45c6c831&",
-    ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083305508708453/image0.jpg?ex=6a9e7dc8&is=6a9d2c48&hm=d5bf2913bcc5f989a3d978cf5a8189af31e0e4e1fa95159d45147b60573b9235&",
-    ["Love"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083379974246531/image0.jpg?ex=6a9e7dda&is=6a9d2c5a&hm=f741f1e97a5a6b0e13b7b73faf6617c88885700c6232f1843c60d2f335e94567&",
-    ["Spider"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083729691385876/image0.jpg?ex=6a9e7e2e&is=6a9d2cae&hm=0a6b48d8be2d0b15d9fa8f6d06382eff0d78bcf2b94f1bbcafa81a0fe69a03e2&",
-    ["Sound"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083818958626927/image0.jpg?ex=6a9e7e43&is=6a9d2cc3&hm=d6815190624c37a883d6dbef37f4e554950a17cd9a0c2d9720dd3e8bd81518f6&",
-    ["Phoenix"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083213066113084/image0.jpg?ex=6a9e7db2&is=6a9d2c32&hm=a8455a3db8f33db27cf7bd3d30dd7d4131b51641b8e9bab05cba243cfee37f50&",
-    ["Portal"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083475394793644/image0.jpg?ex=6a9e7df1&is=6a9d2c71&hm=1bd4292bdf4c21e1bdce346e7a1d65dcf151a6ba844f0e591dfd9115514c8943&",
-    ["Lightning"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084090686607402/image0.jpg?ex=6a9e7e84&is=6a9d2d04&hm=853094404fe35c5d54ba43715615b241725f27cb8364809e93f4d0b3d1aff74e&",
-    ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084000068542564/image0.jpg?ex=6a9e7e6e&is=6a9d2cee&hm=d03c937a2467fec9d690da5e9dd032046e332e8707634b516d8b146bdceff2a0&",
-    ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083909845000283/image0.jpg?ex=6a9e7e58&is=6a9d2cd8&hm=adcc68dddf74dde6d50412858f14b0da980f2ab0d3f58d7ab951265049e0e5c4&",
-
-    -- Legendary & Mythical
-    ["Gravity"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084263445790850/image0.jpg?ex=6a9e7ead&is=6a9d2d2d&hm=f1a7d03ccb7b14bf53098aa2e71f86ab22cb437b5e27f8e2d95f556ba6fa98e3&",
-    ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084740258603028/image0.jpg?ex=6a9e7f1e&is=6a9d2d9e&hm=f845663dc8f84f88fe28b3f855c711154ab7881deb6f9f55b4e7d2f9d151c2bc&",
-    ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084890372743238/image0.jpg?ex=6a9e7f42&is=6a9d2dc2&hm=e8587219ffcdb54efe91ff22e2842df8d93bd314090004266123aee51ecbe570&",
-    ["Venom"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084994739605574/image0.jpg?ex=6a9e7f5b&is=6a9d2ddb&hm=b398a9a932aec88fd611c3d240b8f6b945b9a4b37545aa9384502169bb603cbb&",
-    ["Control"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546085450278510655/image0.jpg?ex=6a9e7fc8&is=6a9d2e48&hm=19766127d87ac3a50554492cbf03c1adc17167efb68c004d899c278ad18b92b4&",
-    ["Spirit"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546085278542860328/image0.jpg?ex=6a9e7f9f&is=6a9d2e1f&hm=9364e04b1faa978b077a5ec8546b69bef8d7554484aca577a06d9079d21c8b05&",
-    ["Dragon"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546086896432578632/image0.jpg?ex=6a9e8121&is=6a9d2fa1&hm=81749a473b0390d7b191816fec397862a9ae75e60a96331b4022cfaae881b1bb&",
-    ["Tiger"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546085656319631531/image0.jpg?ex=6a9e7ff9&is=6a9d2e79&hm=c408c784692b6b8eb5c40385cf6270985f32a841b1e79f7d0b19eb5921ccee58&",
-    ["T-Rex"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084622067171338/image0.jpg?ex=6a9e7f02&is=6a9d2d82&hm=9796a22a4120b1bbd384e050185fb38215fd2b02de6a312920981ff94c428206&",
-    ["Kitsune"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546085786573733928/image0.jpg?ex=6a9e8018&is=6a9d2e98&hm=7bc7f814ed9ecbe66314d3ae346c9c60bbad0eeb91ec5331382b5b05a3bab1d6&",
-    ["Yeti"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546085544252014592/image0.jpg?ex=6a9e7fde&is=6a9d2e5e&hm=72a11abed35400193401dffde327403b609d8312a89a8b060f729079c991ec4e&",
-    ["Gas"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546089445164322816/image0.jpg?ex=6a9e8380&is=6a9d3200&hm=3f7719cc108e18d1084811486b14782b7dd7cb501a4a104eb1631eabc85a1fec&",
-    ["Magnet"] = ""
-}
-
--- Hàm mã hóa và giải mã dữ liệu nội bộ
+local factionDisplayName = ((chosenFaction == "Pirates") and "Pirates") or "Marines";
+local AllBloxFruits = {Rocket="Rocket-Rocket",Spin="Spin-Spin",Blade="Blade-Blade",Spring="Spring-Spring",Bomb="Bomb-Bomb",Smoke="Smoke-Smoke",Spike="Spike-Spike",Flame="Flame-Flame",Falcon="Falcon-Falcon",Eagle="Eagle-Eagle",Ice="Ice-Ice",Sand="Sand-Sand",Dark="Dark-Dark",Diamond="Diamond-Diamond",Light="Light-Light",Rubber="Rubber-Rubber",Creation="Creation-Creation",Ghost="Ghost-Ghost",Magma="Magma-Magma",Quake="Quake-Quake",Buddha="Buddha-Buddha",Love="Love-Love",Spider="Spider-Spider",Sound="Sound-Sound",Phoenix="Phoenix-Phoenix",Portal="Portal-Portal",Lightning="Lightning-Linghtning",Pain="Pain-Pain",Blizzard="Blizzard-Blizzard",Gravity="Gravity-Gravity",Dough="Dough-Dough",Shadow="Shadow-Shadow",Venom="Venom-Venom",Control="Control-Control",Spirit="Spirit-Spirit",Dragon="Dragon-Dragon",Tiger="Tiger-Tiger",["T-Rex"]="T-Rex-T-Rex",Mammoth="Mammoth-Mammoth",Kitsune="Kitsune-Kitsune",Yeti="Yeti-Yeti",Gas="Gas-Gas",Magnet="Magnet-Magnet"};
+local FruitImages = {Rocket="https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a9e40e5&is=6a9cef65&hm=031aa2e0ade47e3fdc70f3689f43592e35971641c12bdfec8f640f3412ccdb86&",Spin="https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a9e43c9&is=6a9cf249&hm=bed4c12238047831987c91261bf23056f0e046aa4ee142bbfcbc859120944ccc&",Blade="https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a9e44ab&is=6a9cf32b&hm=ece8925100b75bf581be0a487fc63d86a964ed8c8d989d11876ad4bfe3afd776&",Spring="https://cdn.discordapp.com/attachments/1530612413966188584/1543304280037920808/image0.jpg?ex=6a9e44dd&is=6a9cf35d&hm=3075c83bbf5cc3f26bbc02e866cb48baa1fb26670a7cfd97abc75ec5d23dc37b&",Bomb="https://cdn.discordapp.com/attachments/1530612413966188584/1543304467477176360/image0.jpg?ex=6a9e450a&is=6a9cf38a&hm=dad0519b736f0f76fb1e6a5c74d61823af787d693a0d280a40df3b1e0b07e658&",Smoke="https://cdn.discordapp.com/attachments/1530612413966188584/1543304800941121849/image0.jpg?ex=6a9e4559&is=6a9cf3d9&hm=68aa768cf4d565604fc85abd48014470c5a6501e53b2e72cab859fe92568b95f&",Spike="https://cdn.discordapp.com/attachments/1530612413966188584/1543305044194230372/image0.jpg?ex=6a9e4593&is=6a9cf413&hm=94cac410a13c492a5d78633a0f9319111c561935333153f9cda1fb550a331742&",Flame="https://cdn.discordapp.com/attachments/1530612413966188584/1543305175446585454/image0.jpg?ex=6a9e45b3&is=6a9cf433&hm=49fed45375767db0a9c8705b4b51d15fb3b804e56e696688d37a0e19f90b22ee&",Eagle="https://cdn.discordapp.com/attachments/1530612413966188584/1543305331596206181/image0.jpg?ex=6a9e45d8&is=6a9cf458&hm=571f9983bb092297914f72ec3c5037cde8d2c786d2de766672ae40c263f1527b&",Ice="https://cdn.discordapp.com/attachments/1530612413966188584/1543305454300561458/image0.jpg?ex=6a9e45f5&is=6a9cf475&hm=7cf41a36c618b1c9a222650c4a76c3fa0109dfd5da4266a2f88f3344bb17d140&",Sand="https://cdn.discordapp.com/attachments/1530612413966188584/1543305786334384291/image0.jpg?ex=6a9e4644&is=6a9cf4c4&hm=0ccc7c4fcc2e36df006e01b137b7687380247d7995b000b8849ccf527dcc2fde&",Dark="https://cdn.discordapp.com/attachments/1530612413966188584/1543305866671820931/image0.jpg?ex=6a9e4657&is=6a9cf4d7&hm=eb1d44c9908773c91f250b533c2df978e4d70b710255b23d6af025a3e9ac3824&",Diamond="https://cdn.discordapp.com/attachments/1530612413966188584/1543306562045743214/image0.jpg?ex=6a9e46fd&is=6a9cf57d&hm=cc3f9f7582113ebb07c1ae052aaa89140a78c41c48d805214b845fc13de701e3&",Light="https://cdn.discordapp.com/attachments/1530612413966188584/1543306648632819752/image0.jpg?ex=6a9e4712&is=6a9cf592&hm=95490943b6349ed9029a45fee44dfdf5f882c3d3e7a8f51d3ccb07cec783c0ab&",Rubber="https://cdn.discordapp.com/attachments/1530612413966188584/1543306896532967575/image0.jpg?ex=6a9e474d&is=6a9cf5cd&hm=613dcba37af74114abfdab2850ccf8b3ad41de932134a971206a08c14966904b&",Creation="https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a9e4788&is=6a9cf608&hm=8d59460d75890ef103e287f41b11f52362ce73f872046e5ac6040889616008fe&",Ghost="https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9e4819&is=6a9cf699&hm=c076f00e48259b71db4aaa06766ec4cfce1319083e7acaf7c411c0d2859ea2e3&",Magma="https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9e4835&is=6a9cf6b5&hm=c362e1feed5537f894386cade48d468e8ee599a6801e8c4d85ace0212b042edf&",Quake="https://cdn.discordapp.com/attachments/1530612413966188584/1546079320672436366/image0.jpg?ex=6a9e7a12&is=6a9d2892&hm=3d7939ca7add5d596cbb12ece038c6b5d528806e420c93e7f2ab6aaa45c6c831&",Buddha="https://cdn.discordapp.com/attachments/1530612413966188584/1546083305508708453/image0.jpg?ex=6a9e7dc8&is=6a9d2c48&hm=d5bf2913bcc5f989a3d978cf5a8189af31e0e4e1fa95159d45147b60573b9235&",Love="https://cdn.discordapp.com/attachments/1530612413966188584/1546083379974246531/image0.jpg?ex=6a9e7dda&is=6a9d2c5a&hm=f741f1e97a5a6b0e13b7b73faf6617c88885700c6232f1843c60d2f335e94567&",Spider="https://cdn.discordapp.com/attachments/1530612413966188584/1546083729691385876/image0.jpg?ex=6a9e7e2e&is=6a9d2cae&hm=0a6b48d8be2d0b15d9fa8f6d06382eff0d78bcf2b94f1bbcafa81a0fe69a03e2&",Sound="https://cdn.discordapp.com/attachments/1530612413966188584/1546083818958626927/image0.jpg?ex=6a9e7e43&is=6a9d2cc3&hm=d6815190624c37a883d6dbef37f4e554950a17cd9a0c2d9720dd3e8bd81518f6&",Phoenix="https://cdn.discordapp.com/attachments/1530612413966188584/1546083213066113084/image0.jpg?ex=6a9e7db2&is=6a9d2c32&hm=a8455a3db8f33db27cf7bd3d30dd7d4131b51641b8e9bab05cba243cfee37f50&",Portal="https://cdn.discordapp.com/attachments/1530612413966188584/1546083475394793644/image0.jpg?ex=6a9e7df1&is=6a9d2c71&hm=1bd4292bdf4c21e1bdce346e7a1d65dcf151a6ba844f0e591dfd9115514c8943&",Lightning="https://cdn.discordapp.com/attachments/1530612413966188584/1546084090686607402/image0.jpg?ex=6a9e7e84&is=6a9d2d04&hm=853094404fe35c5d54ba43715615b241725f27cb8364809e93f4d0b3d1aff74e&",Pain="https://cdn.discordapp.com/attachments/1530612413966188584/1546084000068542564/image0.jpg?ex=6a9e7e6e&is=6a9d2cee&hm=d03c937a2467fec9d690da5e9dd032046e332e8707634b516d8b146bdceff2a0&",Blizzard="https://cdn.discordapp.com/attachments/1530612413966188584/1546083909845000283/image0.jpg?ex=6a9e7e58&is=6a9d2cd8&hm=adcc68dddf74dde6d50412858f14b0da980f2ab0d3f58d7ab951265049e0e5c4&",Gravity="https://cdn.discordapp.com/attachments/1530612413966188584/1546084263445790850/image0.jpg?ex=6a9e7ead&is=6a9d2d2d&hm=f1a7d03ccb7b14bf53098aa2e71f86ab22cb437b5e27f8e2d95f556ba6fa98e3&",Dough="https://cdn.discordapp.com/attachments/1530612413966188584/1546084740258603028/image0.jpg?ex=6a9e7f1e&is=6a9d2d9e&hm=f845663dc8f84f88fe28b3f855c711154ab7881deb6f9f55b4e7d2f9d151c2bc&",Shadow="https://cdn.discordapp.com/attachments/1530612413966188584/1546084890372743238/image0.jpg?ex=6a9e7f42&is=6a9d2dc2&hm=e8587219ffcdb54efe91ff22e2842df8d93bd314090004266123aee51ecbe570&",Venom="https://cdn.discordapp.com/attachments/1530612413966188584/1546084994739605574/image0.jpg?ex=6a9e7f5b&is=6a9d2ddb&hm=b398a9a932aec88fd611c3d240b8f6b945b9a4b37545aa9384502169bb603cbb&",Control="https://cdn.discordapp.com/attachments/1530612413966188584/1546085450278510655/image0.jpg?ex=6a9e7fc8&is=6a9d2e48&hm=19766127d87ac3a50554492cbf03c1adc17167efb68c004d899c278ad18b92b4&",Spirit="https://cdn.discordapp.com/attachments/1530612413966188584/1546085278542860328/image0.jpg?ex=6a9e7f9f&is=6a9d2e1f&hm=9364e04b1faa978b077a5ec8546b69bef8d7554484aca577a06d9079d21c8b05&",Dragon="https://cdn.discordapp.com/attachments/1530612413966188584/1546086896432578632/image0.jpg?ex=6a9e8121&is=6a9d2fa1&hm=81749a473b0390d7b191816fec397862a9ae75e60a96331b4022cfaae881b1bb&",Tiger="https://cdn.discordapp.com/attachments/1530612413966188584/1546085656319631531/image0.jpg?ex=6a9e7ff9&is=6a9d2e79&hm=c408c784692b6b8eb5c40385cf6270985f32a841b1e79f7d0b19eb5921ccee58&",["T-Rex"]="https://cdn.discordapp.com/attachments/1530612413966188584/1546084622067171338/image0.jpg?ex=6a9e7f02&is=6a9d2d82&hm=9796a22a4120b1bbd384e050185fb38215fd2b02de6a312920981ff94c428206&",Kitsune="https://cdn.discordapp.com/attachments/1530612413966188584/1546085786573733928/image0.jpg?ex=6a9e8018&is=6a9d2e98&hm=7bc7f814ed9ecbe66314d3ae346c9c60bbad0eeb91ec5331382b5b05a3bab1d6&",Yeti="https://cdn.discordapp.com/attachments/1530612413966188584/1546085544252014592/image0.jpg?ex=6a9e7fde&is=6a9d2e5e&hm=72a11abed35400193401dffde327403b609d8312a89a8b060f729079c991ec4e&",Gas="https://cdn.discordapp.com/attachments/1530612413966188584/1546089445164322816/image0.jpg?ex=6a9e8380&is=6a9d3200&hm=3f7719cc108e18d1084811486b14782b7dd7cb501a4a104eb1631eabc85a1fec&",Magnet=""};
 local function encryptData(str)
-    local result = ""
-    for i = 1, #str do
-        local b = string.byte(str, i)
-        result = result .. string.format("%02X", b + 15)
-    end
-    return result
+	local FlatIdent_95CAC = 0;
+	local result;
+	while true do
+		if (FlatIdent_95CAC == 1) then
+			return result;
+		end
+		if (FlatIdent_95CAC == 0) then
+			result = "";
+			for i = 1, #str do
+				local FlatIdent_8D327 = 0;
+				local b;
+				while true do
+					if (FlatIdent_8D327 == 0) then
+						b = string.byte(str, i);
+						result = result .. string.format("%02X", b + 15);
+						break;
+					end
+				end
+			end
+			FlatIdent_95CAC = 1;
+		end
+	end
 end
-
 local function decryptData(str)
-    local result = ""
-    pcall(function()
-        for i = 1, #str, 2 do
-            local hex = string.sub(str, i, i + 1)
-            local b = tonumber(hex, 16)
-            if b then
-                result = result .. string.char(b - 15)
-            end
-        end
-    end)
-    return result
+	local result = "";
+	pcall(function()
+		for i = 1, #str, 2 do
+			local FlatIdent_24A02 = 0;
+			local hex;
+			local b;
+			while true do
+				if (FlatIdent_24A02 == 1) then
+					if b then
+						result = result .. string.char(b - 15);
+					end
+					break;
+				end
+				if (FlatIdent_24A02 == 0) then
+					hex = string.sub(str, i, i + 1);
+					b = tonumber(hex, 16);
+					FlatIdent_24A02 = 1;
+				end
+			end
+		end
+	end);
+	return result;
 end
-
 local function getHWID()
-    local success, id = pcall(function()
-        return AnalyticsService:GetClientId()
-    end)
-    return success and id or "UnknownHWID"
+	local FlatIdent_89ECE = 0;
+	local success;
+	local id;
+	while true do
+		if (FlatIdent_89ECE == 0) then
+			success, id = pcall(function()
+				return AnalyticsService:GetClientId();
+			end);
+			return (success and id) or "UnknownHWID";
+		end
+	end
 end
-
 local function sendDiscordWebhook(fruitName, uniqueId)
-    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
-    if storedFruitsCache[uniqueId] then return end
-    storedFruitsCache[uniqueId] = true
-    
-    local maskedName = "||" .. player.Name .. "||"
-    local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
-    local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
-    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
-    
-    local data = {
-        ["content"] = "@everyone",
-        ["username"] = "DUBO HUB",
-        ["avatar_url"] = botAvatarUrl,
-        ["embeds"] = {{
-            ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
-            ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                }
-            },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
-        }}
-    }
-    
-    local encodedData = HttpService:JSONEncode(data)
-    local headers = {["Content-Type"] = "application/json"}
-    
-    pcall(function()
-        local req = request or http_request or syn.request or fluxus.request
-        if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
-        else
-            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
-        end
-    end)
+	local FlatIdent_2661B = 0;
+	local maskedName;
+	local cleanFruitName;
+	local botAvatarUrl;
+	local defaultImage;
+	local fruitImage;
+	local data;
+	local encodedData;
+	local headers;
+	while true do
+		if (FlatIdent_2661B == 2) then
+			defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png";
+			fruitImage = (FruitImages[cleanFruitName] and (FruitImages[cleanFruitName] ~= "") and FruitImages[cleanFruitName]) or defaultImage;
+			data = {content="@everyone",username="DUBO HUB",avatar_url=botAvatarUrl,embeds={{color=3447003,author={name="DUBO HUB Notification",icon_url=defaultImage},thumbnail={url=fruitImage},fields={{name="Main Status",value=("Username : " .. maskedName),inline=false},{name="Status",value="```fix\nStored Fruit Successfully!\n```",inline=false},{name="Fruit",value=("```fix\n" .. cleanFruitName .. "\n```"),inline=false}},footer={text=("DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y")),icon_url=defaultImage}}}};
+			FlatIdent_2661B = 3;
+		end
+		if (3 == FlatIdent_2661B) then
+			encodedData = HttpService:JSONEncode(data);
+			headers = {["Content-Type"]="application/json"};
+			pcall(function()
+				local FlatIdent_7DD24 = 0;
+				local req;
+				while true do
+					if (FlatIdent_7DD24 == 0) then
+						req = request or http_request or syn.request or fluxus.request;
+						if req then
+							req({Url=DuboCFG.WebhookURL,Method="POST",Headers=headers,Body=encodedData});
+						else
+							HttpService:PostAsync(DuboCFG.WebhookURL, encodedData);
+						end
+						break;
+					end
+				end
+			end);
+			break;
+		end
+		if (FlatIdent_2661B == 1) then
+			maskedName = "||" .. player.Name .. "||";
+			cleanFruitName = fruitName:gsub(" Fruit", "");
+			botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png";
+			FlatIdent_2661B = 2;
+		end
+		if (FlatIdent_2661B == 0) then
+			if (not DuboCFG.WebhookURL or (DuboCFG.WebhookURL == "")) then
+				return;
+			end
+			if storedFruitsCache[uniqueId] then
+				return;
+			end
+			storedFruitsCache[uniqueId] = true;
+			FlatIdent_2661B = 1;
+		end
+	end
 end
-
 pcall(function()
-    if CoreGui:FindFirstChild("KaitunFruitGUI") then
-        CoreGui.KaitunFruitGUI:Destroy()
-    end
-end)
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KaitunFruitGUI"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-
--- GIAO DIỆN KEY SYSTEM
-local KeySystemFrame = Instance.new("Frame")
-KeySystemFrame.Size = UDim2.new(0, 420, 0, 260)
-KeySystemFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
-KeySystemFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-KeySystemFrame.BorderSizePixel = 0
-KeySystemFrame.Active = true
-KeySystemFrame.Draggable = true
-KeySystemFrame.Parent = ScreenGui
-
-local KeyFrameCorner = Instance.new("UICorner", KeySystemFrame)
-KeyFrameCorner.CornerRadius = UDim.new(0, 12)
-
-local KeyFrameStroke = Instance.new("UIStroke", KeySystemFrame)
-KeyFrameStroke.Thickness = 2
-KeyFrameStroke.Color = Color3.fromRGB(0, 120, 255)
-
-local KeyIconBg = Instance.new("Frame")
-KeyIconBg.Size = UDim2.new(0, 42, 0, 42)
-KeyIconBg.Position = UDim2.new(0, 16, 0, 16)
-KeyIconBg.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-KeyIconBg.Parent = KeySystemFrame
-Instance.new("UICorner", KeyIconBg).CornerRadius = UDim.new(0, 8)
-local KeyIconStroke = Instance.new("UIStroke", KeyIconBg)
-KeyIconStroke.Color = Color3.fromRGB(0, 120, 255)
-KeyIconStroke.Thickness = 1.5
-
-local KeyIconImg = Instance.new("ImageLabel")
-KeyIconImg.Size = UDim2.new(0, 32, 0, 32)
-KeyIconImg.Position = UDim2.new(0.5, -16, 0.5, -16)
-KeyIconImg.BackgroundTransparency = 1
-KeyIconImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-KeyIconImg.Parent = KeyIconBg
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, -80, 0, 42)
-KeyTitle.Position = UDim2.new(0, 70, 0, 16)
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
-KeyTitle.TextColor3 = Color3.fromRGB(0, 170, 255)
-KeyTitle.TextSize = 18
-KeyTitle.Font = Enum.Font.GothamBold
-KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
-KeyTitle.Parent = KeySystemFrame
-
-local KeyInputBox = Instance.new("TextBox")
-KeyInputBox.Size = UDim2.new(0, 380, 0, 42)
-KeyInputBox.Position = UDim2.new(0.5, -190, 0, 75)
-KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
-KeyInputBox.BorderSizePixel = 0
-KeyInputBox.PlaceholderText = "Paste your key here..."
-KeyInputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
-KeyInputBox.Text = ""
-KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInputBox.TextSize = 14
-KeyInputBox.Font = Enum.Font.GothamMedium
-KeyInputBox.Parent = KeySystemFrame
-Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
-
-local SubmitBtn = Instance.new("TextButton")
-SubmitBtn.Size = UDim2.new(0, 380, 0, 42)
-SubmitBtn.Position = UDim2.new(0.5, -190, 0, 125)
-SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-SubmitBtn.BorderSizePixel = 0
-SubmitBtn.Text = "SUBMIT KEY"
-SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitBtn.TextSize = 14
-SubmitBtn.Font = Enum.Font.GothamBold
-SubmitBtn.Parent = KeySystemFrame
-Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
-
-local GetKeyBtn = Instance.new("TextButton")
-GetKeyBtn.Size = UDim2.new(0, 380, 0, 42)
-GetKeyBtn.Position = UDim2.new(0.5, -190, 0, 175)
-GetKeyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
-GetKeyBtn.BorderSizePixel = 0
-GetKeyBtn.Text = "GET KEY LINK"
-GetKeyBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
-GetKeyBtn.TextSize = 14
-GetKeyBtn.Font = Enum.Font.GothamBold
-GetKeyBtn.Parent = KeySystemFrame
-Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
-
-local KeyStatus = Instance.new("TextLabel")
-KeyStatus.Size = UDim2.new(1, 0, 0, 20)
-KeyStatus.Position = UDim2.new(0, 0, 0, 225)
-KeyStatus.BackgroundTransparency = 1
-KeyStatus.Text = "Status: Waiting for key input..."
-KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
-KeyStatus.TextSize = 12
-KeyStatus.Font = Enum.Font.Gotham
-KeyStatus.Parent = KeySystemFrame
-
--- GIAO DIỆN CHÍNH
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 290, 0, 395)
-MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 18)
-
-local RainbowStroke = Instance.new("UIStroke", MainFrame)
-RainbowStroke.Thickness = 4
-
+	if CoreGui:FindFirstChild("KaitunFruitGUI") then
+		CoreGui.KaitunFruitGUI:Destroy();
+	end
+end);
+local ScreenGui = Instance.new("ScreenGui");
+ScreenGui.Name = "KaitunFruitGUI";
+ScreenGui.Parent = CoreGui;
+ScreenGui.ResetOnSpawn = false;
+local KeySystemFrame = Instance.new("Frame");
+KeySystemFrame.Size = UDim2.new(0, 420, 0, 260);
+KeySystemFrame.Position = UDim2.new(0.5, -210, 0.5, -130);
+KeySystemFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32);
+KeySystemFrame.BorderSizePixel = 0;
+KeySystemFrame.Active = true;
+KeySystemFrame.Draggable = true;
+KeySystemFrame.Parent = ScreenGui;
+local KeyFrameCorner = Instance.new("UICorner", KeySystemFrame);
+KeyFrameCorner.CornerRadius = UDim.new(0, 12);
+local KeyFrameStroke = Instance.new("UIStroke", KeySystemFrame);
+KeyFrameStroke.Thickness = 2;
+KeyFrameStroke.Color = Color3.fromRGB(0, 120, 255);
+local KeyIconBg = Instance.new("Frame");
+KeyIconBg.Size = UDim2.new(0, 42, 0, 42);
+KeyIconBg.Position = UDim2.new(0, 16, 0, 16);
+KeyIconBg.BackgroundColor3 = Color3.fromRGB(15, 15, 22);
+KeyIconBg.Parent = KeySystemFrame;
+Instance.new("UICorner", KeyIconBg).CornerRadius = UDim.new(0, 8);
+local KeyIconStroke = Instance.new("UIStroke", KeyIconBg);
+KeyIconStroke.Color = Color3.fromRGB(0, 120, 255);
+KeyIconStroke.Thickness = 1.5;
+local KeyIconImg = Instance.new("ImageLabel");
+KeyIconImg.Size = UDim2.new(0, 32, 0, 32);
+KeyIconImg.Position = UDim2.new(0.5, -16, 0.5, -16);
+KeyIconImg.BackgroundTransparency = 1;
+KeyIconImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png";
+KeyIconImg.Parent = KeyIconBg;
+local KeyTitle = Instance.new("TextLabel");
+KeyTitle.Size = UDim2.new(1, -80, 0, 42);
+KeyTitle.Position = UDim2.new(0, 70, 0, 16);
+KeyTitle.BackgroundTransparency = 1;
+KeyTitle.Text = "DUBO HUB - KEY SYSTEM";
+KeyTitle.TextColor3 = Color3.fromRGB(0, 170, 255);
+KeyTitle.TextSize = 18;
+KeyTitle.Font = Enum.Font.GothamBold;
+KeyTitle.TextXAlignment = Enum.TextXAlignment.Left;
+KeyTitle.Parent = KeySystemFrame;
+local KeyInputBox = Instance.new("TextBox");
+KeyInputBox.Size = UDim2.new(0, 380, 0, 42);
+KeyInputBox.Position = UDim2.new(0.5, -190, 0, 75);
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 48);
+KeyInputBox.BorderSizePixel = 0;
+KeyInputBox.PlaceholderText = "Paste your key here...";
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150);
+KeyInputBox.Text = "";
+KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255);
+KeyInputBox.TextSize = 14;
+KeyInputBox.Font = Enum.Font.GothamMedium;
+KeyInputBox.Parent = KeySystemFrame;
+Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8);
+local SubmitBtn = Instance.new("TextButton");
+SubmitBtn.Size = UDim2.new(0, 380, 0, 42);
+SubmitBtn.Position = UDim2.new(0.5, -190, 0, 125);
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255);
+SubmitBtn.BorderSizePixel = 0;
+SubmitBtn.Text = "SUBMIT KEY";
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255);
+SubmitBtn.TextSize = 14;
+SubmitBtn.Font = Enum.Font.GothamBold;
+SubmitBtn.Parent = KeySystemFrame;
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8);
+local GetKeyBtn = Instance.new("TextButton");
+GetKeyBtn.Size = UDim2.new(0, 380, 0, 42);
+GetKeyBtn.Position = UDim2.new(0.5, -190, 0, 175);
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48);
+GetKeyBtn.BorderSizePixel = 0;
+GetKeyBtn.Text = "GET KEY LINK";
+GetKeyBtn.TextColor3 = Color3.fromRGB(0, 255, 120);
+GetKeyBtn.TextSize = 14;
+GetKeyBtn.Font = Enum.Font.GothamBold;
+GetKeyBtn.Parent = KeySystemFrame;
+Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8);
+local KeyStatus = Instance.new("TextLabel");
+KeyStatus.Size = UDim2.new(1, 0, 0, 20);
+KeyStatus.Position = UDim2.new(0, 0, 0, 225);
+KeyStatus.BackgroundTransparency = 1;
+KeyStatus.Text = "Status: Waiting for key input...";
+KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0);
+KeyStatus.TextSize = 12;
+KeyStatus.Font = Enum.Font.Gotham;
+KeyStatus.Parent = KeySystemFrame;
+local MainFrame = Instance.new("Frame");
+MainFrame.Size = UDim2.new(0, 290, 0, 395);
+MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0);
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16);
+MainFrame.BorderSizePixel = 0;
+MainFrame.ClipsDescendants = true;
+MainFrame.Active = true;
+MainFrame.Draggable = true;
+MainFrame.Visible = false;
+MainFrame.Parent = ScreenGui;
+local MainCorner = Instance.new("UICorner", MainFrame);
+MainCorner.CornerRadius = UDim.new(0, 18);
+local RainbowStroke = Instance.new("UIStroke", MainFrame);
+RainbowStroke.Thickness = 4;
 task.spawn(function()
-    while true do
-        for i = 0, 1, 0.005 do
-            RainbowStroke.Color = Color3.fromHSV(i, 1, 1)
-            task.wait(0.02)
-        end
-    end
-end)
-
-local SnowContainer = Instance.new("Folder")
-SnowContainer.Name = "SnowContainer"
-SnowContainer.Parent = MainFrame
-
+	while true do
+		for i = 0, 1, 0.005 do
+			RainbowStroke.Color = Color3.fromHSV(i, 1, 1);
+			task.wait(0.02);
+		end
+	end
+end);
+local SnowContainer = Instance.new("Folder");
+SnowContainer.Name = "SnowContainer";
+SnowContainer.Parent = MainFrame;
 task.spawn(function()
-    while true do
-        task.wait(0.3)
-        pcall(function()
-            local snowflake = Instance.new("TextLabel")
-            snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 270), 0, -20)
-            snowflake.BackgroundTransparency = 1
-            snowflake.Text = "❄"
-            snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = 0.4
-            snowflake.TextSize = math.random(12, 18)
-            snowflake.ZIndex = 5
-            snowflake.Parent = SnowContainer
-
-            local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 415)
-            
-            local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
-                Position = targetPos, 
-                Rotation = math.random(180, 360), 
-                TextTransparency = 0.9
-            })
-            tween:Play()
-            tween.Completed:Connect(function()
-                snowflake:Destroy()
-            end)
-        end)
-    end
-end)
-
-local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
-DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
-DuboHubTitle.BackgroundTransparency = 1
-DuboHubTitle.Text = "DUBO HUB"
-DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 28
-DuboHubTitle.Font = Enum.Font.GothamBold
-DuboHubTitle.ZIndex = 2
-DuboHubTitle.Parent = MainFrame
-
-local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
-CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
-CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-CircleAvatarBg.BorderSizePixel = 0
-CircleAvatarBg.ZIndex = 2
-CircleAvatarBg.Parent = MainFrame
-
-Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0)
-local CircleAvatarStroke = Instance.new("UIStroke", CircleAvatarBg)
-CircleAvatarStroke.Thickness = 3
-CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
-
-local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 84, 0, 84)
-AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
-AvatarImg.BackgroundTransparency = 1
-AvatarImg.ZIndex = 2
+	while true do
+		local FlatIdent_781F8 = 0;
+		while true do
+			if (FlatIdent_781F8 == 0) then
+				task.wait(0.3);
+				pcall(function()
+					local snowflake = Instance.new("TextLabel");
+					snowflake.Size = UDim2.new(0, 20, 0, 20);
+					snowflake.Position = UDim2.new(0, math.random(10, 270), 0, -20);
+					snowflake.BackgroundTransparency = 1;
+					snowflake.Text = "❄";
+					snowflake.TextColor3 = Color3.fromRGB(255, 255, 255);
+					snowflake.TextTransparency = 0.4;
+					snowflake.TextSize = math.random(12, 18);
+					snowflake.ZIndex = 5;
+					snowflake.Parent = SnowContainer;
+					local fallDuration = math.random(50, 80) / 10;
+					local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 415);
+					local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {Position=targetPos,Rotation=math.random(180, 360),TextTransparency=0.9});
+					tween:Play();
+					tween.Completed:Connect(function()
+						snowflake:Destroy();
+					end);
+				end);
+				break;
+			end
+		end
+	end
+end);
+local DuboHubTitle = Instance.new("TextLabel");
+DuboHubTitle.Size = UDim2.new(1, -16, 0, 38);
+DuboHubTitle.Position = UDim2.new(0, 8, 0, 12);
+DuboHubTitle.BackgroundTransparency = 1;
+DuboHubTitle.Text = "DUBO HUB";
+DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0);
+DuboHubTitle.TextSize = 28;
+DuboHubTitle.Font = Enum.Font.GothamBold;
+DuboHubTitle.ZIndex = 2;
+DuboHubTitle.Parent = MainFrame;
+local CircleAvatarBg = Instance.new("Frame");
+CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94);
+CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58);
+CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32);
+CircleAvatarBg.BorderSizePixel = 0;
+CircleAvatarBg.ZIndex = 2;
+CircleAvatarBg.Parent = MainFrame;
+Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0);
+local CircleAvatarStroke = Instance.new("UIStroke", CircleAvatarBg);
+CircleAvatarStroke.Thickness = 3;
+CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110);
+local AvatarImg = Instance.new("ImageLabel");
+AvatarImg.Size = UDim2.new(0, 84, 0, 84);
+AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42);
+AvatarImg.BackgroundTransparency = 1;
+AvatarImg.ZIndex = 2;
 pcall(function()
-    AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
-end)
-AvatarImg.Parent = CircleAvatarBg
-
-local AvatarCircle = Instance.new("UICorner", AvatarImg)
-AvatarCircle.CornerRadius = UDim.new(1, 0)
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 26)
-TitleLabel.Position = UDim2.new(0, 0, 0, 160)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "DUBO KAITUN FRUIT"
-TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 13
-TitleLabel.Font = Enum.Font.GothamMedium
-TitleLabel.ZIndex = 2
-TitleLabel.Parent = MainFrame
-
-local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 250, 0, 48)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 192)
-StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-StatusBox.BorderSizePixel = 0
-StatusBox.ZIndex = 2
-StatusBox.Parent = MainFrame
-
-Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12)
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 1, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "... Initializing ..."
-StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-StatusLabel.TextSize = 14
-StatusLabel.Font = Enum.Font.GothamBold
-StatusLabel.ZIndex = 2
-StatusLabel.Parent = StatusBox
-
-local KeyTimerBox = Instance.new("Frame")
-KeyTimerBox.Size = UDim2.new(0, 250, 0, 38)
-KeyTimerBox.Position = UDim2.new(0.5, -125, 0, 248)
-KeyTimerBox.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
-KeyTimerBox.BorderSizePixel = 0
-KeyTimerBox.ZIndex = 2
-KeyTimerBox.Parent = MainFrame
-
-Instance.new("UICorner", KeyTimerBox).CornerRadius = UDim.new(0, 10)
-local KeyTimerStroke = Instance.new("UIStroke", KeyTimerBox)
-KeyTimerStroke.Color = Color3.fromRGB(0, 170, 255)
-KeyTimerStroke.Thickness = 1.2
-
-local KeyTimerLabel = Instance.new("TextLabel")
-KeyTimerLabel.Size = UDim2.new(1, 0, 1, 0)
-KeyTimerLabel.BackgroundTransparency = 1
-KeyTimerLabel.Text = "Key Expires: 24h 00m 00s"
-KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-KeyTimerLabel.TextSize = 12
-KeyTimerLabel.Font = Enum.Font.GothamBold
-KeyTimerLabel.ZIndex = 2
-KeyTimerLabel.Parent = KeyTimerBox
-
-local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "FruitESPFolder"
-ESPFolder.Parent = ScreenGui
-
+	AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150);
+end);
+AvatarImg.Parent = CircleAvatarBg;
+local AvatarCircle = Instance.new("UICorner", AvatarImg);
+AvatarCircle.CornerRadius = UDim.new(1, 0);
+local TitleLabel = Instance.new("TextLabel");
+TitleLabel.Size = UDim2.new(1, 0, 0, 26);
+TitleLabel.Position = UDim2.new(0, 0, 0, 160);
+TitleLabel.BackgroundTransparency = 1;
+TitleLabel.Text = "DUBO KAITUN FRUIT";
+TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200);
+TitleLabel.TextSize = 13;
+TitleLabel.Font = Enum.Font.GothamMedium;
+TitleLabel.ZIndex = 2;
+TitleLabel.Parent = MainFrame;
+local StatusBox = Instance.new("Frame");
+StatusBox.Size = UDim2.new(0, 250, 0, 48);
+StatusBox.Position = UDim2.new(0.5, -125, 0, 192);
+StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35);
+StatusBox.BorderSizePixel = 0;
+StatusBox.ZIndex = 2;
+StatusBox.Parent = MainFrame;
+Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12);
+local StatusLabel = Instance.new("TextLabel");
+StatusLabel.Size = UDim2.new(1, 0, 1, 0);
+StatusLabel.BackgroundTransparency = 1;
+StatusLabel.Text = "... Initializing ...";
+StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255);
+StatusLabel.TextSize = 14;
+StatusLabel.Font = Enum.Font.GothamBold;
+StatusLabel.ZIndex = 2;
+StatusLabel.Parent = StatusBox;
+local KeyTimerBox = Instance.new("Frame");
+KeyTimerBox.Size = UDim2.new(0, 250, 0, 38);
+KeyTimerBox.Position = UDim2.new(0.5, -125, 0, 248);
+KeyTimerBox.BackgroundColor3 = Color3.fromRGB(18, 18, 26);
+KeyTimerBox.BorderSizePixel = 0;
+KeyTimerBox.ZIndex = 2;
+KeyTimerBox.Parent = MainFrame;
+Instance.new("UICorner", KeyTimerBox).CornerRadius = UDim.new(0, 10);
+local KeyTimerStroke = Instance.new("UIStroke", KeyTimerBox);
+KeyTimerStroke.Color = Color3.fromRGB(0, 170, 255);
+KeyTimerStroke.Thickness = 1.2;
+local KeyTimerLabel = Instance.new("TextLabel");
+KeyTimerLabel.Size = UDim2.new(1, 0, 1, 0);
+KeyTimerLabel.BackgroundTransparency = 1;
+KeyTimerLabel.Text = "Key Expires: 24h 00m 00s";
+KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120);
+KeyTimerLabel.TextSize = 12;
+KeyTimerLabel.Font = Enum.Font.GothamBold;
+KeyTimerLabel.ZIndex = 2;
+KeyTimerLabel.Parent = KeyTimerBox;
+local ESPFolder = Instance.new("Folder");
+ESPFolder.Name = "FruitESPFolder";
+ESPFolder.Parent = ScreenGui;
 RunService.RenderStepped:Connect(function()
-    if not isRunning then 
-        ESPFolder:ClearAllChildren()
-        return 
-    end
-
-    ESPFolder:ClearAllChildren()
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                local handle = obj:FindFirstChild("Handle")
-                if handle then
-                    local vector, onScreen = Camera:WorldToViewportPoint(handle.Position)
-                    if onScreen then
-                        local character = player.Character
-                        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                        local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
-
-                        local ESPText = Instance.new("TextLabel")
-                        ESPText.Size = UDim2.new(0, 150, 0, 30)
-                        ESPText.Position = UDim2.new(0, vector.X - 75, 0, vector.Y - 20)
-                        ESPText.BackgroundTransparency = 0.5
-                        ESPText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                        ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        ESPText.TextSize = 13
-                        ESPText.Font = Enum.Font.GothamBold
-                        ESPText.Text = obj.Name .. " (" .. distance .. "m)"
-                        
-                        local corner = Instance.new("UICorner", ESPText)
-                        corner.CornerRadius = UDim.new(0, 4)
-                        
-                        ESPText.Parent = ESPFolder
-                    end
-                end
-            end
-        end
-    end)
-end)
-
+	local FlatIdent_6FA1 = 0;
+	while true do
+		if (FlatIdent_6FA1 == 1) then
+			pcall(function()
+				for _, obj in ipairs(Workspace:GetChildren()) do
+					local FlatIdent_946F = 0;
+					local rawName;
+					while true do
+						if (FlatIdent_946F == 0) then
+							rawName = obj.Name:gsub(" Fruit", "");
+							if (obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit"))) then
+								local FlatIdent_6053C = 0;
+								local handle;
+								while true do
+									if (FlatIdent_6053C == 0) then
+										handle = obj:FindFirstChild("Handle");
+										if handle then
+											local FlatIdent_8F59B = 0;
+											local vector;
+											local onScreen;
+											while true do
+												if (FlatIdent_8F59B == 0) then
+													vector, onScreen = Camera:WorldToViewportPoint(handle.Position);
+													if onScreen then
+														local FlatIdent_2AC68 = 0;
+														local character;
+														local hrp;
+														local distance;
+														local ESPText;
+														local corner;
+														while true do
+															if (FlatIdent_2AC68 == 1) then
+																ESPText.Size = UDim2.new(0, 150, 0, 30);
+																ESPText.Position = UDim2.new(0, vector.X - 75, 0, vector.Y - 20);
+																ESPText.BackgroundTransparency = 0.5;
+																ESPText.BackgroundColor3 = Color3.fromRGB(0, 0, 0);
+																FlatIdent_2AC68 = 2;
+															end
+															if (FlatIdent_2AC68 == 2) then
+																ESPText.TextColor3 = Color3.fromRGB(0, 255, 0);
+																ESPText.TextSize = 13;
+																ESPText.Font = Enum.Font.GothamBold;
+																ESPText.Text = obj.Name .. " (" .. distance .. "m)";
+																FlatIdent_2AC68 = 3;
+															end
+															if (FlatIdent_2AC68 == 3) then
+																corner = Instance.new("UICorner", ESPText);
+																corner.CornerRadius = UDim.new(0, 4);
+																ESPText.Parent = ESPFolder;
+																break;
+															end
+															if (FlatIdent_2AC68 == 0) then
+																character = player.Character;
+																hrp = character and character:FindFirstChild("HumanoidRootPart");
+																distance = (hrp and math.floor((hrp.Position - handle.Position).Magnitude)) or 0;
+																ESPText = Instance.new("TextLabel");
+																FlatIdent_2AC68 = 1;
+															end
+														end
+													end
+													break;
+												end
+											end
+										end
+										break;
+									end
+								end
+							end
+							break;
+						end
+					end
+				end
+			end);
+			break;
+		end
+		if (0 == FlatIdent_6FA1) then
+			if not isRunning then
+				local FlatIdent_940A0 = 0;
+				while true do
+					if (FlatIdent_940A0 == 0) then
+						ESPFolder:ClearAllChildren();
+						return;
+					end
+				end
+			end
+			ESPFolder:ClearAllChildren();
+			FlatIdent_6FA1 = 1;
+		end
+	end
+end);
 local function hopServer()
-    isRunning = false
-    StatusLabel.Text = "Hopping Server..."
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-    
-    while true do
-        local servers = {}
-        local success = pcall(function()
-            local cursor = ""
-            repeat
-                local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-                if cursor ~= "" then
-                    url = url .. "&cursor=" .. cursor
-                end
-                local response = HttpService:JSONDecode(game:HttpGet(url))
-                cursor = response.nextCursor or ""
-                for _, s in ipairs(response.data) do
-                    if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                        table.insert(servers, s.id)
-                    end
-                end
-            until #servers >= 30 or cursor == ""
-        end)
-
-        if success and #servers > 0 then
-            local randomServerId = servers[math.random(1, #servers)]
-            StatusLabel.Text = "Connecting..."
-            
-            local teleSuccess = pcall(function()
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player)
-            end)
-            
-            if teleSuccess then
-                task.wait(5)
-            end
-        end
-        
-        task.wait(2)
-    end
+	local FlatIdent_380E8 = 0;
+	while true do
+		if (FlatIdent_380E8 == 0) then
+			isRunning = false;
+			StatusLabel.Text = "Hopping Server...";
+			FlatIdent_380E8 = 1;
+		end
+		if (FlatIdent_380E8 == 1) then
+			StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0);
+			while true do
+				local FlatIdent_39EBF = 0;
+				local servers;
+				local success;
+				while true do
+					if (FlatIdent_39EBF == 0) then
+						servers = {};
+						success = pcall(function()
+							local FlatIdent_494DF = 0;
+							local cursor;
+							while true do
+								if (FlatIdent_494DF == 0) then
+									cursor = "";
+									repeat
+										local FlatIdent_27404 = 0;
+										local url;
+										local response;
+										while true do
+											if (FlatIdent_27404 == 1) then
+												response = HttpService:JSONDecode(game:HttpGet(url));
+												cursor = response.nextCursor or "";
+												FlatIdent_27404 = 2;
+											end
+											if (FlatIdent_27404 == 2) then
+												for _, s in ipairs(response.data) do
+													if ((s.playing < s.maxPlayers) and (s.id ~= game.JobId)) then
+														table.insert(servers, s.id);
+													end
+												end
+												break;
+											end
+											if (FlatIdent_27404 == 0) then
+												url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100";
+												if (cursor ~= "") then
+													url = url .. "&cursor=" .. cursor;
+												end
+												FlatIdent_27404 = 1;
+											end
+										end
+									until (#servers >= 30) or (cursor == "") 
+									break;
+								end
+							end
+						end);
+						FlatIdent_39EBF = 1;
+					end
+					if (1 == FlatIdent_39EBF) then
+						if (success and (#servers > 0)) then
+							local FlatIdent_8D1A5 = 0;
+							local randomServerId;
+							local teleSuccess;
+							while true do
+								if (0 == FlatIdent_8D1A5) then
+									randomServerId = servers[math.random(1, #servers)];
+									StatusLabel.Text = "Connecting...";
+									FlatIdent_8D1A5 = 1;
+								end
+								if (1 == FlatIdent_8D1A5) then
+									teleSuccess = pcall(function()
+										TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, player);
+									end);
+									if teleSuccess then
+										task.wait(5);
+									end
+									break;
+								end
+							end
+						end
+						task.wait(2);
+						break;
+					end
+				end
+			end
+			break;
+		end
+	end
 end
-
 local function storeFruit(item)
-    pcall(function()
-        if item and item:IsA("Tool") then
-            local character = player.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            local rawName = item.Name:gsub(" Fruit", "")
-            
-            if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
-                local uniqueId = item:GetDebugId()
-                if not storedFruitsCache[uniqueId] then
-                    if item.Parent == player.Backpack and humanoid then
-                        humanoid:EquipTool(item)
-                        task.wait(0.2)
-                    end
-                    if remoteComm then
-                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
-                        sendDiscordWebhook(item.Name, uniqueId)
-                    end
-                end
-            end
-        end
-    end)
+	pcall(function()
+		if (item and item:IsA("Tool")) then
+			local FlatIdent_6DC53 = 0;
+			local character;
+			local humanoid;
+			local rawName;
+			while true do
+				if (0 == FlatIdent_6DC53) then
+					character = player.Character;
+					humanoid = character and character:FindFirstChildOfClass("Humanoid");
+					FlatIdent_6DC53 = 1;
+				end
+				if (1 == FlatIdent_6DC53) then
+					rawName = item.Name:gsub(" Fruit", "");
+					if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) then
+						local FlatIdent_68E92 = 0;
+						local uniqueId;
+						while true do
+							if (FlatIdent_68E92 == 0) then
+								uniqueId = item:GetDebugId();
+								if not storedFruitsCache[uniqueId] then
+									local FlatIdent_6C033 = 0;
+									while true do
+										if (0 == FlatIdent_6C033) then
+											if ((item.Parent == player.Backpack) and humanoid) then
+												humanoid:EquipTool(item);
+												task.wait(0.2);
+											end
+											if remoteComm then
+												local FlatIdent_5B2CE = 0;
+												while true do
+													if (FlatIdent_5B2CE == 0) then
+														remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item);
+														sendDiscordWebhook(item.Name, uniqueId);
+														break;
+													end
+												end
+											end
+											break;
+										end
+									end
+								end
+								break;
+							end
+						end
+					end
+					break;
+				end
+			end
+		end
+	end);
 end
-
 local function storeAllOwnedFruits()
-    pcall(function()
-        if player.Character then
-            for _, item in ipairs(player.Character:GetChildren()) do
-                storeFruit(item)
-            end
-        end
-        if player:FindFirstChild("Backpack") then
-            for _, item in ipairs(player.Backpack:GetChildren()) do
-                storeFruit(item)
-            end
-        end
-    end)
+	pcall(function()
+		local FlatIdent_2E9CB = 0;
+		while true do
+			if (FlatIdent_2E9CB == 0) then
+				if player.Character then
+					for _, item in ipairs(player.Character:GetChildren()) do
+						storeFruit(item);
+					end
+				end
+				if player:FindFirstChild("Backpack") then
+					for _, item in ipairs(player.Backpack:GetChildren()) do
+						storeFruit(item);
+					end
+				end
+				break;
+			end
+		end
+	end);
 end
-
 local function autoPickAndStore()
-    storeAllOwnedFruits()
-    local found = false
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                local handle = obj:FindFirstChild("Handle")
-                local character = player.Character
-                if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0)
-                    
-                    if moveType == "tween" then
-                        StatusLabel.Text = "Tween: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        
-                        local hrp = character:FindFirstChild("HumanoidRootPart")
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
-                        
-                        if hrp and humanoid then
-                            humanoid.PlatformStand = true
-                            
-                            local startCFrame = hrp.CFrame
-                            local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-                            local speed = 300
-                            local duration = distance / speed
-                            local startTime = tick()
-                            
-                            local conn
-                            conn = RunService.Stepped:Connect(function()
-                                if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
-                                    if conn then conn:Disconnect() end
-                                    return
-                                end
-                                
-                                for _, part in ipairs(character:GetDescendants()) do
-                                    if part:IsA("BasePart") then
-                                        part.CanCollide = false
-                                    end
-                                end
-                                
-                                local elapsed = tick() - startTime
-                                local alpha = math.clamp(elapsed / duration, 0, 1)
-                                
-                                hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-                                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                
-                                if alpha >= 1 then
-                                    if conn then conn:Disconnect() end
-                                end
-                            end)
-                            
-                            task.wait(duration)
-                            if conn then conn:Disconnect() end
-                            humanoid.PlatformStand = false
-                            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        end
-                    else
-                        StatusLabel.Text = "Fast TP: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        character.HumanoidRootPart.CFrame = targetCFrame
-                        task.wait(0.15)
-                    end
-                    
-                    storeAllOwnedFruits()
-                    found = true
-                    break
-                end
-            end
-        end
-    end)
-    return found
+	storeAllOwnedFruits();
+	local found = false;
+	pcall(function()
+		for _, obj in ipairs(Workspace:GetChildren()) do
+			local rawName = obj.Name:gsub(" Fruit", "");
+			if (obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit"))) then
+				local handle = obj:FindFirstChild("Handle");
+				local character = player.Character;
+				if (handle and character and character:FindFirstChild("HumanoidRootPart")) then
+					local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0);
+					if (moveType == "tween") then
+						StatusLabel.Text = "Tween: " .. obj.Name;
+						StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0);
+						local hrp = character:FindFirstChild("HumanoidRootPart");
+						local humanoid = character:FindFirstChildOfClass("Humanoid");
+						if (hrp and humanoid) then
+							local FlatIdent_8BC55 = 0;
+							local startCFrame;
+							local distance;
+							local speed;
+							local duration;
+							local startTime;
+							local conn;
+							while true do
+								if (1 == FlatIdent_8BC55) then
+									speed = 300;
+									duration = distance / speed;
+									startTime = tick();
+									FlatIdent_8BC55 = 2;
+								end
+								if (FlatIdent_8BC55 == 3) then
+									if conn then
+										conn:Disconnect();
+									end
+									humanoid.PlatformStand = false;
+									hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0);
+									break;
+								end
+								if (FlatIdent_8BC55 == 0) then
+									humanoid.PlatformStand = true;
+									startCFrame = hrp.CFrame;
+									distance = (startCFrame.Position - targetCFrame.Position).Magnitude;
+									FlatIdent_8BC55 = 1;
+								end
+								if (2 == FlatIdent_8BC55) then
+									conn = nil;
+									conn = RunService.Stepped:Connect(function()
+										if (not isRunning or not character:FindFirstChild("HumanoidRootPart")) then
+											local FlatIdent_882F4 = 0;
+											while true do
+												if (FlatIdent_882F4 == 0) then
+													if conn then
+														conn:Disconnect();
+													end
+													return;
+												end
+											end
+										end
+										for _, part in ipairs(character:GetDescendants()) do
+											if part:IsA("BasePart") then
+												part.CanCollide = false;
+											end
+										end
+										local elapsed = tick() - startTime;
+										local alpha = math.clamp(elapsed / duration, 0, 1);
+										hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha);
+										hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0);
+										if (alpha >= 1) then
+											if conn then
+												conn:Disconnect();
+											end
+										end
+									end);
+									task.wait(duration);
+									FlatIdent_8BC55 = 3;
+								end
+							end
+						end
+					else
+						local FlatIdent_3CF01 = 0;
+						while true do
+							if (FlatIdent_3CF01 == 1) then
+								character.HumanoidRootPart.CFrame = targetCFrame;
+								task.wait(0.15);
+								break;
+							end
+							if (FlatIdent_3CF01 == 0) then
+								StatusLabel.Text = "Fast TP: " .. obj.Name;
+								StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0);
+								FlatIdent_3CF01 = 1;
+							end
+						end
+					end
+					storeAllOwnedFruits();
+					found = true;
+					break;
+				end
+			end
+		end
+	end);
+	return found;
 end
-
-local expireTimestamp = 0
+local expireTimestamp = 0;
 task.spawn(function()
-    while true do
-        if MainFrame.Visible and expireTimestamp > 0 then
-            local timeLeft = expireTimestamp - os.time()
-            if timeLeft > 0 then
-                local hours = math.floor(timeLeft / 3600)
-                local minutes = math.floor((timeLeft % 3600) / 60)
-                local seconds = timeLeft % 60
-                
-                KeyTimerLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, minutes, seconds)
-                
-                if timeLeft <= 1800 then
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                elseif timeLeft <= 7200 then
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
-                else
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-                end
-            else
-                KeyTimerLabel.Text = "Key Expired! Re-locking..."
-                KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                task.wait(1)
-                pcall(function()
-                    if delfile and isfile("dubo_session_S.txt") then
-                        delfile("dubo_session_S.txt")
-                    end
-                end)
-                game:GetService("TeleportService"):Teleport(game.PlaceId, player)
-                break
-            end
-        end
-        task.wait(1)
-    end
-end)
-
+	while true do
+		if (MainFrame.Visible and (expireTimestamp > 0)) then
+			local timeLeft = expireTimestamp - os.time();
+			if (timeLeft > 0) then
+				local FlatIdent_25A9F = 0;
+				local hours;
+				local minutes;
+				local seconds;
+				while true do
+					if (FlatIdent_25A9F == 1) then
+						seconds = timeLeft % 60;
+						KeyTimerLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, minutes, seconds);
+						FlatIdent_25A9F = 2;
+					end
+					if (FlatIdent_25A9F == 0) then
+						hours = math.floor(timeLeft / 3600);
+						minutes = math.floor((timeLeft % 3600) / 60);
+						FlatIdent_25A9F = 1;
+					end
+					if (FlatIdent_25A9F == 2) then
+						if (timeLeft <= 1800) then
+							KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50);
+						elseif (timeLeft <= 7200) then
+							KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 165, 0);
+						else
+							KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120);
+						end
+						break;
+					end
+				end
+			else
+				KeyTimerLabel.Text = "Key Expired! Re-locking...";
+				KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50);
+				task.wait(1);
+				pcall(function()
+					if (delfile and isfile("dubo_session_S.txt")) then
+						delfile("dubo_session_S.txt");
+					end
+				end);
+				game:GetService("TeleportService"):Teleport(game.PlaceId, player);
+				break;
+			end
+		end
+		task.wait(1);
+	end
+end);
 local function launchMainScript(targetExpireTime)
-    if targetExpireTime then
-        expireTimestamp = targetExpireTime
-    end
-    KeySystemFrame.Visible = false
-    MainFrame.Visible = true
-    isRunning = true
-    
-    task.spawn(function()
-        while true do
-            isRunning = true
-            StatusLabel.Text = "Team: " .. factionDisplayName
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            
-            local attempts = 0
-            repeat
-                pcall(function()
-                    if remoteComm then
-                        remoteComm:InvokeServer("SetTeam", chosenFaction)
-                    end
-                end)
-                task.wait(1)
-                attempts = attempts + 1
-            until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
-
-            if not isRunning then break end
-
-            StatusLabel.Text = "Ready!"
-            task.wait(0.5)
-
-            local scanStart = tick()
-            while isRunning do
-                StatusLabel.Text = "Scanning..."
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                
-                local collected = false
-                pcall(function()
-                    collected = autoPickAndStore()
-                end)
-                
-                if collected then
-                    scanStart = tick()
-                end
-                
-                if not collected and (tick() - scanStart > 3) then
-                    StatusLabel.Text = "Not found (Hopping...)"
-                    StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                    task.wait(0.5)
-                    break
-                end
-                
-                if not isRunning then break end
-                task.wait(0.2)
-            end
-
-            if not isRunning then break end
-            hopServer()
-            task.wait(3)
-        end
-    end)
+	local FlatIdent_3B7E2 = 0;
+	while true do
+		if (FlatIdent_3B7E2 == 0) then
+			if targetExpireTime then
+				expireTimestamp = targetExpireTime;
+			end
+			KeySystemFrame.Visible = false;
+			FlatIdent_3B7E2 = 1;
+		end
+		if (2 == FlatIdent_3B7E2) then
+			task.spawn(function()
+				while true do
+					isRunning = true;
+					StatusLabel.Text = "Team: " .. factionDisplayName;
+					StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
+					local attempts = 0;
+					repeat
+						pcall(function()
+							if remoteComm then
+								remoteComm:InvokeServer("SetTeam", chosenFaction);
+							end
+						end);
+						task.wait(1);
+						attempts = attempts + 1;
+					until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position.Magnitude > 50)) or (attempts > 12) or not isRunning 
+					if not isRunning then
+						break;
+					end
+					StatusLabel.Text = "Ready!";
+					task.wait(0.5);
+					local scanStart = tick();
+					while isRunning do
+						StatusLabel.Text = "Scanning...";
+						StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
+						local collected = false;
+						pcall(function()
+							collected = autoPickAndStore();
+						end);
+						if collected then
+							scanStart = tick();
+						end
+						if (not collected and ((tick() - scanStart) > 3)) then
+							StatusLabel.Text = "Not found (Hopping...)";
+							StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50);
+							task.wait(0.5);
+							break;
+						end
+						if not isRunning then
+							break;
+						end
+						task.wait(0.2);
+					end
+					if not isRunning then
+						break;
+					end
+					hopServer();
+					task.wait(3);
+				end
+			end);
+			break;
+		end
+		if (FlatIdent_3B7E2 == 1) then
+			MainFrame.Visible = true;
+			isRunning = true;
+			FlatIdent_3B7E2 = 2;
+		end
+	end
 end
-
--- KIỂM TRA SESSION CHỐNG GIAN LẬN THỜI GIAN VÔ CỰC DO AI HOẶC HACKER TỰ CHỈNH SỬA
 task.spawn(function()
-    pcall(function()
-        if isfile and readfile then
-            if isfile("dubo_session_S.txt") then
-                local content = readfile("dubo_session_S.txt")
-                local parts = {}
-                for part in string.gmatch(content, "[^|]+") do
-                    table.insert(parts, part)
-                end
-                
-                local isValid = false
-                local targetTime = 0
-                if #parts >= 3 then
-                    local savedKey = decryptData(parts[1])
-                    local savedHWID = decryptData(parts[2])
-                    local rawTimeString = decryptData(parts[3])
-                    local savedTime = tonumber(rawTimeString) or 0
-                    local currentTime = os.time()
-                    
-                    if savedHWID == getHWID() and string.sub(savedKey, 1, 9) == "DUBO-KEY=" then
-                        if savedTime > currentTime then
-                            local duration = savedTime - currentTime
-                            -- Chống thời gian vô cực/AI sửa số quá lớn: Key hợp lệ chỉ được phép tồn tại tối đa trong 25 giờ (90000 giây) trở lại.
-                            if duration <= 90000 then
-                                isValid = true
-                                targetTime = savedTime
-                            end
-                        end
-                    end
-                end
-                
-                if isValid then
-                    launchMainScript(targetTime)
-                else
-                    -- Phát hiện gian lận hoặc sai lệch -> Tự hủy file ngay lập tức, bắt buộc get key lại
-                    pcall(function()
-                        if delfile then
-                            delfile("dubo_session_S.txt")
-                        end
-                    end)
-                end
-            end
-        end
-    end)
-end)
-
--- XỬ LÝ NÚT GET KEY LINK (Dùng ĐÚNG 1 link API chính duy nhất, không dùng dự phòng)
+	pcall(function()
+		if (isfile and readfile) then
+			if isfile("dubo_session_S.txt") then
+				local content = readfile("dubo_session_S.txt");
+				local parts = {};
+				for part in string.gmatch(content, "[^|]+") do
+					table.insert(parts, part);
+				end
+				local isValid = false;
+				local targetTime = 0;
+				if (#parts >= 3) then
+					local FlatIdent_521D6 = 0;
+					local savedKey;
+					local savedHWID;
+					local rawTimeString;
+					local savedTime;
+					local currentTime;
+					while true do
+						if (FlatIdent_521D6 == 1) then
+							rawTimeString = decryptData(parts[3]);
+							savedTime = tonumber(rawTimeString) or 0;
+							FlatIdent_521D6 = 2;
+						end
+						if (2 == FlatIdent_521D6) then
+							currentTime = os.time();
+							if ((savedHWID == getHWID()) and (string.sub(savedKey, 1, 9) == "DUBO-KEY=")) then
+								if (savedTime > currentTime) then
+									local FlatIdent_68856 = 0;
+									local duration;
+									while true do
+										if (FlatIdent_68856 == 0) then
+											duration = savedTime - currentTime;
+											if (duration <= 90000) then
+												isValid = true;
+												targetTime = savedTime;
+											end
+											break;
+										end
+									end
+								end
+							end
+							break;
+						end
+						if (0 == FlatIdent_521D6) then
+							savedKey = decryptData(parts[1]);
+							savedHWID = decryptData(parts[2]);
+							FlatIdent_521D6 = 1;
+						end
+					end
+				end
+				if isValid then
+					launchMainScript(targetTime);
+				else
+					pcall(function()
+						if delfile then
+							delfile("dubo_session_S.txt");
+						end
+					end);
+				end
+			end
+		end
+	end);
+end);
 GetKeyBtn.MouseButton1Click:Connect(function()
-    KeyStatus.Text = "Generating secure key..."
-    KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
-    
-    pcall(function()
-        if delfile and isfile then
-            if isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end
-        end
-    end)
-    
-    local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    local randStr = ""
-    math.randomseed(tick())
-    for i = 1, 20 do
-        local randIdx = math.random(1, #chars)
-        randStr = randStr .. string.sub(chars, randIdx, randIdx)
-    end
-    
-    local fullKey = "DUBO-KEY=" .. randStr
-    local encodedKey = encryptData(fullKey)
-    
-    pcall(function()
-        if writefile then
-            writefile("dubo_temp_K.txt", encodedKey)
-        end
-    end)
-    
-    local authtoolLink = "https://authtool.app/get-key/?result=" .. fullKey
-    local laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink)
-    
-    local success, response = pcall(function()
-        return game:HttpGet(laymaApiUrl)
-    end)
-    
-    if success and response then
-        local decodeSuccess, decoded = pcall(function()
-            return HttpService:JSONDecode(response)
-        end)
-        
-        if decodeSuccess and decoded and decoded.success and decoded.html then
-            local shortlink = decoded.html
-            pcall(function()
-                setclipboard(shortlink)
-            end)
-            
-            KeyStatus.Text = "Shortlink copied! Complete link to get key."
-            KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
-        else
-            KeyStatus.Text = "API Error! Failed to parse response."
-            KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    else
-        KeyStatus.Text = "Network Error! Could not reach Layma API."
-        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-    end
-end)
-
--- XỬ LÝ NÚT SUBMIT KEY
+	local FlatIdent_42BD8 = 0;
+	local chars;
+	local randStr;
+	local fullKey;
+	local encodedKey;
+	local authtoolLink;
+	local laymaApiUrl;
+	local success;
+	local response;
+	while true do
+		if (2 == FlatIdent_42BD8) then
+			encodedKey = encryptData(fullKey);
+			pcall(function()
+				if writefile then
+					writefile("dubo_temp_K.txt", encodedKey);
+				end
+			end);
+			authtoolLink = "https://authtool.app/get-key/?result=" .. fullKey;
+			laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink);
+			FlatIdent_42BD8 = 3;
+		end
+		if (FlatIdent_42BD8 == 3) then
+			success, response = pcall(function()
+				return game:HttpGet(laymaApiUrl);
+			end);
+			if (success and response) then
+				local FlatIdent_7F3C8 = 0;
+				local decodeSuccess;
+				local decoded;
+				while true do
+					if (FlatIdent_7F3C8 == 0) then
+						decodeSuccess, decoded = pcall(function()
+							return HttpService:JSONDecode(response);
+						end);
+						if (decodeSuccess and decoded and decoded.success and decoded.html) then
+							local shortlink = decoded.html;
+							pcall(function()
+								setclipboard(shortlink);
+							end);
+							KeyStatus.Text = "Shortlink copied! Complete link to get key.";
+							KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120);
+						else
+							KeyStatus.Text = "API Error! Failed to parse response.";
+							KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50);
+						end
+						break;
+					end
+				end
+			else
+				local FlatIdent_854BA = 0;
+				while true do
+					if (FlatIdent_854BA == 0) then
+						KeyStatus.Text = "Network Error! Could not reach Layma API.";
+						KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50);
+						break;
+					end
+				end
+			end
+			break;
+		end
+		if (FlatIdent_42BD8 == 0) then
+			KeyStatus.Text = "Generating secure key...";
+			KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0);
+			pcall(function()
+				if (delfile and isfile) then
+					if isfile("dubo_temp_K.txt") then
+						delfile("dubo_temp_K.txt");
+					end
+				end
+			end);
+			chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+			FlatIdent_42BD8 = 1;
+		end
+		if (FlatIdent_42BD8 == 1) then
+			randStr = "";
+			math.randomseed(tick());
+			for i = 1, 20 do
+				local FlatIdent_2A644 = 0;
+				local randIdx;
+				while true do
+					if (FlatIdent_2A644 == 0) then
+						randIdx = math.random(1, #chars);
+						randStr = randStr .. string.sub(chars, randIdx, randIdx);
+						break;
+					end
+				end
+			end
+			fullKey = "DUBO-KEY=" .. randStr;
+			FlatIdent_42BD8 = 2;
+		end
+	end
+end);
 SubmitBtn.MouseButton1Click:Connect(function()
-    local enteredKey = KeyInputBox.Text
-    if enteredKey == "" then
-        KeyStatus.Text = "Please enter your key!"
-        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-        return
-    end
-    
-    local isValid = false
-    pcall(function()
-        if isfile and readfile then
-            if isfile("dubo_temp_K.txt") then
-                local decryptedTempKey = decryptData(readfile("dubo_temp_K.txt"))
-                if enteredKey == decryptedTempKey then
-                    isValid = true
-                end
-            end
-        end
-    end)
-    
-    if isValid then
-        pcall(function()
-            if delfile and isfile("dubo_temp_K.txt") then
-                delfile("dubo_temp_K.txt")
-            end
-        end)
-        
-        local calculatedExpireTime = os.time() + 86400
-        pcall(function()
-            if writefile then
-                local encKey = encryptData(enteredKey)
-                local encHWID = encryptData(getHWID())
-                local encTime = encryptData(tostring(calculatedExpireTime))
-                
-                local finalSessionData = encKey .. "|" .. encHWID .. "|" .. encTime
-                writefile("dubo_session_S.txt", finalSessionData)
-            end
-        end)
-        
-        KeyStatus.Text = "Key verified successfully!"
-        KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
-        task.wait(0.8)
-        launchMainScript(calculatedExpireTime)
-    else
-        KeyStatus.Text = "Invalid key or temporary file missing!"
-        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-    end
-end)
+	local enteredKey = KeyInputBox.Text;
+	if (enteredKey == "") then
+		local FlatIdent_5D802 = 0;
+		while true do
+			if (FlatIdent_5D802 == 1) then
+				return;
+			end
+			if (FlatIdent_5D802 == 0) then
+				KeyStatus.Text = "Please enter your key!";
+				KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50);
+				FlatIdent_5D802 = 1;
+			end
+		end
+	end
+	local isValid = false;
+	pcall(function()
+		if (isfile and readfile) then
+			if isfile("dubo_temp_K.txt") then
+				local FlatIdent_43337 = 0;
+				local decryptedTempKey;
+				while true do
+					if (FlatIdent_43337 == 0) then
+						decryptedTempKey = decryptData(readfile("dubo_temp_K.txt"));
+						if (enteredKey == decryptedTempKey) then
+							isValid = true;
+						end
+						break;
+					end
+				end
+			end
+		end
+	end);
+	if isValid then
+		pcall(function()
+			if (delfile and isfile("dubo_temp_K.txt")) then
+				delfile("dubo_temp_K.txt");
+			end
+		end);
+		local calculatedExpireTime = os.time() + 86400;
+		pcall(function()
+			if writefile then
+				local FlatIdent_1468D = 0;
+				local encKey;
+				local encHWID;
+				local encTime;
+				local finalSessionData;
+				while true do
+					if (FlatIdent_1468D == 2) then
+						writefile("dubo_session_S.txt", finalSessionData);
+						break;
+					end
+					if (FlatIdent_1468D == 0) then
+						encKey = encryptData(enteredKey);
+						encHWID = encryptData(getHWID());
+						FlatIdent_1468D = 1;
+					end
+					if (FlatIdent_1468D == 1) then
+						encTime = encryptData(tostring(calculatedExpireTime));
+						finalSessionData = encKey .. "|" .. encHWID .. "|" .. encTime;
+						FlatIdent_1468D = 2;
+					end
+				end
+			end
+		end);
+		KeyStatus.Text = "Key verified successfully!";
+		KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120);
+		task.wait(0.8);
+		launchMainScript(calculatedExpireTime);
+	else
+		local FlatIdent_89917 = 0;
+		while true do
+			if (FlatIdent_89917 == 0) then
+				KeyStatus.Text = "Invalid key or temporary file missing!";
+				KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50);
+				break;
+			end
+		end
+	end
+end);
