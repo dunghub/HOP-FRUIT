@@ -72,7 +72,7 @@ local FruitImages = {
     ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg"
 }
 
--- Hàm mã hóa và giải mã chống sửa đổi
+-- Hàm mã hóa và giải mã dữ liệu nội bộ
 local function encryptData(str)
     local result = ""
     for i = 1, #str do
@@ -186,14 +186,12 @@ KeySystemFrame.Active = true
 KeySystemFrame.Draggable = true
 KeySystemFrame.Parent = ScreenGui
 
-local KeyFrameCorner = Instance.new("UICorner")
+local KeyFrameCorner = Instance.new("UICorner", KeySystemFrame)
 KeyFrameCorner.CornerRadius = UDim.new(0, 12)
-KeyFrameCorner.Parent = KeySystemFrame
 
-local KeyFrameStroke = Instance.new("UIStroke")
+local KeyFrameStroke = Instance.new("UIStroke", KeySystemFrame)
 KeyFrameStroke.Thickness = 2
 KeyFrameStroke.Color = Color3.fromRGB(0, 120, 255)
-KeyFrameStroke.Parent = KeySystemFrame
 
 local KeyIconBg = Instance.new("Frame")
 KeyIconBg.Size = UDim2.new(0, 42, 0, 42)
@@ -283,13 +281,11 @@ MainFrame.Draggable = true
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
+local MainCorner = Instance.new("UICorner", MainFrame)
 MainCorner.CornerRadius = UDim.new(0, 18)
-MainCorner.Parent = MainFrame
 
-local RainbowStroke = Instance.new("UIStroke")
+local RainbowStroke = Instance.new("UIStroke", MainFrame)
 RainbowStroke.Thickness = 4
-RainbowStroke.Parent = MainFrame
 
 task.spawn(function()
     while true do
@@ -354,14 +350,10 @@ CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
 CircleAvatarBg.Parent = MainFrame
 
-local CircleBgCorner = Instance.new("UICorner")
-CircleBgCorner.CornerRadius = UDim.new(1, 0)
-CircleBgCorner.Parent = CircleAvatarBg
-
-local CircleAvatarStroke = Instance.new("UIStroke")
+Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0)
+local CircleAvatarStroke = Instance.new("UIStroke", CircleAvatarBg)
 CircleAvatarStroke.Thickness = 3
 CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
-CircleAvatarStroke.Parent = CircleAvatarBg
 
 local AvatarImg = Instance.new("ImageLabel")
 AvatarImg.Size = UDim2.new(0, 84, 0, 84)
@@ -373,9 +365,8 @@ pcall(function()
 end)
 AvatarImg.Parent = CircleAvatarBg
 
-local AvatarCircle = Instance.new("UICorner")
+local AvatarCircle = Instance.new("UICorner", AvatarImg)
 AvatarCircle.CornerRadius = UDim.new(1, 0)
-AvatarCircle.Parent = AvatarImg
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 26)
@@ -396,9 +387,7 @@ StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
 
-local StatusBoxCorner = Instance.new("UICorner")
-StatusBoxCorner.CornerRadius = UDim.new(0, 12)
-StatusBoxCorner.Parent = StatusBox
+Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12)
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -410,7 +399,6 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- KHUNG HIỂN THỊ THỜI GIAN SỐNG CỦA KEY
 local KeyTimerBox = Instance.new("Frame")
 KeyTimerBox.Size = UDim2.new(0, 250, 0, 38)
 KeyTimerBox.Position = UDim2.new(0.5, -125, 0, 248)
@@ -419,14 +407,10 @@ KeyTimerBox.BorderSizePixel = 0
 KeyTimerBox.ZIndex = 2
 KeyTimerBox.Parent = MainFrame
 
-local KeyTimerCorner = Instance.new("UICorner")
-KeyTimerCorner.CornerRadius = UDim.new(0, 10)
-KeyTimerCorner.Parent = KeyTimerBox
-
-local KeyTimerStroke = Instance.new("UIStroke")
+Instance.new("UICorner", KeyTimerBox).CornerRadius = UDim.new(0, 10)
+local KeyTimerStroke = Instance.new("UIStroke", KeyTimerBox)
 KeyTimerStroke.Color = Color3.fromRGB(0, 170, 255)
 KeyTimerStroke.Thickness = 1.2
-KeyTimerStroke.Parent = KeyTimerBox
 
 local KeyTimerLabel = Instance.new("TextLabel")
 KeyTimerLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -471,9 +455,8 @@ RunService.RenderStepped:Connect(function()
                         ESPText.Font = Enum.Font.GothamBold
                         ESPText.Text = obj.Name .. " (" .. distance .. "m)"
                         
-                        local corner = Instance.new("UICorner")
+                        local corner = Instance.new("UICorner", ESPText)
                         corner.CornerRadius = UDim.new(0, 4)
-                        corner.Parent = ESPText
                         
                         ESPText.Parent = ESPFolder
                     end
@@ -637,7 +620,6 @@ local function autoPickAndStore()
     return found
 end
 
--- VÒNG LẶP CẬP NHẬT THỜI GIAN HẾT HẠN TRÊN GIAO DIỆN CHÍNH
 local expireTimestamp = 0
 task.spawn(function()
     while true do
@@ -736,7 +718,7 @@ local function launchMainScript(targetExpireTime)
     end)
 end
 
--- TỰ ĐỘNG KIỂM TRA & TỰ HỦY FILE S NẾU HẾT HẠN HOẶC BỊ LỖI/CHẾ BỪA
+-- KIỂM TRA SESSION CHỐNG GIAN LẬN THỜI GIAN VÔ CỰC DO AI HOẶC HACKER TỰ CHỈNH SỬA
 task.spawn(function()
     pcall(function()
         if isfile and readfile then
@@ -752,17 +734,26 @@ task.spawn(function()
                 if #parts >= 3 then
                     local savedKey = decryptData(parts[1])
                     local savedHWID = decryptData(parts[2])
-                    local savedTime = tonumber(decryptData(parts[3])) or 0
+                    local rawTimeString = decryptData(parts[3])
+                    local savedTime = tonumber(rawTimeString) or 0
+                    local currentTime = os.time()
                     
-                    if savedHWID == getHWID() and os.time() < savedTime and string.sub(savedKey, 1, 9) == "DUBO-KEY=" then
-                        isValid = true
-                        targetTime = savedTime
+                    if savedHWID == getHWID() and string.sub(savedKey, 1, 9) == "DUBO-KEY=" then
+                        if savedTime > currentTime then
+                            local duration = savedTime - currentTime
+                            -- Chống thời gian vô cực/AI sửa số quá lớn: Key hợp lệ chỉ được phép tồn tại tối đa trong 25 giờ (90000 giây) trở lại.
+                            if duration <= 90000 then
+                                isValid = true
+                                targetTime = savedTime
+                            end
+                        end
                     end
                 end
                 
                 if isValid then
                     launchMainScript(targetTime)
                 else
+                    -- Phát hiện gian lận hoặc sai lệch -> Tự hủy file ngay lập tức, bắt buộc get key lại
                     pcall(function()
                         if delfile then
                             delfile("dubo_session_S.txt")
@@ -774,17 +765,13 @@ task.spawn(function()
     end)
 end)
 
--- XỬ LÝ NÚT GET KEY LINK (Đã bỏ link dự phòng, chỉ dùng 1 tham số url chính duy nhất)
+-- XỬ LÝ NÚT GET KEY LINK (Dùng ĐÚNG 1 link API chính duy nhất, không dùng dự phòng)
 GetKeyBtn.MouseButton1Click:Connect(function()
     KeyStatus.Text = "Generating secure key..."
     KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
     
     pcall(function()
         if delfile and isfile then
-            for i = 1, 10 do
-                local oldK = "dubo_temp_K_" .. i .. ".txt"
-                if isfile(oldK) then delfile(oldK) end
-            end
             if isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end
         end
     end)
