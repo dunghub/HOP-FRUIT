@@ -271,7 +271,7 @@ KeyStatus.TextSize = 12
 KeyStatus.Font = Enum.Font.Gotham
 KeyStatus.Parent = KeySystemFrame
 
--- GIAO DIỆN CHÍNH (Được kéo dài thêm chiều cao để chứa khung thời gian key)
+-- GIAO DIỆN CHÍNH
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 290, 0, 395)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
@@ -410,7 +410,7 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- KHUNG HIỂN THỊ THỜI GIAN SỐNG CỦA KEY (Đếm ngược từ 24h về 00:00:00)
+-- KHUNG HIỂN THỊ THỜI GIAN SỐNG CỦA KEY
 local KeyTimerBox = Instance.new("Frame")
 KeyTimerBox.Size = UDim2.new(0, 250, 0, 38)
 KeyTimerBox.Position = UDim2.new(0.5, -125, 0, 248)
@@ -650,13 +650,12 @@ task.spawn(function()
                 
                 KeyTimerLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, minutes, seconds)
                 
-                -- Đổi màu cảnh báo khi dưới 2 tiếng hoặc dưới 30 phút
                 if timeLeft <= 1800 then
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50) -- Đỏ (Sắp hết hạn nghiêm trọng)
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                 elseif timeLeft <= 7200 then
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 165, 0) -- Vàng cam (Chuẩn bị tinh thần)
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(255, 165, 0)
                 else
-                    KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120) -- Xanh an toàn
+                    KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
                 end
             else
                 KeyTimerLabel.Text = "Key Expired! Re-locking..."
@@ -775,7 +774,7 @@ task.spawn(function()
     end)
 end)
 
--- XỬ LÝ NÚT GET KEY LINK
+-- XỬ LÝ NÚT GET KEY LINK (Đã bỏ link dự phòng, chỉ dùng 1 tham số url chính duy nhất)
 GetKeyBtn.MouseButton1Click:Connect(function()
     KeyStatus.Text = "Generating secure key..."
     KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
@@ -808,7 +807,7 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     end)
     
     local authtoolLink = "https://authtool.app/get-key/?result=" .. fullKey
-    local laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink) .. "&link_du_phong=" .. HttpService:UrlEncode(authtoolLink)
+    local laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink)
     
     local success, response = pcall(function()
         return game:HttpGet(laymaApiUrl)
