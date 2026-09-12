@@ -335,7 +335,6 @@ RunService.RenderStepped:Connect(function()
             if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local handle = obj:FindFirstChild("Handle")
                 if handle then
-                    -- Cố định vị trí 3D ngay trên đầu trái ác quỷ, không phụ thuộc vào hướng nhìn của camera
                     local worldPos = handle.Position + Vector3.new(0, 2.5, 0)
                     local vector, onScreen = Camera:WorldToViewportPoint(worldPos)
                     
@@ -346,7 +345,6 @@ RunService.RenderStepped:Connect(function()
 
                         local ESPText = Instance.new("TextLabel")
                         ESPText.Size = UDim2.new(0, 160, 0, 24)
-                        -- Neo vị trí chuẩn xác theo tọa độ màn hình, căn giữa hộp chữ sát ngay trên trái cây
                         ESPText.Position = UDim2.new(0, vector.X - 80, 0, vector.Y - 12)
                         ESPText.BackgroundTransparency = 0.4
                         ESPText.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
