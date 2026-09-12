@@ -10,7 +10,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
 
 local remoteComm = nil
 pcall(function()
@@ -322,7 +321,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- LOGIC ESP LINEAR SMOOTH (CHỐNG NHẢY SỐ / STREAMINGENABLED)
+-- LOGIC ESP LINEAR SMOOTH (TỰ HỦY KHI MẤT ĐỂ KHÔNG BỊ THỪA)
 -- ==========================================
 local EspFolder = Instance.new("Folder", CoreGui)
 EspFolder.Name = "FruitESP_LinearSmooth"
@@ -358,7 +357,7 @@ local function CreateLinearESP(fruit)
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
-            if not isRunning or not fruit or not fruit.Parent then
+            if not isRunning or not fruit or not fruit.Parent or (fruit:IsA("Tool") and fruit.Parent ~= Workspace and fruit.Parent ~= player.Backpack and fruit.Parent ~= player.Character) then
                 FruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
@@ -586,7 +585,8 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0)
+                    -- FIX 1: Dịch thẳng vị trí chạm vào trái cây (trùng khớp tâm Handle thay vì cộng thêm khoảng cao ở đầu)
+                    local targetCFrame = handle.CFrame
                     
                     if moveType == "tween" then
                         StatusLabel.Text = "Tween: " .. obj.Name
@@ -606,7 +606,7 @@ local function autoPickAndStore()
                             
                             local conn
                             conn = RunService.Stepped:Connect(function()
-                                if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
+                                if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent then
                                     if conn then conn:Disconnect() end
                                     return
                                 end
@@ -687,8 +687,9 @@ task.spawn(function()
                 scanStart = tick()
             end
             
+            -- FIX 2: Nếu không tìm thấy hoặc kẹt không nhặt được fruit trong vòng 3 giây, tự động chuyển server tránh biến
             if not collected and (tick() - scanStart > 3) then
-                StatusLabel.Text = "Not found (Hopping...)"
+                StatusLabel.Text = "Not found / Stuck (Hopping...)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                 task.wait(0.5)
                 break
