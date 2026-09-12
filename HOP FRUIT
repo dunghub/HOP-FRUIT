@@ -318,54 +318,74 @@ task.spawn(function()
     end
 end)
 
-local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "FruitESPFolder"
-ESPFolder.Parent = ScreenGui
+-- Tích hợp phong cách ESP chữ chuẩn xác theo yêu cầu
+local function CreateFruitESP(fruit)
+    local handle = fruit:WaitForChild("Handle", 3) or fruit:FindFirstChildWhichIsA("BasePart")
+    if not handle then return end
 
-RunService.RenderStepped:Connect(function()
-    if not isRunning then 
-        ESPFolder:ClearAllChildren()
-        return 
-    end
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "FruitESP_" .. fruit.Name
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = CoreGui
 
-    ESPFolder:ClearAllChildren()
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                local handle = obj:FindFirstChild("Handle")
-                if handle then
-                    local worldPos = handle.Position + Vector3.new(0, 2.5, 0)
-                    local vector, onScreen = Camera:WorldToViewportPoint(worldPos)
-                    
-                    if onScreen then
-                        local character = player.Character
-                        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                        local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(0, 200, 0, 50)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+    textLabel.TextSize = 16
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextStrokeTransparency = 0
+    textLabel.Parent = screenGui
 
-                        local ESPText = Instance.new("TextLabel")
-                        ESPText.Size = UDim2.new(0, 160, 0, 24)
-                        ESPText.Position = UDim2.new(0, vector.X - 80, 0, vector.Y - 12)
-                        ESPText.BackgroundTransparency = 0.4
-                        ESPText.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-                        ESPText.TextColor3 = Color3.fromRGB(0, 255, 120)
-                        ESPText.TextSize = 11
-                        ESPText.Font = Enum.Font.GothamBold
-                        ESPText.Text = obj.Name .. " (" .. distance .. "m)"
-                        
-                        local stroke = Instance.new("UIStroke", ESPText)
-                        stroke.Thickness = 1
-                        stroke.Color = Color3.fromRGB(0, 170, 255)
-                        
-                        local corner = Instance.new("UICorner", ESPText)
-                        corner.CornerRadius = UDim.new(0, 4)
-                        
-                        ESPText.Parent = ESPFolder
-                    end
-                end
-            end
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not isRunning or not fruit or not fruit.Parent or not handle or not handle.Parent then
+            screenGui:Destroy()
+            connection:Disconnect()
+            return
+        end
+
+        local fruitPosition = handle.Position + Vector3.new(0, 3, 0)
+        local screenPos, onScreen = Camera:WorldToViewportPoint(fruitPosition)
+
+        if onScreen then
+            textLabel.Visible = true
+            local distance = math.floor((player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position - handle.Position).Magnitude) or 0)
+            
+            textLabel.Text = fruit.Name .. " (" .. tostring(distance) .. "m)"
+            textLabel.Position = UDim2.new(0, screenPos.X - 100, 0, screenPos.Y - 25)
+        else
+            textLabel.Visible = false
         end
     end)
+end
+
+local function OutlineFruits()
+    for _, obj in pairs(Workspace:GetChildren()) do
+        local rawName = obj.Name:gsub(" Fruit", "")
+        if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+            if not CoreGui:FindFirstChild("FruitESP_" .. obj.Name) then
+                CreateFruitESP(obj)
+            end
+        end
+    end
+end
+
+Workspace.ChildAdded:Connect(function(obj)
+    task.wait(0.5)
+    local rawName = obj.Name:gsub(" Fruit", "")
+    if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+        CreateFruitESP(obj)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if isRunning then
+            OutlineFruits()
+        end
+        task.wait(3)
+    end
 end)
 
 local function ServerHop()
