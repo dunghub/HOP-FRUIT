@@ -100,68 +100,6 @@ local FruitImages = {
     ["Magnet"] = ""
 }
 
-local function sendDiscordWebhook(fruitName, uniqueId)
-    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
-    if storedFruitsCache[uniqueId] then return end
-    storedFruitsCache[uniqueId] = true
-    
-    local maskedName = "||" .. player.Name .. "||"
-    local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
-    local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
-    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
-    
-    local data = {
-        ["content"] = "@everyone",
-        ["username"] = "DUBO HUB",
-        ["avatar_url"] = botAvatarUrl,
-        ["embeds"] = {{
-            ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
-            ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                }
-            },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
-        }}
-    }
-    
-    local encodedData = HttpService:JSONEncode(data)
-    local headers = {["Content-Type"] = "application/json"}
-    
-    pcall(function()
-        local req = request or http_request or syn.request or fluxus.request
-        if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
-        else
-            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
-        end
-    end)
-end
-
 pcall(function()
     if CoreGui:FindFirstChild("KaitunFruitGUI") then
         CoreGui.KaitunFruitGUI:Destroy()
@@ -173,8 +111,9 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- Đã mở rộng chiều ngang ra thành 340 (thay vì 290) và tăng chiều cao lên 430 để vừa 4 ô thông tin
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 290, 0, 345)
+MainFrame.Size = UDim2.new(0, 340, 0, 430)
 MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -209,7 +148,7 @@ task.spawn(function()
         pcall(function()
             local snowflake = Instance.new("TextLabel")
             snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 270), 0, -20)
+            snowflake.Position = UDim2.new(0, math.random(10, 320), 0, -20)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -219,7 +158,7 @@ task.spawn(function()
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 365)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 450)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -283,8 +222,8 @@ TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 250, 0, 58)
-StatusBox.Position = UDim2.new(0.5, -125, 0, 196)
+StatusBox.Size = UDim2.new(0, 300, 0, 50)
+StatusBox.Position = UDim2.new(0.5, -150, 0, 192)
 StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
@@ -301,6 +240,94 @@ StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
+
+-- ================= TẠO 4 KHUNG THÔNG TIN PHÍA DƯỚI =================
+local InfoContainer = Instance.new("Frame")
+InfoContainer.Size = UDim2.new(0, 300, 0, 145)
+InfoContainer.Position = UDim2.new(0.5, -150, 0, 252)
+InfoContainer.BackgroundTransparency = 1
+InfoContainer.ZIndex = 2
+InfoContainer.Parent = MainFrame
+
+local uiGrid = Instance.new("UIGridLayout")
+uiGrid.CellSize = UDim2.new(0.48, 0, 0.45, 0)
+uiGrid.CellPadding = UDim2.new(0.04, 0, 0.1, 0)
+uiGrid.Parent = InfoContainer
+
+local function createInfoBox(name, defaultText)
+    local box = Instance.new("Frame")
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    box.BorderSizePixel = 0
+    box.ZIndex = 2
+    
+    local corner = Instance.new("UICorner", box)
+    corner.CornerRadius = UDim.new(0, 8)
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0.4, 0)
+    title.BackgroundTransparency = 1
+    title.Text = name
+    title.TextColor3 = Color3.fromRGB(150, 150, 170)
+    title.TextSize = 11
+    title.Font = Enum.Font.GothamBold
+    title.ZIndex = 2
+    title.Parent = box
+    
+    local value = Instance.new("TextLabel")
+    value.Size = UDim2.new(1, 0, 0.6, 0)
+    value.Position = UDim2.new(0, 0, 0.4, 0)
+    value.BackgroundTransparency = 1
+    value.Text = defaultText
+    value.TextColor3 = Color3.fromRGB(255, 255, 255)
+    value.TextSize = 12
+    value.Font = Enum.Font.GothamBold
+    value.ZIndex = 2
+    value.Parent = box
+    
+    box.Parent = InfoContainer
+    return value
+end
+
+local timeLabel = createInfoBox("TIME", "00:00")
+local serverLabel = createInfoBox("SERVER", "0/12")
+local teamLabel = createInfoBox("TEAM", factionDisplayName)
+local moveLabel = createInfoBox("MOVE", moveType:gsub("^%l", string.upper))
+
+-- Cập nhật đồng hồ TIME đếm giây tăng dần
+local secondsCounter = 0
+task.spawn(function()
+    while task.wait(1) do
+        secondsCounter = secondsCounter + 1
+        local mins = math.floor(secondsCounter / 60)
+        local secs = secondsCounter % 60
+        timeLabel.Text = string.format("%02d:%02d", mins, secs)
+    end
+end)
+
+-- Cập nhật số lượng người chơi SERVER
+task.spawn(function()
+    while task.wait(2) do
+        pcall(function()
+            local currentPlayers = #Players:GetPlayers()
+            local maxPlayers = Players.MaxPlayers
+            serverLabel.Text = currentPlayers .. "/" .. maxPlayers
+        end)
+    end
+end)
+
+-- Cập nhật TEAM theo thực tế người chơi
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            if player.Team then
+                teamLabel.Text = player.Team.Name
+            else
+                teamLabel.Text = factionDisplayName
+            end
+        end)
+    end
+end)
+-- ===================================================================
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "FruitESPFolder"
@@ -346,7 +373,6 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- HÀM HOP SERVER KẾT HỢP API VÀ GỌI QUA REMOTE __ServerBrowser TRÁNH LỖI 773
 local function ServerHop()
     isRunning = false
     StatusLabel.Text = "Hopping Server..."
@@ -379,7 +405,6 @@ local function ServerHop()
                         return 
                     end
                 else
-                    -- Fallback nếu không bắt được __ServerBrowser thì dùng TeleportService
                     local tpSuccess = pcall(function()
                         StatusLabel.Text = "Connecting..."
                         TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
@@ -393,12 +418,99 @@ local function ServerHop()
         end
     end
     
-    -- Fallback cuối cùng nếu quét API lỗi
     pcall(function()
         if serverBrowser then
             serverBrowser:InvokeServer("teleport")
         else
             TeleportService:Teleport(currentPlaceId, player)
+        end
+    end)
+end
+
+-- ĐÃ TÍCH HỢP 4 THÔNG SỐ VÀO WEBHOOK
+local function sendDiscordWebhook(fruitName, uniqueId)
+    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
+    if storedFruitsCache[uniqueId] then return end
+    storedFruitsCache[uniqueId] = true
+    
+    local maskedName = "||" .. player.Name .. "||"
+    local cleanFruitName = fruitName:gsub(" Fruit", "")
+    
+    local currentTimeStr = timeLabel and timeLabel.Text or "00:00"
+    local currentServerStr = serverLabel and serverLabel.Text or (#Players:GetPlayers() .. "/" .. Players.MaxPlayers)
+    local currentTeamStr = player.Team and player.Team.Name or factionDisplayName
+    local currentMoveStr = moveType:gsub("^%l", string.upper)
+    
+    local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
+    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
+    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
+    
+    local data = {
+        ["content"] = "@everyone",
+        ["username"] = "DUBO HUB",
+        ["avatar_url"] = botAvatarUrl,
+        ["embeds"] = {{
+            ["color"] = 3447003,
+            ["author"] = {
+                ["name"] = "DUBO HUB Notification",
+                ["icon_url"] = defaultImage
+            },
+            ["thumbnail"] = {
+                ["url"] = fruitImage
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "Main Status",
+                    ["value"] = "Username : " .. maskedName,
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Status",
+                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Fruit",
+                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "⏱️ Time",
+                    ["value"] = "```yaml\n" .. currentTimeStr .. "\n```",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "👥 Server",
+                    ["value"] = "```yaml\n" .. currentServerStr .. "\n```",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "⚔️ Team",
+                    ["value"] = "```yaml\n" .. currentTeamStr .. "\n```",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "🚀 Move",
+                    ["value"] = "```yaml\n" .. currentMoveStr .. "\n```",
+                    ["inline"] = true
+                }
+            },
+            ["footer"] = {
+                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
+                ["icon_url"] = defaultImage
+            }
+        }}
+    }
+    
+    local encodedData = HttpService:JSONEncode(data)
+    local headers = {["Content-Type"] = "application/json"}
+    
+    pcall(function()
+        local req = request or http_request or syn.request or fluxus.request
+        if req then
+            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
+        else
+            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
         end
     end)
 end
