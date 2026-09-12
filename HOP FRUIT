@@ -318,74 +318,75 @@ task.spawn(function()
     end
 end)
 
--- Tích hợp phong cách ESP chữ chuẩn xác theo yêu cầu
-local function CreateFruitESP(fruit)
-    local handle = fruit:WaitForChild("Handle", 3) or fruit:FindFirstChildWhichIsA("BasePart")
-    if not handle then return end
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "FruitESPFolder"
+ESPFolder.Parent = ScreenGui
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "FruitESP_" .. fruit.Name
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = CoreGui
+RunService.RenderStepped:Connect(function()
+    if not isRunning then 
+        ESPFolder:ClearAllChildren()
+        return 
+    end
 
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0, 200, 0, 50)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-    textLabel.TextSize = 16
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.TextStrokeTransparency = 0
-    textLabel.Parent = screenGui
+    ESPFolder:ClearAllChildren()
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                if handle then
+                    local character = player.Character
+                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                    local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
 
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not isRunning or not fruit or not fruit.Parent or not handle or not handle.Parent then
-            screenGui:Destroy()
-            connection:Disconnect()
-            return
-        end
+                    local fruitPosition = handle.Position + Vector3.new(0, 3, 0)
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(fruitPosition)
+                    local viewportSize = Camera.ViewportSize
 
-        local fruitPosition = handle.Position + Vector3.new(0, 3, 0)
-        local screenPos, onScreen = Camera:WorldToViewportPoint(fruitPosition)
+                    local ESPText = Instance.new("TextLabel")
+                    ESPText.Size = UDim2.new(0, 160, 0, 24)
+                    ESPText.BackgroundTransparency = 0.4
+                    ESPText.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+                    ESPText.TextColor3 = Color3.fromRGB(0, 255, 120)
+                    ESPText.TextSize = 11
+                    ESPText.Font = Enum.Font.GothamBold
+                    ESPText.Text = rawName .. " [" .. distance .. "m]"
 
-        if onScreen then
-            textLabel.Visible = true
-            local distance = math.floor((player.Character and player.Character:FindFirstChild("HumanoidRootPart") and (player.Character.HumanoidRootPart.Position - handle.Position).Magnitude) or 0)
-            
-            textLabel.Text = fruit.Name .. " (" .. tostring(distance) .. "m)"
-            textLabel.Position = UDim2.new(0, screenPos.X - 100, 0, screenPos.Y - 25)
-        else
-            textLabel.Visible = false
-        end
-    end)
-end
+                    local stroke = Instance.new("UIStroke", ESPText)
+                    stroke.Thickness = 1
+                    stroke.Color = Color3.fromRGB(0, 170, 255)
 
-local function OutlineFruits()
-    for _, obj in pairs(Workspace:GetChildren()) do
-        local rawName = obj.Name:gsub(" Fruit", "")
-        if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-            if not CoreGui:FindFirstChild("FruitESP_" .. obj.Name) then
-                CreateFruitESP(obj)
+                    local corner = Instance.new("UICorner", ESPText)
+                    corner.CornerRadius = UDim.new(0, 4)
+
+                    if onScreen and screenPos.Z > 0 then
+                        ESPText.Position = UDim2.new(0, screenPos.X - 80, 0, screenPos.Y - 12)
+                    else
+                        local camPos = Camera.CFrame.Position
+                        local camLookVector = Camera.CFrame.LookVector
+                        local targetDir = (fruitPosition - camPos).Unit
+                        local rightVector = Camera.CFrame.RightVector
+                        
+                        local dotForward = camLookVector:Dot(targetDir)
+                        local dotRight = rightVector:Dot(targetDir)
+                        
+                        if dotForward < 0 then
+                            dotRight = -dotRight
+                        end
+
+                        local centerX = viewportSize.X / 2
+                        local posX = centerX + (dotRight * (viewportSize.X / 3))
+                        local posY = viewportSize.Y * 0.35
+
+                        posX = math.clamp(posX, 50, viewportSize.X - 50 - 160)
+                        ESPText.Position = UDim2.new(0, posX - 80, 0, posY)
+                    end
+
+                    ESPText.Parent = ESPFolder
+                end
             end
         end
-    end
-end
-
-Workspace.ChildAdded:Connect(function(obj)
-    task.wait(0.5)
-    local rawName = obj.Name:gsub(" Fruit", "")
-    if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-        CreateFruitESP(obj)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if isRunning then
-            OutlineFruits()
-        end
-        task.wait(3)
-    end
+    end)
 end)
 
 local function ServerHop()
