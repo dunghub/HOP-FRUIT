@@ -104,6 +104,9 @@ pcall(function()
     if CoreGui:FindFirstChild("KaitunFruitGUI") then
         CoreGui.KaitunFruitGUI:Destroy()
     end
+    if CoreGui:FindFirstChild("FruitESP_LinearSmooth") then
+        CoreGui.FruitESP_LinearSmooth:Destroy()
+    end
 end)
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -318,76 +321,80 @@ task.spawn(function()
     end
 end)
 
-local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "FruitESPFolder"
-ESPFolder.Parent = ScreenGui
+-- ==========================================
+-- LOGIC ESP LINEAR SMOOTH (CHỐNG NHẢY SỐ / STREAMINGENABLED)
+-- ==========================================
+local EspFolder = Instance.new("Folder", CoreGui)
+EspFolder.Name = "FruitESP_LinearSmooth"
 
-RunService.RenderStepped:Connect(function()
-    if not isRunning then 
-        ESPFolder:ClearAllChildren()
-        return 
-    end
+local FruitPositions = {}
 
-    ESPFolder:ClearAllChildren()
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                if handle then
-                    local character = player.Character
-                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                    local distance = hrp and math.floor((hrp.Position - handle.Position).Magnitude) or 0
+local function CreateLinearESP(fruit)
+    if not fruit:FindFirstChild("Fruit_ESP") then
+        local targetPart = fruit:IsA("BasePart") and fruit or fruit:FindFirstChildWhichIsA("BasePart")
+        if not targetPart then return end
+        
+        local fruitId = fruit:GetDebugId()
+        FruitPositions[fruitId] = targetPart.Position
 
-                    local fruitPosition = handle.Position + Vector3.new(0, 3, 0)
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(fruitPosition)
-                    local viewportSize = Camera.ViewportSize
+        local rawName = fruit.Name:gsub(" Fruit", "")
 
-                    local ESPText = Instance.new("TextLabel")
-                    ESPText.Size = UDim2.new(0, 160, 0, 24)
-                    ESPText.BackgroundTransparency = 0.4
-                    ESPText.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-                    ESPText.TextColor3 = Color3.fromRGB(0, 255, 120)
-                    ESPText.TextSize = 11
-                    ESPText.Font = Enum.Font.GothamBold
-                    ESPText.Text = rawName .. " [" .. distance .. "m]"
+        local bgu = Instance.new("BillboardGui")
+        bgu.Name = "Fruit_ESP"
+        bgu.Size = UDim2.new(0, 250, 0, 50)
+        bgu.AlwaysOnTop = true
+        bgu.ExtentsOffset = Vector3.new(0, 4, 0)
+        bgu.Parent = fruit
 
-                    local stroke = Instance.new("UIStroke", ESPText)
-                    stroke.Thickness = 1
-                    stroke.Color = Color3.fromRGB(0, 170, 255)
+        local tl = Instance.new("TextLabel")
+        tl.Size = UDim2.new(1, 0, 1, 0)
+        tl.BackgroundTransparency = 1
+        tl.TextColor3 = Color3.fromRGB(255, 165, 0)
+        tl.TextSize = 14
+        tl.Font = Enum.Font.Code
+        tl.TextStrokeTransparency = 0
+        tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        tl.Parent = bgu
 
-                    local corner = Instance.new("UICorner", ESPText)
-                    corner.CornerRadius = UDim.new(0, 4)
-
-                    if onScreen and screenPos.Z > 0 then
-                        ESPText.Position = UDim2.new(0, screenPos.X - 80, 0, screenPos.Y - 12)
-                    else
-                        local camPos = Camera.CFrame.Position
-                        local camLookVector = Camera.CFrame.LookVector
-                        local targetDir = (fruitPosition - camPos).Unit
-                        local rightVector = Camera.CFrame.RightVector
-                        
-                        local dotForward = camLookVector:Dot(targetDir)
-                        local dotRight = rightVector:Dot(targetDir)
-                        
-                        if dotForward < 0 then
-                            dotRight = -dotRight
-                        end
-
-                        local centerX = viewportSize.X / 2
-                        local posX = centerX + (dotRight * (viewportSize.X / 3))
-                        local posY = viewportSize.Y * 0.35
-
-                        posX = math.clamp(posX, 50, viewportSize.X - 50 - 160)
-                        ESPText.Position = UDim2.new(0, posX - 80, 0, posY)
-                    end
-
-                    ESPText.Parent = ESPFolder
-                end
+        local renderConnection
+        renderConnection = RunService.RenderStepped:Connect(function()
+            if not isRunning or not fruit or not fruit.Parent then
+                FruitPositions[fruitId] = nil
+                if renderConnection then renderConnection:Disconnect() end
+                if bgu then bgu:Destroy() end
+                return
             end
+
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local savedPos = FruitPositions[fruitId]
+            
+            if hrp and savedPos then
+                local distance = math.floor((hrp.Position - savedPos).Magnitude)
+                tl.Text = rawName .. " [" .. tostring(distance) .. "m]"
+            end
+        end)
+    end
+end
+
+local function ScanMap()
+    for _, item in pairs(Workspace:GetChildren()) do
+        local rawName = item.Name:gsub(" Fruit", "")
+        if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
+            CreateLinearESP(item)
         end
-    end)
+    end
+end
+
+ScanMap()
+Workspace.ChildAdded:Connect(function(child)
+    task.wait(0.1)
+    local rawName = child.Name:gsub(" Fruit", "")
+    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
+        CreateLinearESP(child)
+    end
 end)
+-- ==========================================
 
 local function ServerHop()
     isRunning = false
