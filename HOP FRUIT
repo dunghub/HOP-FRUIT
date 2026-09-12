@@ -209,6 +209,7 @@ AvatarImg.Parent = CircleAvatarBg
 local AvatarCircle = Instance.new("UICorner", AvatarImg)
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 
+-- Khung Status (Đã đưa chữ về cố định bên trái theo đúng logic cũ)
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 188, 0, 32)
 StatusBox.Position = UDim2.new(0, 48, 0, 26)
@@ -220,8 +221,10 @@ StatusBox.Parent = MainFrame
 Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 6)
 
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 1, 0)
+StatusLabel.Size = UDim2.new(1, -10, 1, 0)
+StatusLabel.Position = UDim2.new(0, 8, 0, 0) -- Cố định lề trái
 StatusLabel.BackgroundTransparency = 1
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left -- Canh trái chữ
 StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 StatusLabel.TextSize = 11
@@ -229,7 +232,7 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- ================= 4 KHUNG THÔNG TIN XÁM ĐẬM ĐẶC RẤT DỄ NHÌN =================
+-- ================= 4 KHUNG THÔNG TIN XÁM ĐẬM CÓ MÀU RIÊNG =================
 local InfoContainer = Instance.new("Frame")
 InfoContainer.Size = UDim2.new(0, 230, 0, 180)
 InfoContainer.Position = UDim2.new(0.5, -115, 0, 68)
@@ -242,17 +245,15 @@ uiGrid.CellSize = UDim2.new(0.48, 0, 0.46, 0)
 uiGrid.CellPadding = UDim2.new(0.04, 0, 0.08, 0)
 uiGrid.Parent = InfoContainer
 
-local function createInfoBox(name, defaultText)
+local function createInfoBox(name, defaultText, accentColor)
     local box = Instance.new("Frame")
-    -- Đã tăng độ đậm tối đa (màu tối rất rõ nét, không sợ bị mờ nền)
     box.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
     box.BorderSizePixel = 0
     box.ZIndex = 2
     
-    -- Thêm một lớp viền nhẹ giúp phân biệt khung rõ hơn nữa
     local boxStroke = Instance.new("UIStroke", box)
-    boxStroke.Thickness = 1
-    boxStroke.Color = Color3.fromRGB(50, 50, 70)
+    boxStroke.Thickness = 1.2
+    boxStroke.Color = accentColor or Color3.fromRGB(50, 50, 70)
     
     local corner = Instance.new("UICorner", box)
     corner.CornerRadius = UDim.new(0, 6)
@@ -261,7 +262,7 @@ local function createInfoBox(name, defaultText)
     title.Size = UDim2.new(1, 0, 0.38, 0)
     title.BackgroundTransparency = 1
     title.Text = name
-    title.TextColor3 = Color3.fromRGB(200, 200, 220)
+    title.TextColor3 = accentColor or Color3.fromRGB(200, 200, 220)
     title.TextSize = 9
     title.Font = Enum.Font.GothamBold
     title.ZIndex = 2
@@ -282,10 +283,11 @@ local function createInfoBox(name, defaultText)
     return value
 end
 
-local timeLabel = createInfoBox("TIME", "00:00")
-local serverLabel = createInfoBox("SERVER", "0/12")
-local teamLabel = createInfoBox("TEAM", factionDisplayName)
-local moveLabel = createInfoBox("MOVE", moveType:gsub("^%l", string.upper))
+-- Mỗi ô có 1 màu sắc nhận diện riêng biệt, sinh động
+local timeLabel   = createInfoBox("TIME", "00:00", Color3.fromRGB(0, 200, 255))     -- Xanh dương sáng
+local serverLabel = createInfoBox("SERVER", "0/12", Color3.fromRGB(255, 170, 0))   -- Cam sáng
+local teamLabel   = createInfoBox("TEAM", factionDisplayName, Color3.fromRGB(255, 80, 80)) -- Đỏ/Hồng sáng
+local moveLabel   = createInfoBox("MOVE", moveType:gsub("^%l", string.upper), Color3.fromRGB(0, 255, 120)) -- Xanh lá sáng
 
 local secondsCounter = 0
 task.spawn(function()
