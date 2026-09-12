@@ -23,9 +23,10 @@ end)
 
 local isRunning = false
 local storedFruitsCache = {}
+local blacklistedFruits = {} -- Danh sách các trái đã chết khi cố lấy sẽ bị bỏ qua
 
 DuboCFG = DuboCFG or {}
-local moveType = tostring(DuboCFG.Move or "teleport"):lower()
+local moveType = tostring(DuboCFG.Move or "tween"):lower()
 
 local Factions = {"Pirates", "Marines"}
 local chosenFaction = ""
@@ -320,9 +321,7 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- LOGIC ESP LINEAR SMOOTH (TỰ HỦY KHI MẤT ĐỂ KHÔNG BỊ THỪA)
--- ==========================================
+-- ESP LINEAR SMOOTH
 local EspFolder = Instance.new("Folder", CoreGui)
 EspFolder.Name = "FruitESP_LinearSmooth"
 
@@ -357,7 +356,7 @@ local function CreateLinearESP(fruit)
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
-            if not isRunning or not fruit or not fruit.Parent or (fruit:IsA("Tool") and fruit.Parent ~= Workspace and fruit.Parent ~= player.Backpack and fruit.Parent ~= player.Character) then
+            if not isRunning or not fruit or not fruit.Parent then
                 FruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
@@ -393,7 +392,6 @@ Workspace.ChildAdded:Connect(function(child)
         CreateLinearESP(child)
     end
 end)
--- ==========================================
 
 local function ServerHop()
     isRunning = false
@@ -421,20 +419,13 @@ local function ServerHop()
                         StatusLabel.Text = "Connecting..."
                         serverBrowser:InvokeServer(unpack(args))
                     end)
-                    
-                    if tpSuccess then
-                        task.wait(2)
-                        return 
-                    end
+                    if tpSuccess then task.wait(2); return end
                 else
                     local tpSuccess = pcall(function()
                         StatusLabel.Text = "Connecting..."
                         TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
                     end)
-                    
-                    if tpSuccess then
-                        return
-                    end
+                    if tpSuccess then return end
                 end
             end
         end
@@ -456,7 +447,6 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
     local currentTimeStr = timeLabel and timeLabel.Text or "00:00"
     local currentServerStr = serverLabel and serverLabel.Text or (#Players:GetPlayers() .. "/" .. Players.MaxPlayers)
     local currentTeamStr = player.Team and player.Team.Name or factionDisplayName
@@ -472,64 +462,26 @@ local function sendDiscordWebhook(fruitName, uniqueId)
         ["avatar_url"] = botAvatarUrl,
         ["embeds"] = {{
             ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
+            ["author"] = { ["name"] = "DUBO HUB Notification", ["icon_url"] = defaultImage },
+            ["thumbnail"] = { ["url"] = fruitImage },
             ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "⏱️ Time",
-                    ["value"] = "```yaml\n" .. currentTimeStr .. "\n```",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "👥 Server",
-                    ["value"] = "```yaml\n" .. currentServerStr .. "\n```",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "⚔️ Team",
-                    ["value"] = "```yaml\n" .. currentTeamStr .. "\n```",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "🚀 Move",
-                    ["value"] = "```yaml\n" .. currentMoveStr .. "\n```",
-                    ["inline"] = true
-                }
+                { ["name"] = "Main Status", ["value"] = "Username : " .. maskedName, ["inline"] = false },
+                { ["name"] = "Status", ["value"] = "```fix\nStored Fruit Successfully!\n```", ["inline"] = false },
+                { ["name"] = "Fruit", ["value"] = "```fix\n" .. cleanFruitName .. "\n```", ["inline"] = false },
+                { ["name"] = "⏱️ Time", ["value"] = "```yaml\n" .. currentTimeStr .. "\n```", ["inline"] = true },
+                { ["name"] = "👥 Server", ["value"] = "```yaml\n" .. currentServerStr .. "\n```", ["inline"] = true },
+                { ["name"] = "⚔️ Team", ["value"] = "```yaml\n" .. currentTeamStr .. "\n```", ["inline"] = true },
+                { ["name"] = "🚀 Move", ["value"] = "```yaml\n" .. currentMoveStr .. "\n```", ["inline"] = true }
             },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
+            ["footer"] = { ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"), ["icon_url"] = defaultImage }
         }}
     }
     
     local encodedData = HttpService:JSONEncode(data)
-    local headers = {["Content-Type"] = "application/json"}
-    
     pcall(function()
         local req = request or http_request or syn.request or fluxus.request
         if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
+            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData})
         else
             HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
         end
@@ -577,76 +529,90 @@ end
 
 local function autoPickAndStore()
     storeAllOwnedFruits()
-    local found = false
+    local foundValidFruit = false
+    
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
             local rawName = obj.Name:gsub(" Fruit", "")
             if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                local handle = obj:FindFirstChild("Handle")
-                local character = player.Character
-                if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    local targetCFrame = handle.CFrame
-                    
-                    if moveType == "tween" then
-                        StatusLabel.Text = "Tween: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                local uniqueId = obj:GetDebugId()
+                
+                -- Nếu trái này đã từng làm player chết (nằm trong blacklist) thì bỏ qua tìm trái khác
+                if not blacklistedFruits[uniqueId] then
+                    local handle = obj:FindFirstChild("Handle")
+                    local character = player.Character
+                    if handle and character and character:FindFirstChild("HumanoidRootPart") then
+                        local targetCFrame = handle.CFrame
+                        foundValidFruit = true
                         
-                        local hrp = character:FindFirstChild("HumanoidRootPart")
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
-                        
-                        if hrp and humanoid then
-                            humanoid.PlatformStand = true
+                        if moveType == "tween" then
+                            StatusLabel.Text = "Tween: " .. obj.Name
+                            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                             
-                            local startCFrame = hrp.CFrame
-                            local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-                            local speed = 300
-                            local duration = distance / speed
-                            local startTime = tick()
+                            local hrp = character:FindFirstChild("HumanoidRootPart")
+                            local humanoid = character:FindFirstChildOfClass("Humanoid")
                             
-                            local conn
-                            conn = RunService.Stepped:Connect(function()
-                                if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent then
-                                    if conn then conn:Disconnect() end
-                                    return
-                                end
+                            if hrp and humanoid then
+                                humanoid.PlatformStand = true
+                                local startCFrame = hrp.CFrame
+                                local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+                                local speed = 300
+                                local duration = distance / speed
+                                local startTime = tick()
                                 
-                                for _, part in ipairs(character:GetDescendants()) do
-                                    if part:IsA("BasePart") then
-                                        part.CanCollide = false
+                                local diedDuringTween = false
+                                local charDeathConn
+                                charDeathConn = humanoid.Died:Connect(function()
+                                    diedDuringTween = true
+                                    blacklistedFruits[uniqueId] = true -- Đưa vào danh sách đen để bỏ qua trái lỗi này
+                                end)
+                                
+                                local conn
+                                conn = RunService.Stepped:Connect(function()
+                                    if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent or humanoid.Health <= 0 then
+                                        if conn then conn:Disconnect() end
+                                        return
                                     end
+                                    
+                                    for _, part in ipairs(character:GetDescendants()) do
+                                        if part:IsA("BasePart") then part.CanCollide = false end
+                                    end
+                                    
+                                    local elapsed = tick() - startTime
+                                    local alpha = math.clamp(elapsed / duration, 0, 1)
+                                    hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
+                                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                    
+                                    if alpha >= 1 or diedDuringTween then
+                                        if conn then conn:Disconnect() end
+                                    end
+                                end)
+                                
+                                task.wait(duration)
+                                if conn then conn:Disconnect() end
+                                if charDeathConn then charDeathConn:Disconnect() end
+                                humanoid.PlatformStand = false
+                                
+                                -- Nếu chết giữa đường do xuống nước, lập tức dừng vòng lặp tween hiện tại để hồi sinh và tìm trái khác
+                                if diedDuringTween or humanoid.Health <= 0 then
+                                    return 
                                 end
-                                
-                                local elapsed = tick() - startTime
-                                local alpha = math.clamp(elapsed / duration, 0, 1)
-                                
-                                hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-                                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                
-                                if alpha >= 1 then
-                                    if conn then conn:Disconnect() end
-                                end
-                            end)
-                            
-                            task.wait(duration)
-                            if conn then conn:Disconnect() end
-                            humanoid.PlatformStand = false
-                            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            end
+                        else
+                            StatusLabel.Text = "Fast TP: " .. obj.Name
+                            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            character.HumanoidRootPart.CFrame = targetCFrame
+                            task.wait(0.15)
                         end
-                    else
-                        StatusLabel.Text = "Fast TP: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        character.HumanoidRootPart.CFrame = targetCFrame
-                        task.wait(0.15)
+                        
+                        storeAllOwnedFruits()
+                        break
                     end
-                    
-                    storeAllOwnedFruits()
-                    found = true
-                    break
                 end
             end
         end
     end)
-    return found
+    return foundValidFruit
 end
 
 task.spawn(function()
@@ -672,37 +638,34 @@ task.spawn(function()
         StatusLabel.Text = "Ready!"
         task.wait(0.5)
 
-        local fruitFound = false
         local loopStartTick = tick()
         
         while isRunning do
-            if tick() - loopStartTick > 30 then
+            if tick() - loopStartTick > 25 then
                 ServerHop()
                 break
             end
 
-            fruitFound = autoPickAndStore()
+            -- Theo dõi nếu nhân vật chết (ví dụ: lỡ dính nước hoặc quái đánh)
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health <= 0 then
+                StatusLabel.Text = "Player Died, Resetting..."
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+                task.wait(4) -- Đợi hồi sinh
+                break -- Thoát vòng lặp hiện tại để quét lại trái khác hoặc đổi server nếu hết trái sạch
+            end
+
+            local fruitFound = autoPickAndStore()
             if fruitFound then
-                task.wait(1)
                 loopStartTick = tick()
             else
-                StatusLabel.Text = "Searching Fruit..."
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                
-                local foundAnyFruit = false
-                for _, obj in ipairs(Workspace:GetChildren()) do
-                    local rawName = obj.Name:gsub(" Fruit", "")
-                    if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
-                        foundAnyFruit = true
-                        break
-                    end
-                end
-
-                if not foundAnyFruit then
-                    task.wait(1)
-                    ServerHop()
-                    break
-                end
+                -- Không còn trái nào khả dụng (hoặc các trái còn lại đều ở dưới nước bị blacklist) -> Đổi server ngay
+                StatusLabel.Text = "No Valid Fruits, Hopping..."
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+                task.wait(1)
+                ServerHop()
+                break
             end
             task.wait(0.5)
         end
