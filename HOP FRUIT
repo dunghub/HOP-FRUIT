@@ -172,45 +172,68 @@ task.spawn(function()
     end
 end)
 
+-- 1. AVATAR GỐC CỦA NGƯỜI CHƠI Ở BÊN TRÁI
+local UserAvatarBg = Instance.new("Frame")
+UserAvatarBg.Size = UDim2.new(0, 32, 0, 32)
+UserAvatarBg.Position = UDim2.new(0, 10, 0, 26)
+UserAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+UserAvatarBg.BorderSizePixel = 0
+UserAvatarBg.ZIndex = 2
+UserAvatarBg.Parent = MainFrame
+
+Instance.new("UICorner", UserAvatarBg).CornerRadius = UDim.new(1, 0)
+local UserAvatarStroke = Instance.new("UIStroke", UserAvatarBg)
+UserAvatarStroke.Thickness = 1.5
+UserAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
+
+local UserAvatarImg = Instance.new("ImageLabel")
+UserAvatarImg.Size = UDim2.new(0, 28, 0, 28)
+UserAvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
+UserAvatarImg.BackgroundTransparency = 1
+UserAvatarImg.ZIndex = 2
+pcall(function()
+    UserAvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size42x42)
+end)
+UserAvatarImg.Parent = UserAvatarBg
+
+local UserAvatarCircle = Instance.new("UICorner", UserAvatarImg)
+UserAvatarCircle.CornerRadius = UDim.new(1, 0)
+
+-- 2. TIÊU ĐỀ: DUBO HUB (XANH BIỂN) & KAITUN FRUIT (XÁM NHỎ) NẰM GIỮA
+local TitleContainer = Instance.new("Frame")
+TitleContainer.Size = UDim2.new(0, 100, 0, 32)
+TitleContainer.Position = UDim2.new(0, 48, 0, 5)
+TitleContainer.BackgroundTransparency = 1
+TitleContainer.ZIndex = 2
+TitleContainer.Parent = MainFrame
+
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -10, 0, 20)
-DuboHubTitle.Position = UDim2.new(0, 5, 0, 5)
+DuboHubTitle.Size = UDim2.new(1, 0, 0, 16)
+DuboHubTitle.Position = UDim2.new(0, 0, 0, 0)
 DuboHubTitle.BackgroundTransparency = 1
 DuboHubTitle.Text = "DUBO HUB"
-DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 15
+DuboHubTitle.TextColor3 = Color3.fromRGB(0, 170, 255) -- Xanh biển
+DuboHubTitle.TextSize = 13
 DuboHubTitle.Font = Enum.Font.GothamBold
+DuboHubTitle.TextXAlignment = Enum.TextXAlignment.Left
 DuboHubTitle.ZIndex = 2
-DuboHubTitle.Parent = MainFrame
+DuboHubTitle.Parent = TitleContainer
 
-local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 32, 0, 32)
-CircleAvatarBg.Position = UDim2.new(0, 10, 0, 26)
-CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-CircleAvatarBg.BorderSizePixel = 0
-CircleAvatarBg.ZIndex = 2
-CircleAvatarBg.Parent = MainFrame
+local KaitunSubTitle = Instance.new("TextLabel")
+KaitunSubTitle.Size = UDim2.new(1, 0, 0, 14)
+KaitunSubTitle.Position = UDim2.new(0, 0, 0, 16)
+KaitunSubTitle.BackgroundTransparency = 1
+KaitunSubTitle.Text = "KAITUN FRUIT"
+KaitunSubTitle.TextColor3 = Color3.fromRGB(150, 150, 160) -- Xám nhỏ
+KaitunSubTitle.TextSize = 9
+KaitunSubTitle.Font = Enum.Font.GothamBold
+KaitunSubTitle.TextXAlignment = Enum.TextXAlignment.Left
+KaitunSubTitle.ZIndex = 2
+KaitunSubTitle.Parent = TitleContainer
 
-Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0)
-local CircleAvatarStroke = Instance.new("UIStroke", CircleAvatarBg)
-CircleAvatarStroke.Thickness = 1.5
-CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
-
-local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 28, 0, 28)
-AvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
-AvatarImg.BackgroundTransparency = 1
-AvatarImg.ZIndex = 2
-pcall(function()
-    AvatarImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
-end)
-AvatarImg.Parent = CircleAvatarBg
-
-local AvatarCircle = Instance.new("UICorner", AvatarImg)
-AvatarCircle.CornerRadius = UDim.new(1, 0)
-
+-- 3. KHUNG TRẠNG THÁI (STATUS BOX) NẰM GIỮA
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 188, 0, 32)
+StatusBox.Size = UDim2.new(0, 152, 0, 32)
 StatusBox.Position = UDim2.new(0, 48, 0, 26)
 StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 StatusBox.BorderSizePixel = 0
@@ -224,12 +247,37 @@ StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-StatusLabel.TextSize = 11
+StatusLabel.TextSize = 10
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- ================= 4 KHUNG THÔNG TIN XÁM ĐẬM ĐẶC RẤT DỄ NHÌN =================
+-- 4. KHUNG LINK ẢNH WEBHOOKS Ở GÓC PHẢI
+local WebhookAvatarBg = Instance.new("Frame")
+WebhookAvatarBg.Size = UDim2.new(0, 32, 0, 32)
+WebhookAvatarBg.Position = UDim2.new(1, -42, 0, 26)
+WebhookAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+WebhookAvatarBg.BorderSizePixel = 0
+WebhookAvatarBg.ZIndex = 2
+WebhookAvatarBg.Parent = MainFrame
+
+Instance.new("UICorner", WebhookAvatarBg).CornerRadius = UDim.new(1, 0)
+local WebhookAvatarStroke = Instance.new("UIStroke", WebhookAvatarBg)
+WebhookAvatarStroke.Thickness = 1.5
+WebhookAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
+
+local WebhookAvatarImg = Instance.new("ImageLabel")
+WebhookAvatarImg.Size = UDim2.new(0, 28, 0, 28)
+WebhookAvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
+WebhookAvatarImg.BackgroundTransparency = 1
+WebhookAvatarImg.ZIndex = 2
+WebhookAvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
+WebhookAvatarImg.Parent = WebhookAvatarBg
+
+local WebhookAvatarCircle = Instance.new("UICorner", WebhookAvatarImg)
+WebhookAvatarCircle.CornerRadius = UDim.new(1, 0)
+
+-- ================= 4 KHUNG THÔNG TIN =================
 local InfoContainer = Instance.new("Frame")
 InfoContainer.Size = UDim2.new(0, 230, 0, 180)
 InfoContainer.Position = UDim2.new(0.5, -115, 0, 68)
@@ -244,12 +292,10 @@ uiGrid.Parent = InfoContainer
 
 local function createInfoBox(name, defaultText)
     local box = Instance.new("Frame")
-    -- Đã tăng độ đậm tối đa (màu tối rất rõ nét, không sợ bị mờ nền)
     box.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
     box.BorderSizePixel = 0
     box.ZIndex = 2
     
-    -- Thêm một lớp viền nhẹ giúp phân biệt khung rõ hơn nữa
     local boxStroke = Instance.new("UIStroke", box)
     boxStroke.Thickness = 1
     boxStroke.Color = Color3.fromRGB(50, 50, 70)
