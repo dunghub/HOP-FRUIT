@@ -585,7 +585,6 @@ local function autoPickAndStore()
                 local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                    -- FIX 1: Dịch thẳng vị trí chạm vào trái cây (trùng khớp tâm Handle thay vì cộng thêm khoảng cao ở đầu)
                     local targetCFrame = handle.CFrame
                     
                     if moveType == "tween" then
@@ -673,34 +672,40 @@ task.spawn(function()
         StatusLabel.Text = "Ready!"
         task.wait(0.5)
 
-        local scanStart = tick()
+        local fruitFound = false
+        local loopStartTick = tick()
+        
         while isRunning do
-            StatusLabel.Text = "Scanning..."
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            
-            local collected = false
-            pcall(function()
-                collected = autoPickAndStore()
-            end)
-            
-            if collected then
-                scanStart = tick()
-            end
-            
-            -- FIX 2: Nếu không tìm thấy hoặc kẹt không nhặt được fruit trong vòng 3 giây, tự động chuyển server tránh biến
-            if not collected and (tick() - scanStart > 3) then
-                StatusLabel.Text = "Not found / Stuck (Hopping...)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                task.wait(0.5)
+            if tick() - loopStartTick > 30 then
+                ServerHop()
                 break
             end
-            
-            if not isRunning then break end
-            task.wait(0.2)
-        end
 
-        if not isRunning then break end
-        ServerHop()
-        task.wait(3)
+            fruitFound = autoPickAndStore()
+            if fruitFound then
+                task.wait(1)
+                loopStartTick = tick()
+            else
+                StatusLabel.Text = "Searching Fruit..."
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                
+                local foundAnyFruit = false
+                for _, obj in ipairs(Workspace:GetChildren()) do
+                    local rawName = obj.Name:gsub(" Fruit", "")
+                    if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                        foundAnyFruit = true
+                        break
+                    end
+                end
+
+                if not foundAnyFruit then
+                    task.wait(1)
+                    ServerHop()
+                    break
+                end
+            end
+            task.wait(0.5)
+        end
+        task.wait(1)
     end
 end)
