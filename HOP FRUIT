@@ -111,10 +111,10 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Đã mở rộng chiều ngang ra thành 340 (thay vì 290) và tăng chiều cao lên 430 để vừa 4 ô thông tin
+-- THU GỌN KÍCH THƯỚC: Width = 260, Height = 360 (vừa vặn, cực kỳ nhỏ gọn trên mobile)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 340, 0, 430)
-MainFrame.Position = UDim2.new(0.05, 0, 0.23, 0)
+MainFrame.Size = UDim2.new(0, 260, 0, 360)
+MainFrame.Position = UDim2.new(0.03, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
@@ -124,10 +124,10 @@ MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 18)
+MainCorner.CornerRadius = UDim.new(0, 14)
 
 local RainbowStroke = Instance.new("UIStroke", MainFrame)
-RainbowStroke.Thickness = 4
+RainbowStroke.Thickness = 3
 
 task.spawn(function()
     while true do
@@ -144,21 +144,21 @@ SnowContainer.Parent = MainFrame
 
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.4)
         pcall(function()
             local snowflake = Instance.new("TextLabel")
-            snowflake.Size = UDim2.new(0, 20, 0, 20)
-            snowflake.Position = UDim2.new(0, math.random(10, 320), 0, -20)
+            snowflake.Size = UDim2.new(0, 15, 0, 15)
+            snowflake.Position = UDim2.new(0, math.random(5, 255), 0, -15)
             snowflake.BackgroundTransparency = 1
             snowflake.Text = "❄"
             snowflake.TextColor3 = Color3.fromRGB(255, 255, 255)
-            snowflake.TextTransparency = 0.4
-            snowflake.TextSize = math.random(12, 18)
+            snowflake.TextTransparency = 0.5
+            snowflake.TextSize = math.random(10, 14)
             snowflake.ZIndex = 5
             snowflake.Parent = SnowContainer
 
-            local fallDuration = math.random(50, 80) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-20, 20), 0, 450)
+            local fallDuration = math.random(50, 70) / 10
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-15, 15), 0, 380)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -174,19 +174,20 @@ task.spawn(function()
 end)
 
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -16, 0, 38)
-DuboHubTitle.Position = UDim2.new(0, 8, 0, 12)
+DuboHubTitle.Size = UDim2.new(1, -10, 0, 28)
+DuboHubTitle.Position = UDim2.new(0, 5, 0, 8)
 DuboHubTitle.BackgroundTransparency = 1
 DuboHubTitle.Text = "DUBO HUB"
 DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 28
+DuboHubTitle.TextSize = 20
 DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
+-- Thu nhỏ Avatar lại còn 64x64 để tiết kiệm không gian màn hình
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 94, 0, 94)
-CircleAvatarBg.Position = UDim2.new(0.5, -47, 0, 58)
+CircleAvatarBg.Size = UDim2.new(0, 64, 0, 64)
+CircleAvatarBg.Position = UDim2.new(0.5, -32, 0, 38)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -194,12 +195,12 @@ CircleAvatarBg.Parent = MainFrame
 
 Instance.new("UICorner", CircleAvatarBg).CornerRadius = UDim.new(1, 0)
 local CircleAvatarStroke = Instance.new("UIStroke", CircleAvatarBg)
-CircleAvatarStroke.Thickness = 3
+CircleAvatarStroke.Thickness = 2
 CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 84, 0, 84)
-AvatarImg.Position = UDim2.new(0.5, -42, 0.5, -42)
+AvatarImg.Size = UDim2.new(0, 58, 0, 58)
+AvatarImg.Position = UDim2.new(0.5, -29, 0.5, -29)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -211,47 +212,47 @@ local AvatarCircle = Instance.new("UICorner", AvatarImg)
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 26)
-TitleLabel.Position = UDim2.new(0, 0, 0, 160)
+TitleLabel.Size = UDim2.new(1, 0, 0, 20)
+TitleLabel.Position = UDim2.new(0, 0, 0, 105)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "DUBO KAITUN FRUIT"
 TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 13
+TitleLabel.TextSize = 11
 TitleLabel.Font = Enum.Font.GothamMedium
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = MainFrame
 
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 300, 0, 50)
-StatusBox.Position = UDim2.new(0.5, -150, 0, 192)
+StatusBox.Size = UDim2.new(0, 230, 0, 36)
+StatusBox.Position = UDim2.new(0.5, -115, 0, 128)
 StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
 
-Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 8)
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "... Initializing ..."
 StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-StatusLabel.TextSize = 14
+StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- ================= TẠO 4 KHUNG THÔNG TIN PHÍA DƯỚI =================
+-- ================= 4 KHUNG THÔNG TIN THU GỌN VỪA KHÍT =================
 local InfoContainer = Instance.new("Frame")
-InfoContainer.Size = UDim2.new(0, 300, 0, 145)
-InfoContainer.Position = UDim2.new(0.5, -150, 0, 252)
+InfoContainer.Size = UDim2.new(0, 230, 0, 170)
+InfoContainer.Position = UDim2.new(0.5, -115, 0, 172)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.ZIndex = 2
 InfoContainer.Parent = MainFrame
 
 local uiGrid = Instance.new("UIGridLayout")
-uiGrid.CellSize = UDim2.new(0.48, 0, 0.45, 0)
-uiGrid.CellPadding = UDim2.new(0.04, 0, 0.1, 0)
+uiGrid.CellSize = UDim2.new(0.48, 0, 0.46, 0)
+uiGrid.CellPadding = UDim2.new(0.04, 0, 0.08, 0)
 uiGrid.Parent = InfoContainer
 
 local function createInfoBox(name, defaultText)
@@ -261,25 +262,25 @@ local function createInfoBox(name, defaultText)
     box.ZIndex = 2
     
     local corner = Instance.new("UICorner", box)
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0.4, 0)
+    title.Size = UDim2.new(1, 0, 0.38, 0)
     title.BackgroundTransparency = 1
     title.Text = name
     title.TextColor3 = Color3.fromRGB(150, 150, 170)
-    title.TextSize = 11
+    title.TextSize = 10
     title.Font = Enum.Font.GothamBold
     title.ZIndex = 2
     title.Parent = box
     
     local value = Instance.new("TextLabel")
-    value.Size = UDim2.new(1, 0, 0.6, 0)
-    value.Position = UDim2.new(0, 0, 0.4, 0)
+    value.Size = UDim2.new(1, 0, 0.62, 0)
+    value.Position = UDim2.new(0, 0, 0.38, 0)
     value.BackgroundTransparency = 1
     value.Text = defaultText
     value.TextColor3 = Color3.fromRGB(255, 255, 255)
-    value.TextSize = 12
+    value.TextSize = 11
     value.Font = Enum.Font.GothamBold
     value.ZIndex = 2
     value.Parent = box
@@ -293,7 +294,6 @@ local serverLabel = createInfoBox("SERVER", "0/12")
 local teamLabel = createInfoBox("TEAM", factionDisplayName)
 local moveLabel = createInfoBox("MOVE", moveType:gsub("^%l", string.upper))
 
--- Cập nhật đồng hồ TIME đếm giây tăng dần
 local secondsCounter = 0
 task.spawn(function()
     while task.wait(1) do
@@ -304,7 +304,6 @@ task.spawn(function()
     end
 end)
 
--- Cập nhật số lượng người chơi SERVER
 task.spawn(function()
     while task.wait(2) do
         pcall(function()
@@ -315,7 +314,6 @@ task.spawn(function()
     end
 end)
 
--- Cập nhật TEAM theo thực tế người chơi
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -427,7 +425,6 @@ local function ServerHop()
     end)
 end
 
--- ĐÃ TÍCH HỢP 4 THÔNG SỐ VÀO WEBHOOK
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
