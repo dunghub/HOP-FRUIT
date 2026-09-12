@@ -111,7 +111,6 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- THU GỌN CHIỀU DỌC: Chiều rộng 250, Chiều cao 260, Đặt ở góc trên bên trái
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 250, 0, 260)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -184,7 +183,6 @@ DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Avatar gọn gàng ở góc trái
 local CircleAvatarBg = Instance.new("Frame")
 CircleAvatarBg.Size = UDim2.new(0, 32, 0, 32)
 CircleAvatarBg.Position = UDim2.new(0, 10, 0, 26)
@@ -211,7 +209,6 @@ AvatarImg.Parent = CircleAvatarBg
 local AvatarCircle = Instance.new("UICorner", AvatarImg)
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 
--- Trạng thái (Status Box) nằm ngang hàng với Avatar
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 188, 0, 32)
 StatusBox.Position = UDim2.new(0, 48, 0, 26)
@@ -232,7 +229,7 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- ================= 4 KHUNG THÔNG TIN XÁM ĐƯỢC ĐƯA LÊN PHÍA TRÊN =================
+-- ================= 4 KHUNG THÔNG TIN XÁM ĐÃ ĐƯỢC LÀM ĐẬM RÕ RỆT =================
 local InfoContainer = Instance.new("Frame")
 InfoContainer.Size = UDim2.new(0, 230, 0, 180)
 InfoContainer.Position = UDim2.new(0.5, -115, 0, 68)
@@ -247,7 +244,8 @@ uiGrid.Parent = InfoContainer
 
 local function createInfoBox(name, defaultText)
     local box = Instance.new("Frame")
-    box.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    -- Đã tăng độ đậm màu xám lên đáng kể (từ màu 20 lên màu 40 để rõ nét hơn nhiều)
+    box.BackgroundColor3 = Color3.fromRGB(45, 45, 62)
     box.BorderSizePixel = 0
     box.ZIndex = 2
     
@@ -258,7 +256,7 @@ local function createInfoBox(name, defaultText)
     title.Size = UDim2.new(1, 0, 0.38, 0)
     title.BackgroundTransparency = 1
     title.Text = name
-    title.TextColor3 = Color3.fromRGB(150, 150, 170)
+    title.TextColor3 = Color3.fromRGB(180, 180, 200)
     title.TextSize = 9
     title.Font = Enum.Font.GothamBold
     title.ZIndex = 2
