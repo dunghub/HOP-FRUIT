@@ -172,9 +172,9 @@ task.spawn(function()
     end
 end)
 
--- 1. AVATAR GỐC CỦA NGƯỜI CHƠI Ở BÊN TRÁI
+-- 1. AVATAR GỐC CỦA NGƯỜI CHƠI Ở BÊN TRÁI (ĐÃ PHÓNG TO LÊN 40x40)
 local UserAvatarBg = Instance.new("Frame")
-UserAvatarBg.Size = UDim2.new(0, 32, 0, 32)
+UserAvatarBg.Size = UDim2.new(0, 40, 0, 40)
 UserAvatarBg.Position = UDim2.new(0, 10, 0, 6)
 UserAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 UserAvatarBg.BorderSizePixel = 0
@@ -187,8 +187,8 @@ UserAvatarStroke.Thickness = 1.5
 UserAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 
 local UserAvatarImg = Instance.new("ImageLabel")
-UserAvatarImg.Size = UDim2.new(0, 28, 0, 28)
-UserAvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
+UserAvatarImg.Size = UDim2.new(0, 36, 0, 36)
+UserAvatarImg.Position = UDim2.new(0.5, -18, 0.5, -18)
 UserAvatarImg.BackgroundTransparency = 1
 UserAvatarImg.ZIndex = 2
 pcall(function()
@@ -201,7 +201,7 @@ UserAvatarCircle.CornerRadius = UDim.new(1, 0)
 
 -- 2. TIÊU ĐỀ: DUBO HUB (CÂN GIỮA)
 local TitleContainer = Instance.new("Frame")
-TitleContainer.Size = UDim2.new(0, 120, 0, 32)
+TitleContainer.Size = UDim2.new(0, 120, 0, 40)
 TitleContainer.Position = UDim2.new(0, 65, 0, 6)
 TitleContainer.BackgroundTransparency = 1
 TitleContainer.ZIndex = 2
@@ -219,10 +219,10 @@ DuboHubTitle.TextXAlignment = Enum.TextXAlignment.Center
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = TitleContainer
 
--- 3. ẢNH MINH HỌA Ở BÊN PHẢI
+-- 3. ẢNH MINH HỌA Ở BÊN PHẢI (ĐÃ ĐIỀU CHỈNH KÍCH THƯỚC ĐỒNG BỘ 40x40)
 local WebhookAvatarBg = Instance.new("Frame")
-WebhookAvatarBg.Size = UDim2.new(0, 32, 0, 32)
-WebhookAvatarBg.Position = UDim2.new(1, -42, 0, 6)
+WebhookAvatarBg.Size = UDim2.new(0, 40, 0, 40)
+WebhookAvatarBg.Position = UDim2.new(1, -50, 0, 6)
 WebhookAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 WebhookAvatarBg.BorderSizePixel = 0
 WebhookAvatarBg.ZIndex = 2
@@ -234,8 +234,8 @@ WebhookAvatarStroke.Thickness = 1.5
 WebhookAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 
 local WebhookAvatarImg = Instance.new("ImageLabel")
-WebhookAvatarImg.Size = UDim2.new(0, 28, 0, 28)
-WebhookAvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
+WebhookAvatarImg.Size = UDim2.new(0, 36, 0, 36)
+WebhookAvatarImg.Position = UDim2.new(0.5, -18, 0.5, -18)
 WebhookAvatarImg.BackgroundTransparency = 1
 WebhookAvatarImg.ZIndex = 2
 WebhookAvatarImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png?ex=6a97c084&is=6a966f04&hm=859498894699993427601e70647d9489c873b557f711536d9fa1f3bf862c489d&"
@@ -247,7 +247,7 @@ WebhookAvatarCircle.CornerRadius = UDim.new(1, 0)
 -- 4. KHUNG TRẠNG THÁI (STATUS BOX)
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 230, 0, 26)
-StatusBox.Position = UDim2.new(0, 10, 0, 42)
+StatusBox.Position = UDim2.new(0, 10, 0, 52)
 StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
@@ -267,8 +267,8 @@ StatusLabel.Parent = StatusBox
 
 -- ================= 4 KHUNG THÔNG TIN =================
 local InfoContainer = Instance.new("Frame")
-InfoContainer.Size = UDim2.new(0, 230, 0, 180)
-InfoContainer.Position = UDim2.new(0.5, -115, 0, 74)
+InfoContainer.Size = UDim2.new(0, 230, 0, 170)
+InfoContainer.Position = UDim2.new(0.5, -115, 0, 84)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.ZIndex = 2
 InfoContainer.Parent = MainFrame
