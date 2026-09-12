@@ -111,7 +111,7 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- THU GỌN CHIỀU DỌC: Width = 250, Height = 260 và neo sát góc trên bên trái
+-- THU GỌN CHIỀU DỌC: Chiều rộng 250, Chiều cao 260, Đặt ở góc trên bên trái
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 250, 0, 260)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -174,20 +174,20 @@ task.spawn(function()
 end)
 
 local DuboHubTitle = Instance.new("TextLabel")
-DuboHubTitle.Size = UDim2.new(1, -10, 0, 22)
-DuboHubTitle.Position = UDim2.new(0, 5, 0, 6)
+DuboHubTitle.Size = UDim2.new(1, -10, 0, 20)
+DuboHubTitle.Position = UDim2.new(0, 5, 0, 5)
 DuboHubTitle.BackgroundTransparency = 1
 DuboHubTitle.Text = "DUBO HUB"
 DuboHubTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-DuboHubTitle.TextSize = 16
+DuboHubTitle.TextSize = 15
 DuboHubTitle.Font = Enum.Font.GothamBold
 DuboHubTitle.ZIndex = 2
 DuboHubTitle.Parent = MainFrame
 
--- Thu gọn Avatar và Status để tiết kiệm tối đa chiều dọc
+-- Avatar gọn gàng ở góc trái
 local CircleAvatarBg = Instance.new("Frame")
-CircleAvatarBg.Size = UDim2.new(0, 36, 0, 36)
-CircleAvatarBg.Position = UDim2.new(0, 10, 0, 30)
+CircleAvatarBg.Size = UDim2.new(0, 32, 0, 32)
+CircleAvatarBg.Position = UDim2.new(0, 10, 0, 26)
 CircleAvatarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 CircleAvatarBg.BorderSizePixel = 0
 CircleAvatarBg.ZIndex = 2
@@ -199,8 +199,8 @@ CircleAvatarStroke.Thickness = 1.5
 CircleAvatarStroke.Color = Color3.fromRGB(80, 80, 110)
 
 local AvatarImg = Instance.new("ImageLabel")
-AvatarImg.Size = UDim2.new(0, 32, 0, 32)
-AvatarImg.Position = UDim2.new(0.5, -16, 0.5, -16)
+AvatarImg.Size = UDim2.new(0, 28, 0, 28)
+AvatarImg.Position = UDim2.new(0.5, -14, 0.5, -14)
 AvatarImg.BackgroundTransparency = 1
 AvatarImg.ZIndex = 2
 pcall(function()
@@ -211,10 +211,11 @@ AvatarImg.Parent = CircleAvatarBg
 local AvatarCircle = Instance.new("UICorner", AvatarImg)
 AvatarCircle.CornerRadius = UDim.new(1, 0)
 
+-- Trạng thái (Status Box) nằm ngang hàng với Avatar
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 184, 0, 36)
-StatusBox.Position = UDim2.new(0, 54, 0, 30)
-StatusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+StatusBox.Size = UDim2.new(0, 188, 0, 32)
+StatusBox.Position = UDim2.new(0, 48, 0, 26)
+StatusBox.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 StatusBox.BorderSizePixel = 0
 StatusBox.ZIndex = 2
 StatusBox.Parent = MainFrame
@@ -231,10 +232,10 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
 StatusLabel.Parent = StatusBox
 
--- ================= 4 KHÔNG THÔNG TIN (GỌN GÀNG GÓC TRÊN) =================
+-- ================= 4 KHUNG THÔNG TIN XÁM ĐƯỢC ĐƯA LÊN PHÍA TRÊN =================
 local InfoContainer = Instance.new("Frame")
-InfoContainer.Size = UDim2.new(0, 230, 0, 168)
-InfoContainer.Position = UDim2.new(0.5, -115, 0, 75)
+InfoContainer.Size = UDim2.new(0, 230, 0, 180)
+InfoContainer.Position = UDim2.new(0.5, -115, 0, 68)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.ZIndex = 2
 InfoContainer.Parent = MainFrame
