@@ -17,6 +17,11 @@ pcall(function()
     remoteComm = ReplicatedStorage.Remotes.CommF_
 end)
 
+local serverBrowser = nil
+pcall(function()
+    serverBrowser = ReplicatedStorage:WaitForChild("__ServerBrowser", 2)
+end)
+
 local isRunning = false
 local storedFruitsCache = {}
 
@@ -341,15 +346,14 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- HÀM HOP SERVER GỌN GÀNG ĐÃ SỬA CHUẨN ĐƯỜNG DẪN API CHO ĐÚNG SEA HIỆN TẠI
+-- HÀM HOP SERVER KẾT HỢP API VÀ GỌI QUA REMOTE __ServerBrowser TRÁNH LỖI 773
 local function ServerHop()
     isRunning = false
-    StatusLabel.Text = "Hopping Current Sea..."
+    StatusLabel.Text = "Hopping Server..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
     local currentPlaceId = game.PlaceId
     local currentJobId = game.JobId
-    
     local url = "https://games.roblox.com/v1/games/" .. currentPlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
     
     local success, result = pcall(function()
@@ -359,21 +363,43 @@ local function ServerHop()
     if success and result and result.data then
         for _, server in ipairs(result.data) do
             if server.playing < server.maxPlayers and server.id ~= currentJobId then
-                local tpSuccess, tpError = pcall(function()
-                    StatusLabel.Text = "Connecting..."
-                    TeleportService:TeleportToPlaceInstance(currentPlaceId, server.id, player)
-                end)
+                local args = {
+                    [1] = "teleport",
+                    [2] = tostring(server.id)
+                }
                 
-                if tpSuccess then
-                    return 
+                if serverBrowser then
+                    local tpSuccess = pcall(function()
+                        StatusLabel.Text = "Connecting..."
+                        serverBrowser:InvokeServer(unpack(args))
+                    end)
+                    
+                    if tpSuccess then
+                        task.wait(2)
+                        return 
+                    end
+                else
+                    -- Fallback nếu không bắt được __ServerBrowser thì dùng TeleportService
+                    local tpSuccess = pcall(function()
+                        StatusLabel.Text = "Connecting..."
+                        TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
+                    end)
+                    
+                    if tpSuccess then
+                        return
+                    end
                 end
             end
         end
     end
     
-    -- Dự phòng nếu quét lỗi hoặc không tìm thấy server phù hợp
+    -- Fallback cuối cùng nếu quét API lỗi
     pcall(function()
-        TeleportService:Teleport(currentPlaceId, player)
+        if serverBrowser then
+            serverBrowser:InvokeServer("teleport")
+        else
+            TeleportService:Teleport(currentPlaceId, player)
+        end
     end)
 end
 
