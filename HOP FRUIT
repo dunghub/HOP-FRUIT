@@ -668,15 +668,12 @@ task.spawn(function()
             if fruitFound then
                 loopStartTick = tick()
             else
-                if totalValidFruits == 0 then
-                    StatusLabel.Text = "Not Found"
-                    StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                    task.wait(0.5) -- Đã sửa thời gian chờ thành 0.5 giây
-                    
-                    StatusLabel.Text = "Connecting..."
-                    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-                    task.wait(0.8)
-                end
+                -- Hiển thị Not Found màu đỏ đúng 0.5 giây sau Scanning...
+                StatusLabel.Text = "Not Found"
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                task.wait(0.5)
+                
+                -- Sau đó mới chuyển sang Connecting... rồi đổi server
                 ServerHop()
                 break
             end
