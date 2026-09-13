@@ -23,7 +23,7 @@ end)
 
 local isRunning = false
 local storedFruitsCache = {}
-local blacklistedFruits = {} -- Danh sách các trái đã chết khi cố lấy sẽ bị bỏ qua
+local blacklistedFruits = {}
 
 DuboCFG = DuboCFG or {}
 local moveType = tostring(DuboCFG.Move or "tween"):lower()
@@ -227,8 +227,8 @@ StatusLabel.Size = UDim2.new(1, -10, 1, 0)
 StatusLabel.Position = UDim2.new(0, 8, 0, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.Text = "... Initializing ..."
-StatusLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+StatusLabel.Text = "Scanning..."
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
 StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
@@ -321,11 +321,11 @@ task.spawn(function()
     end
 end)
 
--- ESP NO WATER (GIỮ NGUYÊN HOÀN TOÀN LOGIC CHUẨN ĐÃ YÊU CẦU)
 local EspFolder = Instance.new("Folder", CoreGui)
 EspFolder.Name = "FruitESP_NoWater"
 
 local ValidFruitPositions = {}
+local totalValidFruits = 0
 
 local function CreateNoWaterESP(fruit)
     if not fruit:FindFirstChild("Fruit_ESP") then
@@ -336,6 +336,7 @@ local function CreateNoWaterESP(fruit)
             return 
         end
         
+        totalValidFruits = totalValidFruits + 1
         local fruitId = fruit:GetDebugId()
         ValidFruitPositions[fruitId] = targetPart.Position
 
@@ -364,6 +365,7 @@ local function CreateNoWaterESP(fruit)
                 ValidFruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
+                totalValidFruits = math.max(0, totalValidFruits - 1)
                 return
             end
 
@@ -399,8 +401,8 @@ end)
 
 local function ServerHop()
     isRunning = false
-    StatusLabel.Text = "Hopping Server..."
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+    StatusLabel.Text = "Not Found"
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
     
     local currentPlaceId = game.PlaceId
     local currentJobId = game.JobId
@@ -420,13 +422,11 @@ local function ServerHop()
                 
                 if serverBrowser then
                     local tpSuccess = pcall(function()
-                        StatusLabel.Text = "Connecting..."
                         serverBrowser:InvokeServer(unpack(args))
                     end)
                     if tpSuccess then task.wait(2); return end
                 else
                     local tpSuccess = pcall(function()
-                        StatusLabel.Text = "Connecting..."
                         TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
                     end)
                     if tpSuccess then return end
@@ -443,6 +443,19 @@ local function ServerHop()
         end
     end)
 end
+
+-- Bộ kiểm tra 3 giây đầu tiên cho trạng thái Scanning… nếu ko có trái nào mới chuyển qua Not Found -> Hopping
+task.spawn(function()
+    StatusLabel.Text = "Scanning..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+    task.wait(3)
+    if totalValidFruits == 0 then
+        StatusLabel.Text = "Not Found"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        task.wait(1.5)
+        ServerHop()
+    end
+end)
 
 local function sendDiscordWebhook(fruitName, uniqueId)
     if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
@@ -545,7 +558,6 @@ local function autoPickAndStore()
                     local handle = obj:FindFirstChild("Handle")
                     local character = player.Character
                     if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                        -- Kiểm tra chiều cao Y chống nước cho phần auto pick/tween
                         if handle.Position.Y < 0 then
                             blacklistedFruits[uniqueId] = true
                             continue
@@ -627,8 +639,6 @@ task.spawn(function()
     isRunning = true
     while true do
         isRunning = true
-        StatusLabel.Text = "Team: " .. factionDisplayName
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         
         local attempts = 0
         repeat
@@ -642,9 +652,6 @@ task.spawn(function()
         until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
 
         if not isRunning then break end
-
-        StatusLabel.Text = "Ready!"
-        task.wait(0.5)
 
         local loopStartTick = tick()
         
@@ -667,9 +674,11 @@ task.spawn(function()
             if fruitFound then
                 loopStartTick = tick()
             else
-                StatusLabel.Text = "No Valid Fruits, Hopping..."
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-                task.wait(1)
+                if totalValidFruits == 0 then
+                    StatusLabel.Text = "Not Found"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    task.wait(1.5)
+                end
                 ServerHop()
                 break
             end
