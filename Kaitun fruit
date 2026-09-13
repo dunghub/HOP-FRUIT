@@ -1,5 +1,5 @@
 --[========================================================================--
-    DUBO HUB - SECURE VERSION (PROTECTED SESSION & OBFUSCATED STORAGE)
+    DUBO HUB - SECURE VERSION (FIXED & OPTIMIZED)
 --]========================================================================--
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -49,73 +49,34 @@ local AllBloxFruits = {
 }
 
 --[========================================================================--
-    HỆ THỐNG MÃ HÓA NÂNG CAO (CHỐNG DECODE ONLINE & GÀ MỜ)
+    HỆ THỐNG MÃ HÓA AN TOÀN & ỔN ĐỊNH (CHỐNG DECODE WEB)
 --]========================================================================--
 
-local ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-local XOR_KEY = 0x73 -- Khóa XOR độc quyền
+local XOR_KEY = 0x65
 
-local function encryptData(data)
-    local xored = ""
-    for i = 1, #data do
-        local b = string.byte(data, i)
-        local mixed = bit32.bxor(b, (XOR_KEY + i) % 255)
-        xored = xored .. string.char(mixed)
+local function encryptData(str)
+    local hex = ""
+    for i = 1, #str do
+        local b = string.byte(str, i)
+        local mixed = bit32.bxor(b, XOR_KEY)
+        hex = hex .. string.format("%02X", mixed)
     end
-    
-    local result = ""
-    local len = #xored
-    for i = 1, len, 3 do
-        local a, b, c = xored:byte(i, i + 2)
-        local n = (a * 65536) + ((b or 0) * 256) + (c or 0)
-        
-        local index1 = math.floor(n / 262144) + 1
-        local index2 = math.floor((n / 4096) % 64) + 1
-        local index3 = math.floor((n / 64) % 64) + 1
-        local index4 = (n % 64) + 1
-        
-        result = result .. ALPHA:sub(index1, index1) .. ALPHA:sub(index2, index2)
-        result = result .. (b and ALPHA:sub(index3, index3) or "=")
-        result = result .. (c and ALPHA:sub(index4, index4) or "=")
-    end
-    
-    return string.reverse(result)
+    return string.reverse(hex)
 end
 
-local function decryptData(input)
+local function decryptData(str)
     local success, res = pcall(function()
-        local str = string.reverse(input)
-        local decoded = ""
-        str = string.gsub(str, "[^" .. ALPHA .. "=]", "")
-        
-        for i = 1, #str, 4 do
-            local a = ALPHA:find(str:sub(i, i)) - 1
-            local b = ALPHA:find(str:sub(i+1, i+1)) - 1
-            local c_char = str:sub(i+2, i+2)
-            local d_char = str:sub(i+3, i+3)
-            
-            local c = c_char ~= "=" and (ALPHA:find(c_char) - 1) or 0
-            local d = d_char ~= "=" and (ALPHA:find(d_char) - 1) or 0
-            
-            local n = (a * 262144) + (b * 4096) + (c * 64) + d
-            
-            local byte1 = math.floor(n / 65536)
-            local byte2 = math.floor((n / 256) % 256)
-            local byte3 = n % 256
-            
-            decoded = decoded .. string.char(byte1)
-            if c_char ~= "=" then decoded = decoded .. string.char(byte2) end
-            if d_char ~= "=" then decoded = decoded .. string.char(byte3) end
+        local reversed = string.reverse(str)
+        local result = ""
+        for i = 1, #reversed, 2 do
+            local hex = string.sub(reversed, i, i + 1)
+            local b = tonumber(hex, 16)
+            if b then
+                local originalByte = bit32.bxor(b, XOR_KEY)
+                result = result .. string.char(originalByte)
+            end
         end
-        
-        local original = ""
-        for i = 1, #decoded do
-            local b = string.byte(decoded, i)
-            local originalByte = bit32.bxor(b, (XOR_KEY + i) % 255)
-            original = original .. string.char(originalByte)
-        end
-        
-        return original
+        return result
     end)
     return success and res or ""
 end
