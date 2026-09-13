@@ -102,25 +102,24 @@ local storedFruitsCache = {}
 
 local blacklistedFruits = {}
 
-DuboCFG = DuboCFG or {}
-
-local moveType = tostring(DuboCFG.Move or "tween"):lower()
-
+-- External loader contract: preserve the global DuboCFG created by the compact loader.
+-- CFG is intentionally not read/applied until keyVerified is true.
 local Factions = {"Pirates", "Marines"}
+local moveType = "tween"
+local chosenFaction = Factions[math.random(1, #Factions)]
+local factionDisplayName = chosenFaction
 
-local chosenFaction = ""
-
-if DuboCFG.Team == "Pirates" or DuboCFG.Team == "Marines" then
-
-    chosenFaction = DuboCFG.Team
-
-else
-
-    chosenFaction = Factions[math.random(1, #Factions)]
-
+local function applyExternalCFG()
+    if not keyVerified or type(DuboCFG) ~= "table" then return end
+    moveType = tostring(DuboCFG.Move or "tween"):lower()
+    if moveType ~= "tween" and moveType ~= "teleport" then moveType = "tween" end
+    if DuboCFG.Team == "Pirates" or DuboCFG.Team == "Marines" then
+        chosenFaction = DuboCFG.Team
+    else
+        chosenFaction = Factions[math.random(1, #Factions)]
+    end
+    factionDisplayName = chosenFaction
 end
-
-local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
 
 local AllBloxFruits = {
 
@@ -718,6 +717,9 @@ if not keyVerified then
             pcall(function() if delfile and isfile and isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end end)
             saveSession(enteredKey)
             keyVerified = true
+            applyExternalCFG()
+            teamLabel.Text = factionDisplayName
+            moveLabel.Text = moveType:gsub("^%l", string.upper)
             KeyExpiryLabel.Text = "Expires: " .. formatRemaining(keyExpireAt - os.time())
             KeyExpiryLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
             status.Text = "Key verified successfully!"
@@ -737,6 +739,7 @@ task.spawn(function()
             local remaining = keyExpireAt - os.time()
             if remaining <= 0 then
                 keyVerified = false
+                isRunning = false
                 KeyExpiryLabel.Text = "GET KEY REQUIRED"
                 KeyExpiryLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
                 break
@@ -919,21 +922,22 @@ local function ScanMap()
 
 end
 
-ScanMap()
-
 Workspace.ChildAdded:Connect(function(child)
-
-    task.wait(0.1)
-
-    local rawName = child.Name:gsub(" Fruit", "")
-
-    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
-
-        CreateNoWaterESP(child)
-
-    end
-
+    if not keyVerified then return end
+    task.wait(0.1)
+    local rawName = child.Name:gsub(" Fruit", "")
+    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
+        CreateNoWaterESP(child)
+    end
 end)
+
+-- Apply external loader CFG only after key verification.
+if keyVerified then
+    applyExternalCFG()
+    teamLabel.Text = factionDisplayName
+    moveLabel.Text = moveType:gsub("^%l", string.upper)
+    ScanMap()
+end
 
 local function ServerHop()
 
@@ -1015,7 +1019,8 @@ end
 
 local function sendDiscordWebhook(fruitName, uniqueId)
 
-    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
+        if not keyVerified then return end
+    if type(DuboCFG) ~= "table" or not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
 
     if storedFruitsCache[uniqueId] then return end
 
@@ -1331,7 +1336,7 @@ task.spawn(function()
 
     isRunning = true
 
-    while true do
+    while keyVerified do
 
         isRunning = true
 
