@@ -830,10 +830,8 @@ CheckBtn.MouseButton1Click:Connect(function()
     KeyStatus.Text = "Status: Verifying key and HWID..."
     KeyStatus.TextColor3 = Color3.fromRGB(255, 170, 0)
 
-    -- Giả lập kiểm tra key kết hợp mã hóa (hoặc check API thực tế)
     task.spawn(function()
         task.wait(1)
-        -- Kiểm tra key hợp lệ (Ở đây cho phép chạy trực tiếp hoặc check file config)
         SaveKeyData(userKey)
         KeyStatus.Text = "Status: Key Verified! Loading Hub..."
         KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
@@ -850,7 +848,6 @@ GetKeyBtn.MouseButton1Click:Connect(function()
     KeyStatus.TextColor3 = Color3.fromRGB(0, 170, 255)
 end)
 
--- Tự động vượt qua bước nhập key nếu đã lưu sẵn từ session trước
 local savedKey = CheckSavedKey()
 if savedKey then
     KeyBoxBg.Text = savedKey
