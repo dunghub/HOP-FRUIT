@@ -1,24 +1,6 @@
-repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-while not player do
-    task.wait(0.1)
-    player = Players.LocalPlayer
-end
-
--- Đợi Character load hoàn tất trước khi làm gì tiếp
-repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-
-DuboCFG = DuboCFG or {
-    WebhookURL = "https://discord.com/api/webhooks/1543257753747988560/BWOVuk9eVhqLBdE9B9oM45eG7xrUIR7XlZg0WJloJVVXg7nD_0RxaiR78CA12hkNupsF",
-    Team = "Marines",
-    Move = "Tween"
-}
-
-pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/dunghub/HOP-FRUIT/refs/heads/main/HOP%20FRUIT"))()
-end)
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
@@ -26,6 +8,8 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
 
 local remoteComm = nil
 pcall(function()
@@ -41,6 +25,7 @@ local isRunning = false
 local storedFruitsCache = {}
 local blacklistedFruits = {}
 
+DuboCFG = DuboCFG or {}
 local moveType = tostring(DuboCFG.Move or "tween"):lower()
 
 local Factions = {"Pirates", "Marines"}
@@ -71,6 +56,7 @@ local AllBloxFruits = {
     ["Magnet"] = "Magnet-Magnet"
 }
 
+-- Bảng xếp hạng độ ưu tiên: Mythic (3) và Legendary (2), còn lại Default (1)
 local FruitRarity = {
     ["Kitsune"] = 3, ["Dragon"] = 3, ["Tiger"] = 3, ["Dough"] = 3, ["T-Rex"] = 3,
     ["Spirit"] = 3, ["Control"] = 3, ["Venom"] = 3, ["Shadow"] = 3, ["Mammoth"] = 3,
@@ -396,7 +382,7 @@ local function CreateNoWaterESP(fruit)
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
-            if not isRunning || not fruit || not fruit.Parent then
+            if not isRunning or not fruit or not fruit.Parent then
                 ValidFruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
@@ -405,10 +391,10 @@ local function CreateNoWaterESP(fruit)
             end
 
             local char = player.Character
-            local hrp = char && char:FindFirstChild("HumanoidRootPart")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
             local savedPos = ValidFruitPositions[fruitId]
             
-            if hrp && savedPos then
+            if hrp and savedPos then
                 local distance = math.floor((hrp.Position - savedPos).Magnitude)
                 tl.Text = rawName .. " [" .. tostring(distance) .. "m]"
             end
@@ -419,7 +405,7 @@ end
 local function ScanMap()
     for _, item in pairs(Workspace:GetChildren()) do
         local rawName = item.Name:gsub(" Fruit", "")
-        if (AllBloxFruits[rawName] || string.find(item.Name, "Fruit")) && (item:IsA("Tool") || item:IsA("Model") || item:IsA("BasePart")) then
+        if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
             CreateNoWaterESP(item)
         end
     end
@@ -429,7 +415,7 @@ ScanMap()
 Workspace.ChildAdded:Connect(function(child)
     task.wait(0.1)
     local rawName = child.Name:gsub(" Fruit", "")
-    if AllBloxFruits[rawName] || string.find(child.Name, "Fruit") then
+    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
         CreateNoWaterESP(child)
     end
 end)
@@ -447,9 +433,9 @@ local function ServerHop()
         return HttpService:JSONDecode(game:HttpGet(url))
     end)
     
-    if success && result && result.data then
+    if success and result and result.data then
         for _, server in ipairs(result.data) do
-            if server.playing < server.maxPlayers && server.id ~= currentJobId then
+            if server.playing < server.maxPlayers and server.id ~= currentJobId then
                 local args = {
                     [1] = "teleport",
                     [2] = tostring(server.id)
@@ -480,20 +466,20 @@ local function ServerHop()
 end
 
 local function sendDiscordWebhook(fruitName, uniqueId)
-    if not DuboCFG.WebhookURL || DuboCFG.WebhookURL == "" then return end
+    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
     if storedFruitsCache[uniqueId] then return end
     storedFruitsCache[uniqueId] = true
     
     local maskedName = "||" .. player.Name .. "||"
     local cleanFruitName = fruitName:gsub(" Fruit", "")
-    local currentTimeStr = timeLabel && timeLabel.Text || "00:00"
-    local currentServerStr = serverLabel && serverLabel.Text || (#Players:GetPlayers() .. "/" .. Players.MaxPlayers)
-    local currentTeamStr = player.Team && player.Team.Name || factionDisplayName
+    local currentTimeStr = timeLabel and timeLabel.Text or "00:00"
+    local currentServerStr = serverLabel and serverLabel.Text or (#Players:GetPlayers() .. "/" .. Players.MaxPlayers)
+    local currentTeamStr = player.Team and player.Team.Name or factionDisplayName
     local currentMoveStr = moveType:gsub("^%l", string.upper)
     
     local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
     local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] && FruitImages[cleanFruitName] ~= "" && FruitImages[cleanFruitName] || defaultImage
+    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
     
     local data = {
         ["content"] = "@everyone",
@@ -518,7 +504,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     
     local encodedData = HttpService:JSONEncode(data)
     pcall(function()
-        local req = request || http_request || syn.request || fluxus.request
+        local req = request or http_request or syn.request or fluxus.request
         if req then
             req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData})
         else
@@ -529,20 +515,20 @@ end
 
 local function storeFruit(item)
     pcall(function()
-        if item && item:IsA("Tool") then
+        if item and item:IsA("Tool") then
             local character = player.Character
-            local humanoid = character && character:FindFirstChildOfClass("Humanoid")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             local rawName = item.Name:gsub(" Fruit", "")
             
-            if AllBloxFruits[rawName] || string.find(item.Name, "Fruit") then
+            if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
                 local uniqueId = item:GetDebugId()
                 if not storedFruitsCache[uniqueId] then
-                    if item.Parent == player.Backpack && humanoid then
+                    if item.Parent == player.Backpack and humanoid then
                         humanoid:EquipTool(item)
                         task.wait(0.2)
                     end
                     if remoteComm then
-                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] || (rawName .. "-" .. rawName), item)
+                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
                         sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
@@ -571,14 +557,15 @@ local function autoPickAndStore()
     local foundValidFruit = false
     
     pcall(function()
+        -- Quét và thu thập danh sách các trái cây hợp lệ kèm độ ưu tiên
         local availableFruits = {}
         for _, obj in ipairs(Workspace:GetChildren()) do
             local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") && (AllBloxFruits[rawName] || string.find(obj.Name, "Fruit")) then
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local uniqueId = obj:GetDebugId()
                 if not blacklistedFruits[uniqueId] then
                     local handle = obj:FindFirstChild("Handle")
-                    if handle && handle.Position.Y >= 0 then
+                    if handle and handle.Position.Y >= 0 then
                         local priority = getFruitPriority(rawName)
                         table.insert(availableFruits, {obj = obj, priority = priority, handle = handle})
                     else
@@ -588,6 +575,7 @@ local function autoPickAndStore()
             end
         end
 
+        -- Sắp xếp ưu tiên: độ ưu tiên cao hơn (Mythic/Legendary) đứng trước
         table.sort(availableFruits, function(a, b)
             return a.priority > b.priority
         end)
@@ -597,15 +585,9 @@ local function autoPickAndStore()
             local obj = bestChoice.obj
             local uniqueId = obj:GetDebugId()
             local handle = bestChoice.handle
-            
             local character = player.Character
-            while not character || not character:FindFirstChild("HumanoidRootPart") || not character:FindFirstChildOfClass("Humanoid") || character.Humanoid.Health <= 0 do
-                task.wait(0.1)
-                if not isRunning then return end
-                character = player.Character
-            end
 
-            if handle && character && character:FindFirstChild("HumanoidRootPart") then
+            if handle and character and character:FindFirstChild("HumanoidRootPart") then
                 local targetCFrame = handle.CFrame
                 foundValidFruit = true
                 
@@ -616,7 +598,7 @@ local function autoPickAndStore()
                     local hrp = character:FindFirstChild("HumanoidRootPart")
                     local humanoid = character:FindFirstChildOfClass("Humanoid")
                     
-                    if hrp && humanoid then
+                    if hrp and humanoid then
                         humanoid.PlatformStand = true
                         local startCFrame = hrp.CFrame
                         local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
@@ -633,7 +615,7 @@ local function autoPickAndStore()
                         
                         local conn
                         conn = RunService.Stepped:Connect(function()
-                            if not isRunning || not character:FindFirstChild("HumanoidRootPart") || not obj.Parent || humanoid.Health <= 0 then
+                            if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent or humanoid.Health <= 0 then
                                 if conn then conn:Disconnect() end
                                 return
                             end
@@ -647,7 +629,7 @@ local function autoPickAndStore()
                             hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
                             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                             
-                            if alpha >= 1 || diedDuringTween then
+                            if alpha >= 1 or diedDuringTween then
                                 if conn then conn:Disconnect() end
                             end
                         end)
@@ -655,11 +637,9 @@ local function autoPickAndStore()
                         task.wait(duration)
                         if conn then conn:Disconnect() end
                         if charDeathConn then charDeathConn:Disconnect() end
-                        pcall(function()
-                            humanoid.PlatformStand = false
-                        end)
+                        humanoid.PlatformStand = false
                         
-                        if diedDuringTween || humanoid.Health <= 0 then
+                        if diedDuringTween or humanoid.Health <= 0 then
                             return 
                         end
                     end
@@ -694,7 +674,7 @@ task.spawn(function()
             end)
             task.wait(1)
             attempts = attempts + 1
-        until (player.Character && player.Character:FindFirstChild("HumanoidRootPart") && player.Character.HumanoidRootPart.Position.Magnitude > 50) || attempts > 12 || not isRunning
+        until (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position.Magnitude > 50) or attempts > 12 or not isRunning
 
         if not isRunning then break end
 
@@ -711,20 +691,13 @@ task.spawn(function()
             end
 
             local char = player.Character
-            local hum = char && char:FindFirstChildOfClass("Humanoid")
-            if hum && hum.Health <= 0 then
-                StatusLabel.Text = "Player Died, Waiting Respawn..."
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health <= 0 then
+                StatusLabel.Text = "Player Died, Resetting..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-                
-                repeat
-                    task.wait(0.5)
-                    char = player.Character
-                    hum = char && char:FindFirstChildOfClass("Humanoid")
-                until (char && hum && hum.Health > 0 && char:FindFirstChild("HumanoidRootPart")) || not isRunning
-                
-                if not isRunning then break end
-                loopStartTick = tick()
-                task.wait(1)
+                task.wait(4)
+                ServerHop()
+                break
             end
 
             local fruitFound = autoPickAndStore()
