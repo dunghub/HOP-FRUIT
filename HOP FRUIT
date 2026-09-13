@@ -227,8 +227,8 @@ StatusLabel.Size = UDim2.new(1, -10, 1, 0)
 StatusLabel.Position = UDim2.new(0, 8, 0, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.Text = "Scanning..."
-StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+StatusLabel.Text = "Ready"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.ZIndex = 2
@@ -401,8 +401,8 @@ end)
 
 local function ServerHop()
     isRunning = false
-    StatusLabel.Text = "Not Found"
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    StatusLabel.Text = "Connecting..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
     
     local currentPlaceId = game.PlaceId
     local currentJobId = game.JobId
@@ -444,11 +444,20 @@ local function ServerHop()
     end)
 end
 
--- Bộ kiểm tra 3 giây đầu tiên cho trạng thái Scanning… nếu ko có trái nào mới chuyển qua Not Found -> Hopping
+-- Bộ kiểm tra 3 giây đầu tiên theo yêu cầu
 task.spawn(function()
+    -- Trạng thái lúc load game
+    StatusLabel.Text = "Ready"
+    StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    
+    -- Đợi game load xong hẳn
+    repeat task.wait(0.5) until game:IsLoaded() and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    
+    -- Đã vào game, bắt đầu quét
     StatusLabel.Text = "Scanning..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
     task.wait(3)
+    
     if totalValidFruits == 0 then
         StatusLabel.Text = "Not Found"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
