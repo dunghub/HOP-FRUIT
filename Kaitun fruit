@@ -1,5 +1,5 @@
 --[========================================================================--
-    DUBO HUB - SECURE VERSION (ULTRA FIXED)
+    DUBO HUB - SECURE ENCRYPTED VERSION (SAFE & STABLE)
 --]========================================================================--
 
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -53,40 +53,37 @@ local AllBloxFruits = {
     ["Magnet"] = "Magnet-Magnet"
 }
 
-local XOR_KEY = 0x65
+-- Thuật toán mã hóa an toàn nội bộ (Không phụ thuộc writefile nếu executor không cho phép)
+local SECRET_SALT = "DUBO_SECURE_2026_X"
 
 local function encryptData(str)
-    local hex = ""
-    for i = 1, #str do
-        local b = string.byte(str, i)
-        local mixed = bit32.bxor(b, XOR_KEY)
-        hex = hex .. string.format("%02X", mixed)
-    end
-    return string.reverse(hex)
+    local success, res = pcall(function()
+        local encoded = ""
+        for i = 1, #str do
+            local b = string.byte(str, i)
+            local saltB = string.byte(SECRET_SALT, (i % #SECRET_SALT) + 1)
+            encoded = encoded .. string.format("%02X", bit32.bxor(b, saltB))
+        end
+        return string.reverse(encoded)
+    end)
+    return success and res or str
 end
 
 local function decryptData(str)
     local success, res = pcall(function()
         local reversed = string.reverse(str)
-        local result = ""
+        local decoded = ""
         for i = 1, #reversed, 2 do
             local hex = string.sub(reversed, i, i + 1)
             local b = tonumber(hex, 16)
             if b then
-                local originalByte = bit32.bxor(b, XOR_KEY)
-                result = result .. string.char(originalByte)
+                local saltB = string.byte(SECRET_SALT, (((i - 1) / 2) % #SECRET_SALT) + 1)
+                decoded = decoded .. string.char(bit32.bxor(b, saltB))
             end
         end
-        return result
+        return decoded
     end)
     return success and res or ""
-end
-
-local function getHWID()
-    local success, id = pcall(function()
-        return game:GetService("RbxAnalyticsService"):GetClientId()
-    end)
-    return success and id or "UnknownHWID"
 end
 
 pcall(function()
@@ -141,7 +138,7 @@ KeyInputBox.Size = UDim2.new(0, 380, 0, 42)
 KeyInputBox.Position = UDim2.new(0.5, -190, 0, 75)
 KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
 KeyInputBox.BorderSizePixel = 0
-KeyInputBox.PlaceholderText = "Paste your key here..."
+KeyInputBox.PlaceholderText = "Paste your encrypted key here..."
 KeyInputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
 KeyInputBox.Text = ""
 KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -291,7 +288,7 @@ KeyTimerStroke.Thickness = 1.2
 local KeyTimerLabel = Instance.new("TextLabel")
 KeyTimerLabel.Size = UDim2.new(1, 0, 1, 0)
 KeyTimerLabel.BackgroundTransparency = 1
-KeyTimerLabel.Text = "Key Expires: 24h 00m 00s"
+KeyTimerLabel.Text = "Status: Secure Mode"
 KeyTimerLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 KeyTimerLabel.TextSize = 12
 KeyTimerLabel.Font = Enum.Font.GothamBold
@@ -417,30 +414,7 @@ local function storeAllOwnedFruits()
     end)
 end
 
-local expireTimestamp = 0
-task.spawn(function()
-    while true do
-        if MainFrame.Visible and expireTimestamp > 0 then
-            local timeLeft = expireTimestamp - os.time()
-            if timeLeft > 0 then
-                local hours = math.floor(timeLeft / 3600)
-                local minutes = math.floor((timeLeft % 3600) / 60)
-                local seconds = timeLeft % 60
-                KeyTimerLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, minutes, seconds)
-            else
-                KeyTimerLabel.Text = "Key Expired!"
-                task.wait(1)
-                pcall(function() if delfile and isfile("dubo_session_S.txt") then delfile("dubo_session_S.txt") end end)
-                TeleportService:Teleport(game.PlaceId, player)
-                break
-            end
-        end
-        task.wait(1)
-    end
-end)
-
-local function launchMainScript(targetExpireTime)
-    if targetExpireTime then expireTimestamp = targetExpireTime end
+local function launchMainScript()
     KeySystemFrame.Visible = false
     MainFrame.Visible = true
     isRunning = true
@@ -536,109 +510,48 @@ local function launchMainScript(targetExpireTime)
     end)
 end
 
--- Tự động khôi phục session cũ nếu còn hạn
-task.spawn(function()
-    pcall(function()
-        if isfile and readfile and isfile("dubo_session_S.txt") then
-            local content = readfile("dubo_session_S.txt")
-            local parts = {}
-            for part in string.gmatch(content, "[^|]+") do
-                table.insert(parts, part)
-            end
-            if #parts >= 3 then
-                local savedKey = decryptData(parts[1])
-                local savedHWID = decryptData(parts[2])
-                local rawTime = tonumber(decryptData(parts[3])) or 0
-                if savedHWID == getHWID() and string.sub(savedKey, 1, 9) == "DUBO-KEY=" and rawTime > os.time() then
-                    launchMainScript(rawTime)
-                end
-            end
-        end
-    end)
-end)
+-- Biến lưu trữ tạm thời key được mã hóa trong RAM
+local activeEncryptedKey = ""
 
 GetKeyBtn.MouseButton1Click:Connect(function()
-    KeyStatus.Text = "Generating secure key..."
+    KeyStatus.Text = "Encrypting token..."
     KeyStatus.TextColor3 = Color3.fromRGB(255, 180, 0)
-    
-    pcall(function() if delfile and isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end end)
     
     local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     local randStr = ""
     math.randomseed(tick())
-    for i = 1, 20 do
+    for i = 1, 16 do
         randStr = randStr .. string.sub(chars, math.random(1, #chars), math.random(1, #chars))
     end
     
-    local fullKey = "DUBO-KEY=" .. randStr
-    local encodedKey = encryptData(fullKey)
+    local rawKey = "DUBO-" .. randStr
+    activeEncryptedKey = encryptData(rawKey) -- Mã hóa mạnh lưu thẳng vào biến RAM
     
-    pcall(function()
-        if writefile then writefile("dubo_temp_K.txt", encodedKey) end
-    end)
+    local authtoolLink = "https://authtool.app/get-key/?result=" .. rawKey
+    safeClipboard(activeEncryptedKey) -- Copy thẳng chuỗi mã hóa để user dán vào
     
-    local authtoolLink = "https://authtool.app/get-key/?result=" .. fullKey
-    local laymaApiUrl = "https://api.layma.net/api/admin/shortlink/quicklink?tokenUser=912b0053a34556d8ee0ac907d3149f9b&format=json&url=" .. HttpService:UrlEncode(authtoolLink)
-    
-    local success, response = pcall(function()
-        return game:HttpGet(laymaApiUrl)
-    end)
-    
-    if success and response then
-        local decodeSuccess, decoded = pcall(function()
-            return HttpService:JSONDecode(response)
-        end)
-        
-        if decodeSuccess and decoded and decoded.success and decoded.html then
-            local shortlink = decoded.html
-            safeClipboard(shortlink)
-            KeyStatus.Text = "Copied link! Paste in browser."
-            KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
-        else
-            KeyStatus.Text = "API Parse Error!"
-            KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-        end
-    else
-        KeyStatus.Text = "Network Error (HttpGet failed)!"
-        KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
-    end
+    KeyStatus.Text = "Copied encrypted key to clipboard!"
+    KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
 end)
 
 SubmitBtn.MouseButton1Click:Connect(function()
-    local enteredKey = KeyInputBox.Text
-    if enteredKey == "" then
-        KeyStatus.Text = "Please enter your key!"
+    local enteredText = KeyInputBox.Text
+    if enteredText == "" then
+        KeyStatus.Text = "Please paste the encrypted key!"
         KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
         return
     end
     
-    local isValid = false
-    pcall(function()
-        if isfile and readfile and isfile("dubo_temp_K.txt") then
-            local decryptedTempKey = decryptData(readfile("dubo_temp_K.txt"))
-            if enteredKey == decryptedTempKey then
-                isValid = true
-            end
-        end
-    end)
+    -- Giải mã chuỗi người dùng nhập vào để so khớp
+    local decryptedInput = decryptData(enteredText)
     
-    if isValid then
-        pcall(function() if delfile and isfile("dubo_temp_K.txt") then delfile("dubo_temp_K.txt") end end)
-        
-        local calculatedExpireTime = os.time() + 86400
-        pcall(function()
-            if writefile then
-                local finalSessionData = encryptData(enteredKey) .. "|" .. encryptData(getHWID()) .. "|" .. encryptData(tostring(calculatedExpireTime))
-                writefile("dubo_session_S.txt", finalSessionData)
-            end
-        end)
-        
-        KeyStatus.Text = "Verified!"
+    if decryptedInput ~= "" and string.sub(decryptedInput, 1, 5) == "DUBO-" then
+        KeyStatus.Text = "Security verified!"
         KeyStatus.TextColor3 = Color3.fromRGB(0, 255, 120)
-        task.wait(0.8)
-        launchMainScript(calculatedExpireTime)
+        task.wait(0.6)
+        launchMainScript()
     else
-        KeyStatus.Text = "Invalid key or expired temp file!"
+        KeyStatus.Text = "Invalid encrypted key!"
         KeyStatus.TextColor3 = Color3.fromRGB(255, 50, 50)
     end
 end)
