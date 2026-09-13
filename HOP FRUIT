@@ -47,7 +47,7 @@ local AllBloxFruits = {
     ["Diamond"] = "Diamond-Diamond", ["Light"] = "Light-Light", ["Rubber"] = "Rubber-Rubber", ["Creation"] = "Creation-Creation", ["Ghost"] = "Ghost-Ghost",
     ["Magma"] = "Magma-Magma", ["Quake"] = "Quake-Quake", ["Buddha"] = "Buddha-Buddha",
     ["Love"] = "Love-Love", ["Spider"] = "Spider-Spider", ["Sound"] = "Sound-Sound",
-    ["Phoenix"] = "Phoenix-Phoenix", ["Portal"] = "Portal-Portal", ["Lightning"] = "Lightning-Linghtning",
+    ["Phoenix"] = "Phoenix-Phoenix", ["Portal"] = "Portal-Portal", ["Lightning"] = "Lightning-Lightning",
     ["Pain"] = "Pain-Pain", ["Blizzard"] = "Blizzard-Blizzard", ["Gravity"] = "Gravity-Gravity",
     ["Dough"] = "Dough-Dough", ["Shadow"] = "Shadow-Shadow", ["Venom"] = "Venom-Venom",
     ["Control"] = "Control-Control", ["Spirit"] = "Spirit-Spirit", ["Dragon"] = "Dragon-Dragon",
@@ -55,6 +55,27 @@ local AllBloxFruits = {
     ["Kitsune"] = "Kitsune-Kitsune", ["Yeti"] = "Yeti-Yeti", ["Gas"] = "Gas-Gas",
     ["Magnet"] = "Magnet-Magnet"
 }
+
+-- Bảng xếp hạng độ ưu tiên: Mythic (3) và Legendary (2), còn lại Default (1)
+local FruitRarity = {
+    ["Kitsune"] = 3, ["Dragon"] = 3, ["Tiger"] = 3, ["Dough"] = 3, ["T-Rex"] = 3,
+    ["Spirit"] = 3, ["Control"] = 3, ["Venom"] = 3, ["Shadow"] = 3, ["Mammoth"] = 3,
+    ["Gas"] = 3, ["Yeti"] = 3, ["Magnet"] = 3,
+    
+    ["Blizzard"] = 2, ["Buddha"] = 2, ["Portal"] = 2, ["Lightning"] = 2, ["Creation"] = 2,
+    ["Pain"] = 2, ["Sound"] = 2, ["Phoenix"] = 2, ["Spider"] = 2, ["Love"] = 2, ["Quake"] = 2,
+    
+    ["Default"] = 1
+}
+
+local function getFruitPriority(rawName)
+    for fruitName, priority in pairs(FruitRarity) do
+        if fruitName ~= "Default" and string.find(rawName, fruitName) then
+            return priority
+        end
+    end
+    return FruitRarity["Default"]
+end
 
 local FruitImages = {
     ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a9e40e5&is=6a9cef65&hm=031aa2e0ade47e3fdc70f3689f43592e35971641c12bdfec8f640f3412ccdb86&",
@@ -536,86 +557,100 @@ local function autoPickAndStore()
     local foundValidFruit = false
     
     pcall(function()
+        -- Quét và thu thập danh sách các trái cây hợp lệ kèm độ ưu tiên
+        local availableFruits = {}
         for _, obj in ipairs(Workspace:GetChildren()) do
             local rawName = obj.Name:gsub(" Fruit", "")
             if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local uniqueId = obj:GetDebugId()
-                
                 if not blacklistedFruits[uniqueId] then
                     local handle = obj:FindFirstChild("Handle")
-                    local character = player.Character
-                    if handle and character and character:FindFirstChild("HumanoidRootPart") then
-                        if handle.Position.Y < 0 then
-                            blacklistedFruits[uniqueId] = true
-                            continue
-                        end
-
-                        local targetCFrame = handle.CFrame
-                        foundValidFruit = true
-                        
-                        if moveType == "tween" then
-                            StatusLabel.Text = "Tween: " .. obj.Name
-                            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            
-                            local hrp = character:FindFirstChild("HumanoidRootPart")
-                            local humanoid = character:FindFirstChildOfClass("Humanoid")
-                            
-                            if hrp and humanoid then
-                                humanoid.PlatformStand = true
-                                local startCFrame = hrp.CFrame
-                                local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-                                local speed = 300
-                                local duration = distance / speed
-                                local startTime = tick()
-                                
-                                local diedDuringTween = false
-                                local charDeathConn
-                                charDeathConn = humanoid.Died:Connect(function()
-                                    diedDuringTween = true
-                                    blacklistedFruits[uniqueId] = true
-                                end)
-                                
-                                local conn
-                                conn = RunService.Stepped:Connect(function()
-                                    if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent or humanoid.Health <= 0 then
-                                        if conn then conn:Disconnect() end
-                                        return
-                                    end
-                                    
-                                    for _, part in ipairs(character:GetDescendants()) do
-                                        if part:IsA("BasePart") then part.CanCollide = false end
-                                    end
-                                    
-                                    local elapsed = tick() - startTime
-                                    local alpha = math.clamp(elapsed / duration, 0, 1)
-                                    hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-                                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                    
-                                    if alpha >= 1 or diedDuringTween then
-                                        if conn then conn:Disconnect() end
-                                    end
-                                end)
-                                
-                                task.wait(duration)
-                                if conn then conn:Disconnect() end
-                                if charDeathConn then charDeathConn:Disconnect() end
-                                humanoid.PlatformStand = false
-                                
-                                if diedDuringTween or humanoid.Health <= 0 then
-                                    return 
-                                end
-                            end
-                        else
-                            StatusLabel.Text = "Fast TP: " .. obj.Name
-                            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            character.HumanoidRootPart.CFrame = targetCFrame
-                            task.wait(0.15)
-                        end
-                        
-                        storeAllOwnedFruits()
-                        break
+                    if handle and handle.Position.Y >= 0 then
+                        local priority = getFruitPriority(rawName)
+                        table.insert(availableFruits, {obj = obj, priority = priority, handle = handle})
+                    else
+                        blacklistedFruits[uniqueId] = true
                     end
                 end
+            end
+        end
+
+        -- Sắp xếp ưu tiên: độ ưu tiên cao hơn (Mythic/Legendary) đứng trước
+        table.sort(availableFruits, function(a, b)
+            return a.priority > b.priority
+        end)
+
+        if #availableFruits > 0 then
+            local bestChoice = availableFruits[1]
+            local obj = bestChoice.obj
+            local uniqueId = obj:GetDebugId()
+            local handle = bestChoice.handle
+            local character = player.Character
+
+            if handle and character and character:FindFirstChild("HumanoidRootPart") then
+                local targetCFrame = handle.CFrame
+                foundValidFruit = true
+                
+                if moveType == "tween" then
+                    StatusLabel.Text = "Tween: " .. obj.Name
+                    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    
+                    if hrp and humanoid then
+                        humanoid.PlatformStand = true
+                        local startCFrame = hrp.CFrame
+                        local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+                        local speed = 300
+                        local duration = distance / speed
+                        local startTime = tick()
+                        
+                        local diedDuringTween = false
+                        local charDeathConn
+                        charDeathConn = humanoid.Died:Connect(function()
+                            diedDuringTween = true
+                            blacklistedFruits[uniqueId] = true
+                        end)
+                        
+                        local conn
+                        conn = RunService.Stepped:Connect(function()
+                            if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent or humanoid.Health <= 0 then
+                                if conn then conn:Disconnect() end
+                                return
+                            end
+                            
+                            for _, part in ipairs(character:GetDescendants()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
+                            end
+                            
+                            local elapsed = tick() - startTime
+                            local alpha = math.clamp(elapsed / duration, 0, 1)
+                            hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
+                            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            
+                            if alpha >= 1 or diedDuringTween then
+                                if conn then conn:Disconnect() end
+                            end
+                        end)
+                        
+                        task.wait(duration)
+                        if conn then conn:Disconnect() end
+                        if charDeathConn then charDeathConn:Disconnect() end
+                        humanoid.PlatformStand = false
+                        
+                        if diedDuringTween or humanoid.Health <= 0 then
+                            return 
+                        end
+                    end
+                else
+                    StatusLabel.Text = "Fast TP: " .. obj.Name
+                    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    character.HumanoidRootPart.CFrame = targetCFrame
+                    task.wait(0.15)
+                end
+                
+                storeAllOwnedFruits()
             end
         end
     end)
@@ -661,6 +696,7 @@ task.spawn(function()
                 StatusLabel.Text = "Player Died, Resetting..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
                 task.wait(4)
+                ServerHop()
                 break
             end
 
@@ -668,12 +704,10 @@ task.spawn(function()
             if fruitFound then
                 loopStartTick = tick()
             else
-                -- Hiển thị Not Found màu đỏ đúng 0.5 giây sau Scanning...
                 StatusLabel.Text = "Not Found"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
                 task.wait(0.5)
                 
-                -- Sau đó mới chuyển sang Connecting... rồi đổi server
                 ServerHop()
                 break
             end
