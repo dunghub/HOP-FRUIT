@@ -671,7 +671,7 @@ task.spawn(function()
                 if totalValidFruits == 0 then
                     StatusLabel.Text = "Not Found"
                     StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                    task.wait(1.5)
+                    task.wait(0.5) -- Đã sửa thời gian chờ thành 0.5 giây
                     
                     StatusLabel.Text = "Connecting..."
                     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
