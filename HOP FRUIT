@@ -703,7 +703,6 @@ task.spawn(function()
                 StatusLabel.Text = "Player Died, Waiting Respawn..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
                 
-                -- Đợi nhân vật hồi sinh thay vì ServerHop ngay lập tức
                 repeat
                     task.wait(0.5)
                     char = player.Character
