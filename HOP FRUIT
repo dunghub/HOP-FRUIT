@@ -36,8 +36,8 @@ local function getHWID()
     return success and id or "UnknownHWID"
 end
 
--- Kiểm tra xem đã có session hợp lệ từ trước chưa (để đỡ phải nhập lại nếu chưa hết hạn 24h)
 local isKeyValid = false
+local sessionExpireTime = 0
 pcall(function()
     if isfile and readfile and isfile("dubo_session_S.txt") then
         local content = readfile("dubo_session_S.txt")
@@ -52,6 +52,7 @@ pcall(function()
             
             if decHWID == getHWID() and decTime and os.time() < decTime then
                 isKeyValid = true
+                sessionExpireTime = decTime
             end
         end
     end
@@ -68,7 +69,7 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- GIAO DIỆN KEY SYSTEM
+-- GIAO DIỆN KEY SYSTEM (Đã xóa khối icon vuông bên góc trái tiêu đề)
 local KeySystemFrame = Instance.new("Frame")
 KeySystemFrame.Size = UDim2.new(0, 420, 0, 260)
 KeySystemFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
@@ -86,32 +87,15 @@ local KeyFrameStroke = Instance.new("UIStroke", KeySystemFrame)
 KeyFrameStroke.Thickness = 2
 KeyFrameStroke.Color = Color3.fromRGB(0, 120, 255)
 
-local KeyIconBg = Instance.new("Frame")
-KeyIconBg.Size = UDim2.new(0, 42, 0, 42)
-KeyIconBg.Position = UDim2.new(0, 16, 0, 16)
-KeyIconBg.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-KeyIconBg.Parent = KeySystemFrame
-Instance.new("UICorner", KeyIconBg).CornerRadius = UDim.new(0, 8)
-local KeyIconStroke = Instance.new("UIStroke", KeyIconBg)
-KeyIconStroke.Color = Color3.fromRGB(0, 120, 255)
-KeyIconStroke.Thickness = 1.5
-
-local KeyIconImg = Instance.new("ImageLabel")
-KeyIconImg.Size = UDim2.new(0, 32, 0, 32)
-KeyIconImg.Position = UDim2.new(0.5, -16, 0.5, -16)
-KeyIconImg.BackgroundTransparency = 1
-KeyIconImg.Image = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-KeyIconImg.Parent = KeyIconBg
-
 local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, -80, 0, 42)
-KeyTitle.Position = UDim2.new(0, 70, 0, 16)
+KeyTitle.Size = UDim2.new(1, 0, 0, 42)
+KeyTitle.Position = UDim2.new(0, 0, 0, 16)
 KeyTitle.BackgroundTransparency = 1
 KeyTitle.Text = "DUBO HUB - KEY SYSTEM"
 KeyTitle.TextColor3 = Color3.fromRGB(0, 170, 255)
 KeyTitle.TextSize = 18
 KeyTitle.Font = Enum.Font.GothamBold
-KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
+KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
 KeyTitle.Parent = KeySystemFrame
 
 local KeyInputBox = Instance.new("TextBox")
@@ -246,12 +230,12 @@ SubmitBtn.MouseButton1Click:Connect(function()
             end
         end)
         
-        local calculatedExpireTime = os.time() + 86400
+        sessionExpireTime = os.time() + 86400
         pcall(function()
             if writefile then
                 local encKey = encryptData(enteredKey)
                 local encHWID = encryptData(getHWID())
-                local encTime = encryptData(tostring(calculatedExpireTime))
+                local encTime = encryptData(tostring(sessionExpireTime))
                 
                 local finalSessionData = encKey .. "|" .. encHWID .. "|" .. encTime
                 writefile("dubo_session_S.txt", finalSessionData)
@@ -269,13 +253,12 @@ SubmitBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Chặn toàn bộ luồng chạy tính năng bên dưới cho đến khi người dùng vượt qua Key System
 if not isKeyValid then
     repeat task.wait(0.5) until isKeyValid
 end
 
 --------------------------------------------------
--- PHẦN SCRIPT CHÍNH (AUTO HOP & ESP & UI THỐNG KÊ)
+-- PHẦN SCRIPT CHÍNH (ĐÃ THÊM KHUNG THỜI HẠN KEY Ở DƯỚI 4 KHUNG CHÍNH)
 --------------------------------------------------
 
 local Workspace = game:GetService("Workspace")
@@ -379,8 +362,9 @@ pcall(function()
     end
 end)
 
+-- Đã tinh chỉnh lại chiều cao của MainFrame (từ 260 lên 310) để đủ chỗ chứa thêm khung thời hạn bên dưới
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 250, 0, 260)
+MainFrame.Size = UDim2.new(0, 250, 0, 310)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -425,7 +409,7 @@ task.spawn(function()
             snowflake.Parent = SnowContainer
 
             local fallDuration = math.random(40, 60) / 10
-            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-10, 10), 0, 270)
+            local targetPos = UDim2.new(0, snowflake.Position.X.Offset + math.random(-10, 10), 0, 320)
             
             local tween = TweenService:Create(snowflake, TweenInfo.new(fallDuration, Enum.EasingStyle.Linear), {
                 Position = targetPos, 
@@ -553,6 +537,46 @@ local timeLabel   = createInfoBox("TIME", "00:00", Color3.fromRGB(0, 200, 255))
 local serverLabel = createInfoBox("SERVER", "0/12", Color3.fromRGB(255, 170, 0))
 local teamLabel   = createInfoBox("TEAM", factionDisplayName, Color3.fromRGB(255, 80, 80))
 local moveLabel   = createInfoBox("MOVE", moveType:gsub("^%l", string.upper), Color3.fromRGB(0, 255, 120))
+
+-- Khung hiển thị thời hạn key nằm ngay dưới 4 khung chức năng
+local ExpiryBox = Instance.new("Frame")
+ExpiryBox.Size = UDim2.new(0, 230, 0, 32)
+ExpiryBox.Position = UDim2.new(0.5, -115, 0, 256)
+ExpiryBox.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+ExpiryBox.BorderSizePixel = 0
+ExpiryBox.ZIndex = 2
+ExpiryBox.Parent = MainFrame
+
+Instance.new("UICorner", ExpiryBox).CornerRadius = UDim.new(0, 6)
+local ExpiryStroke = Instance.new("UIStroke", ExpiryBox)
+ExpiryStroke.Thickness = 1.2
+ExpiryStroke.Color = Color3.fromRGB(0, 170, 255)
+
+local ExpiryLabel = Instance.new("TextLabel")
+ExpiryLabel.Size = UDim2.new(1, 0, 1, 0)
+ExpiryLabel.BackgroundTransparency = 1
+ExpiryLabel.Text = "Key Expires: Calculating..."
+ExpiryLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+ExpiryLabel.TextSize = 11
+ExpiryLabel.Font = Enum.Font.GothamBold
+ExpiryLabel.ZIndex = 2
+ExpiryLabel.Parent = ExpiryBox
+
+-- Vòng lặp cập nhật thời gian đếm ngược của Key
+task.spawn(function()
+    while task.wait(1) do
+        local timeLeft = sessionExpireTime - os.time()
+        if timeLeft > 0 then
+            local hours = math.floor(timeLeft / 3600)
+            local mins = math.floor((timeLeft % 3600) / 60)
+            local secs = timeLeft % 60
+            ExpiryLabel.Text = string.format("Key Expires: %02dh %02dm %02ds", hours, mins, secs)
+        else
+            ExpiryLabel.Text = "Key Expired! Please Re-key."
+            ExpiryLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    end
+end)
 
 local secondsCounter = 0
 task.spawn(function()
