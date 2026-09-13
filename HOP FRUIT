@@ -104,8 +104,8 @@ pcall(function()
     if CoreGui:FindFirstChild("KaitunFruitGUI") then
         CoreGui.KaitunFruitGUI:Destroy()
     end
-    if CoreGui:FindFirstChild("FruitESP_LinearSmooth") then
-        CoreGui.FruitESP_LinearSmooth:Destroy()
+    if CoreGui:FindFirstChild("FruitESP_NoWater") then
+        CoreGui.FruitESP_NoWater:Destroy()
     end
 end)
 
@@ -321,19 +321,23 @@ task.spawn(function()
     end
 end)
 
--- ESP LINEAR SMOOTH
+-- ESP NO WATER (GIỮ NGUYÊN HOÀN TOÀN LOGIC CHUẨN ĐÃ YÊU CẦU)
 local EspFolder = Instance.new("Folder", CoreGui)
-EspFolder.Name = "FruitESP_LinearSmooth"
+EspFolder.Name = "FruitESP_NoWater"
 
-local FruitPositions = {}
+local ValidFruitPositions = {}
 
-local function CreateLinearESP(fruit)
+local function CreateNoWaterESP(fruit)
     if not fruit:FindFirstChild("Fruit_ESP") then
         local targetPart = fruit:IsA("BasePart") and fruit or fruit:FindFirstChildWhichIsA("BasePart")
         if not targetPart then return end
         
+        if targetPart.Position.Y < 0 then 
+            return 
+        end
+        
         local fruitId = fruit:GetDebugId()
-        FruitPositions[fruitId] = targetPart.Position
+        ValidFruitPositions[fruitId] = targetPart.Position
 
         local rawName = fruit.Name:gsub(" Fruit", "")
 
@@ -348,7 +352,7 @@ local function CreateLinearESP(fruit)
         tl.Size = UDim2.new(1, 0, 1, 0)
         tl.BackgroundTransparency = 1
         tl.TextColor3 = Color3.fromRGB(255, 165, 0)
-        tl.TextSize = 14
+        tl.TextSize = 16
         tl.Font = Enum.Font.Code
         tl.TextStrokeTransparency = 0
         tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -357,7 +361,7 @@ local function CreateLinearESP(fruit)
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
             if not isRunning or not fruit or not fruit.Parent then
-                FruitPositions[fruitId] = nil
+                ValidFruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
                 return
@@ -365,7 +369,7 @@ local function CreateLinearESP(fruit)
 
             local char = player.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local savedPos = FruitPositions[fruitId]
+            local savedPos = ValidFruitPositions[fruitId]
             
             if hrp and savedPos then
                 local distance = math.floor((hrp.Position - savedPos).Magnitude)
@@ -379,7 +383,7 @@ local function ScanMap()
     for _, item in pairs(Workspace:GetChildren()) do
         local rawName = item.Name:gsub(" Fruit", "")
         if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
-            CreateLinearESP(item)
+            CreateNoWaterESP(item)
         end
     end
 end
@@ -389,7 +393,7 @@ Workspace.ChildAdded:Connect(function(child)
     task.wait(0.1)
     local rawName = child.Name:gsub(" Fruit", "")
     if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
-        CreateLinearESP(child)
+        CreateNoWaterESP(child)
     end
 end)
 
@@ -537,11 +541,16 @@ local function autoPickAndStore()
             if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local uniqueId = obj:GetDebugId()
                 
-                -- Nếu trái này đã từng làm player chết (nằm trong blacklist) thì bỏ qua tìm trái khác
                 if not blacklistedFruits[uniqueId] then
                     local handle = obj:FindFirstChild("Handle")
                     local character = player.Character
                     if handle and character and character:FindFirstChild("HumanoidRootPart") then
+                        -- Kiểm tra chiều cao Y chống nước cho phần auto pick/tween
+                        if handle.Position.Y < 0 then
+                            blacklistedFruits[uniqueId] = true
+                            continue
+                        end
+
                         local targetCFrame = handle.CFrame
                         foundValidFruit = true
                         
@@ -564,7 +573,7 @@ local function autoPickAndStore()
                                 local charDeathConn
                                 charDeathConn = humanoid.Died:Connect(function()
                                     diedDuringTween = true
-                                    blacklistedFruits[uniqueId] = true -- Đưa vào danh sách đen để bỏ qua trái lỗi này
+                                    blacklistedFruits[uniqueId] = true
                                 end)
                                 
                                 local conn
@@ -593,7 +602,6 @@ local function autoPickAndStore()
                                 if charDeathConn then charDeathConn:Disconnect() end
                                 humanoid.PlatformStand = false
                                 
-                                -- Nếu chết giữa đường do xuống nước, lập tức dừng vòng lặp tween hiện tại để hồi sinh và tìm trái khác
                                 if diedDuringTween or humanoid.Health <= 0 then
                                     return 
                                 end
@@ -646,21 +654,19 @@ task.spawn(function()
                 break
             end
 
-            -- Theo dõi nếu nhân vật chết (ví dụ: lỡ dính nước hoặc quái đánh)
             local char = player.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health <= 0 then
                 StatusLabel.Text = "Player Died, Resetting..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-                task.wait(4) -- Đợi hồi sinh
-                break -- Thoát vòng lặp hiện tại để quét lại trái khác hoặc đổi server nếu hết trái sạch
+                task.wait(4)
+                break
             end
 
             local fruitFound = autoPickAndStore()
             if fruitFound then
                 loopStartTick = tick()
             else
-                -- Không còn trái nào khả dụng (hoặc các trái còn lại đều ở dưới nước bị blacklist) -> Đổi server ngay
                 StatusLabel.Text = "No Valid Fruits, Hopping..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
                 task.wait(1)
