@@ -491,7 +491,6 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- HÀM CHUYỂN SERVER MỚI ĐÃ ĐƯỢC THAY THẾ VÀ GẮN VÀO ĐÂY
 local function ServerHop()
     isRunning = false
     StatusLabel.Text = "Connecting..."
