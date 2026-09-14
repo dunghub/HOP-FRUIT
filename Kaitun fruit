@@ -491,7 +491,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- ĐÃ FIX HÀM SERVER HOP CHUẨN XÁC
+-- HÀM CHUYỂN SERVER MỚI ĐÃ ĐƯỢC THAY THẾ VÀ GẮN VÀO ĐÂY
 local function ServerHop()
     isRunning = false
     StatusLabel.Text = "Connecting..."
@@ -508,19 +508,32 @@ local function ServerHop()
     if success and result and result.data then
         for _, server in ipairs(result.data) do
             if server.playing < server.maxPlayers and server.id ~= currentJobId then
-                local tpSuccess = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
-                end)
-                if tpSuccess then 
-                    task.wait(2)
-                    return 
+                local args = {
+                    [1] = "teleport",
+                    [2] = tostring(server.id)
+                }
+                
+                if serverBrowser then
+                    local tpSuccess = pcall(function()
+                        serverBrowser:InvokeServer(unpack(args))
+                    end)
+                    if tpSuccess then task.wait(2); return end
+                else
+                    local tpSuccess = pcall(function()
+                        TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
+                    end)
+                    if tpSuccess then return end
                 end
             end
         end
     end
     
     pcall(function()
-        TeleportService:Teleport(currentPlaceId, player)
+        if serverBrowser then
+            serverBrowser:InvokeServer("teleport")
+        else
+            TeleportService:Teleport(currentPlaceId, player)
+        end
     end)
 end
 
