@@ -1,3 +1,5 @@
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -18,7 +20,7 @@ end)
 
 local serverBrowser = nil
 pcall(function()
-    serverBrowser = ReplicatedStorage.Remotes.ServerBrowser
+    serverBrowser = game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser", 2)
 end)
 
 local isRunning = false
@@ -492,6 +494,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local function ServerHop()
+    repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
     isRunning = false
     StatusLabel.Text = "Connecting..."
     StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
