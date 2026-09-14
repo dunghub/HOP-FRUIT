@@ -26,17 +26,10 @@ end)
 local isRunning = false
 local storedFruitsCache = {}
 
-DuboCFG = DuboCFG or {}
-local moveType = tostring(DuboCFG.Move or "teleport"):lower()
+local moveType = "tween"
 
 local Factions = {"Pirates", "Marines"}
-local chosenFaction = ""
-
-if DuboCFG.Team == "Pirates" or DuboCFG.Team == "Marines" then
-    chosenFaction = DuboCFG.Team
-else
-    chosenFaction = Factions[math.random(1, #Factions)]
-end
+local chosenFaction = Factions[math.random(1, #Factions)]
 
 local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
 
@@ -129,68 +122,6 @@ local function getHWID()
         return AnalyticsService:GetClientId()
     end)
     return success and id or "UnknownHWID"
-end
-
-local function sendDiscordWebhook(fruitName, uniqueId)
-    if not DuboCFG.WebhookURL or DuboCFG.WebhookURL == "" then return end
-    if storedFruitsCache[uniqueId] then return end
-    storedFruitsCache[uniqueId] = true
-    
-    local maskedName = "||" .. player.Name .. "||"
-    local cleanFruitName = fruitName:gsub(" Fruit", "")
-    
-    local botAvatarUrl = "https://cdn.discordapp.com/attachments/1530612413966188584/1544230813690757260/IMG_1109.png"
-    local defaultImage = "https://cdn.discordapp.com/attachments/1530612413966188584/1543286088569725008/IMG_1011.png"
-    local fruitImage = FruitImages[cleanFruitName] and FruitImages[cleanFruitName] ~= "" and FruitImages[cleanFruitName] or defaultImage
-    
-    local data = {
-        ["content"] = "@everyone",
-        ["username"] = "DUBO HUB",
-        ["avatar_url"] = botAvatarUrl,
-        ["embeds"] = {{
-            ["color"] = 3447003,
-            ["author"] = {
-                ["name"] = "DUBO HUB Notification",
-                ["icon_url"] = defaultImage
-            },
-            ["thumbnail"] = {
-                ["url"] = fruitImage
-            },
-            ["fields"] = {
-                {
-                    ["name"] = "Main Status",
-                    ["value"] = "Username : " .. maskedName,
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Status",
-                    ["value"] = "```fix\nStored Fruit Successfully!\n```",
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Fruit",
-                    ["value"] = "```fix\n" .. cleanFruitName .. "\n```",
-                    ["inline"] = false
-                }
-            },
-            ["footer"] = {
-                ["text"] = "DUBO HUB • " .. os.date("%H:%M - %d/%m/%Y"),
-                ["icon_url"] = defaultImage
-            }
-        }}
-    }
-    
-    local encodedData = HttpService:JSONEncode(data)
-    local headers = {["Content-Type"] = "application/json"}
-    
-    pcall(function()
-        local req = request or http_request or syn.request or fluxus.request
-        if req then
-            req({Url = DuboCFG.WebhookURL, Method = "POST", Headers = headers, Body = encodedData})
-        else
-            HttpService:PostAsync(DuboCFG.WebhookURL, encodedData)
-        end
-    end)
 end
 
 pcall(function()
@@ -558,7 +489,6 @@ local function storeFruit(item)
                     end
                     if remoteComm then
                         remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
-                        sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
             end
@@ -593,56 +523,49 @@ local function autoPickAndStore()
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
                     local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     
-                    if moveType == "tween" then
-                        StatusLabel.Text = "Tween: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    StatusLabel.Text = "Tween: " .. obj.Name
+                    StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    
+                    if hrp and humanoid then
+                        humanoid.PlatformStand = true
                         
-                        local hrp = character:FindFirstChild("HumanoidRootPart")
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        local startCFrame = hrp.CFrame
+                        local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+                        local speed = 300
+                        local duration = distance / speed
+                        local startTime = tick()
                         
-                        if hrp and humanoid then
-                            humanoid.PlatformStand = true
+                        local conn
+                        conn = RunService.Stepped:Connect(function()
+                            if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
+                                if conn then conn:Disconnect() end
+                                return
+                            end
                             
-                            local startCFrame = hrp.CFrame
-                            local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-                            local speed = 300
-                            local duration = distance / speed
-                            local startTime = tick()
+                            for _, part in ipairs(character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
                             
-                            local conn
-                            conn = RunService.Stepped:Connect(function()
-                                if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
-                                    if conn then conn:Disconnect() end
-                                    return
-                                end
-                                
-                                for _, part in ipairs(character:GetDescendants()) do
-                                    if part:IsA("BasePart") then
-                                        part.CanCollide = false
-                                    end
-                                end
-                                
-                                local elapsed = tick() - startTime
-                                local alpha = math.clamp(elapsed / duration, 0, 1)
-                                
-                                hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-                                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                
-                                if alpha >= 1 then
-                                    if conn then conn:Disconnect() end
-                                end
-                            end)
+                            local elapsed = tick() - startTime
+                            local alpha = math.clamp(elapsed / duration, 0, 1)
                             
-                            task.wait(duration)
-                            if conn then conn:Disconnect() end
-                            humanoid.PlatformStand = false
+                            hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
                             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        end
-                    else
-                        StatusLabel.Text = "Fast TP: " .. obj.Name
-                        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        character.HumanoidRootPart.CFrame = targetCFrame
-                        task.wait(0.15)
+                            
+                            if alpha >= 1 then
+                                if conn then conn:Disconnect() end
+                            end
+                        end)
+                        
+                        task.wait(duration)
+                        if conn then conn:Disconnect() end
+                        humanoid.PlatformStand = false
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     end
                     
                     storeAllOwnedFruits()
