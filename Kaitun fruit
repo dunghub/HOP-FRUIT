@@ -56,7 +56,6 @@ local AllBloxFruits = {
 }
 
 local FruitImages = {
-    -- Common & Uncommon
     ["Rocket"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543300020030279760/image0.jpg?ex=6a9e40e5&is=6a9cef65&hm=031aa2e0ade47e3fdc70f3689f43592e35971641c12bdfec8f640f3412ccdb86&",
     ["Spin"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543303122020077669/image0.jpg?ex=6a9e43c9&is=6a9cf249&hm=bed4c12238047831987c91261bf23056f0e046aa4ee142bbfcbc859120944ccc&",
     ["Blade"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543304071069311076/image0.jpg?ex=6a9e44ab&is=6a9cf32b&hm=ece8925100b75bf581be0a487fc63d86a964ed8c8d989d11876ad4bfe3afd776&",
@@ -75,8 +74,6 @@ local FruitImages = {
     ["Creation"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307143598317710/image0.jpg?ex=6a9e4788&is=6a9cf608&hm=8d59460d75890ef103e287f41b11f52362ce73f872046e5ac6040889616008fe&",
     ["Ghost"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307754004029661/image0.jpg?ex=6a9e4819&is=6a9cf699&hm=c076f00e48259b71db4aaa06766ec4cfce1319083e7acaf7c411c0d2859ea2e3&",
     ["Magma"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1543307871318708234/image0.jpg?ex=6a9e4835&is=6a9cf6b5&hm=c362e1feed5537f894386cade48d468e8ee599a6801e8c4d85ace0212b042edf&",
-
-    -- Rare
     ["Quake"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546079320672436366/image0.jpg?ex=6a9e7a12&is=6a9d2892&hm=3d7939ca7add5d596cbb12ece038c6b5d528806e420c93e7f2ab6aaa45c6c831&",
     ["Buddha"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083305508708453/image0.jpg?ex=6a9e7dc8&is=6a9d2c48&hm=d5bf2913bcc5f989a3d978cf5a8189af31e0e4e1fa95159d45147b60573b9235&",
     ["Love"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083379974246531/image0.jpg?ex=6a9e7dda&is=6a9d2c5a&hm=f741f1e97a5a6b0e13b7b73faf6617c88885700c6232f1843c60d2f335e94567&",
@@ -87,8 +84,6 @@ local FruitImages = {
     ["Lightning"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084090686607402/image0.jpg?ex=6a9e7e84&is=6a9d2d04&hm=853094404fe35c5d54ba43715615b241725f27cb8364809e93f4d0b3d1aff74e&",
     ["Pain"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084000068542564/image0.jpg?ex=6a9e7e6e&is=6a9d2cee&hm=d03c937a2467fec9d690da5e9dd032046e332e8707634b516d8b146bdceff2a0&",
     ["Blizzard"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546083909845000283/image0.jpg?ex=6a9e7e58&is=6a9d2cd8&hm=adcc68dddf74dde6d50412858f14b0da980f2ab0d3f58d7ab951265049e0e5c4&",
-
-    -- Legendary & Mythical
     ["Gravity"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084263445790850/image0.jpg?ex=6a9e7ead&is=6a9d2d2d&hm=f1a7d03ccb7b14bf53098aa2e71f86ab22cb437b5e27f8e2d95f556ba6fa98e3&",
     ["Dough"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084740258603028/image0.jpg?ex=6a9e7f1e&is=6a9d2d9e&hm=f845663dc8f84f88fe28b3f855c711154ab7881deb6f9f55b4e7d2f9d151c2bc&",
     ["Shadow"] = "https://cdn.discordapp.com/attachments/1530612413966188584/1546084890372743238/image0.jpg?ex=6a9e7f42&is=6a9d2dc2&hm=e8587219ffcdb54efe91ff22e2842df8d93bd314090004266123aee51ecbe570&",
@@ -496,6 +491,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
+-- ĐÃ FIX HÀM SERVER HOP CHUẨN XÁC
 local function ServerHop()
     isRunning = false
     StatusLabel.Text = "Connecting..."
@@ -512,32 +508,19 @@ local function ServerHop()
     if success and result and result.data then
         for _, server in ipairs(result.data) do
             if server.playing < server.maxPlayers and server.id ~= currentJobId then
-                local args = {
-                    [1] = "teleport",
-                    [2] = tostring(server.id)
-                }
-                
-                if serverBrowser then
-                    local tpSuccess = pcall(function()
-                        serverBrowser:InvokeServer(unpack(args))
-                    end)
-                    if tpSuccess then task.wait(2); return end
-                else
-                    local tpSuccess = pcall(function()
-                        TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
-                    end)
-                    if tpSuccess then return end
+                local tpSuccess = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(currentPlaceId, tostring(server.id), player)
+                end)
+                if tpSuccess then 
+                    task.wait(2)
+                    return 
                 end
             end
         end
     end
     
     pcall(function()
-        if serverBrowser then
-            serverBrowser:InvokeServer("teleport")
-        else
-            TeleportService:Teleport(currentPlaceId, player)
-        end
+        TeleportService:Teleport(currentPlaceId, player)
     end)
 end
 
