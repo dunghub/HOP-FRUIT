@@ -605,6 +605,7 @@ local function autoPickAndStore()
                             
                             local conn
                             conn = RunService.Stepped:Connect(function()
+                                repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
                                 if not isRunning or not character:FindFirstChild("HumanoidRootPart") then
                                     if conn then conn:Disconnect() end
                                     return
@@ -652,6 +653,7 @@ end
 local expireTimestamp = 0
 task.spawn(function()
     while true do
+        repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
         if MainFrame.Visible and expireTimestamp > 0 then
             local timeLeft = expireTimestamp - os.time()
             if timeLeft > 0 then
@@ -695,12 +697,14 @@ local function launchMainScript(targetExpireTime)
     
     task.spawn(function()
         while true do
+            repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
             isRunning = true
             StatusLabel.Text = "Team: " .. factionDisplayName
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
             
             local attempts = 0
             repeat
+                repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
                 pcall(function()
                     if remoteComm then
                         remoteComm:InvokeServer("SetTeam", chosenFaction)
@@ -717,6 +721,7 @@ local function launchMainScript(targetExpireTime)
 
             local scanStart = tick()
             while isRunning do
+                repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
                 StatusLabel.Text = "Scanning..."
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 
@@ -749,6 +754,7 @@ end
 
 -- KIỂM TRA SESSION CHỐNG GIAN LẬN THỜI GIAN VÔ CỰC DO AI HOẶC HACKER TỰ CHỈNH SỬA
 task.spawn(function()
+    repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
     pcall(function()
         if isfile and readfile then
             if isfile("dubo_session_S.txt") then
