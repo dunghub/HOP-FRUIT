@@ -69,7 +69,7 @@ ScreenGui.Name = "KaitunFruitGUI"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- GIAO DIỆN KEY SYSTEM (Đã xóa khối icon vuông bên góc trái tiêu đề)
+-- GIAO DIỆN KEY SYSTEM
 local KeySystemFrame = Instance.new("Frame")
 KeySystemFrame.Size = UDim2.new(0, 420, 0, 260)
 KeySystemFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
@@ -613,31 +613,8 @@ EspFolder.Name = "FruitESP_NoWater"
 local ValidFruitPositions = {}
 local totalValidFruits = 0
 
-local function IsValidFruitObject(item)
-    if not (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
-        return false
-    end
-    
-    local name = item.Name
-    -- Strict check: Must match exact fruit format (e.g. ending with "Fruit" or matching AllBloxFruits cleanly, excluding decoration/statue/fruit1)
-    if name:match("1$") then
-        return false
-    end
-    
-    local rawName = name:gsub(" Fruit", "")
-    if AllBloxFruits[rawName] or name:match("Fruit$") then
-        -- Exclude non-fruit objects or static map decorations/statues
-        if name:lower():find("statue") or name:lower():find("model") or name:lower():find("island") then
-            return false
-        end
-        return true
-    end
-    
-    return false
-end
-
 local function CreateNoWaterESP(fruit)
-    if not fruit:FindFirstChild("Fruit_ESP") and IsValidFruitObject(fruit) then
+    if not fruit:FindFirstChild("Fruit_ESP") then
         local targetPart = fruit:IsA("BasePart") and fruit or fruit:FindFirstChildWhichIsA("BasePart")
         if not targetPart then return end
         
@@ -692,7 +669,8 @@ end
 
 local function ScanMap()
     for _, item in pairs(Workspace:GetChildren()) do
-        if IsValidFruitObject(item) then
+        local rawName = item.Name:gsub(" Fruit", "")
+        if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
             CreateNoWaterESP(item)
         end
     end
@@ -701,7 +679,8 @@ end
 ScanMap()
 Workspace.ChildAdded:Connect(function(child)
     task.wait(0.1)
-    if IsValidFruitObject(child) then
+    local rawName = child.Name:gsub(" Fruit", "")
+    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
         CreateNoWaterESP(child)
     end
 end)
@@ -799,6 +778,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     end)
 end
 
+-- ĐÃ KHÔI PHỤC HOÀN TOÀN LOGIC STORE CŨ CỦA ÔNG Ở ĐÂY
 local function storeFruit(item)
     pcall(function()
         if item and item:IsA("Tool") then
@@ -806,7 +786,7 @@ local function storeFruit(item)
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             local rawName = item.Name:gsub(" Fruit", "")
             
-            if IsValidFruitObject(item) then
+            if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
                 local uniqueId = item:GetDebugId()
                 if not storedFruitsCache[uniqueId] then
                     if item.Parent == player.Backpack and humanoid then
@@ -814,7 +794,8 @@ local function storeFruit(item)
                         task.wait(0.2)
                     end
                     if remoteComm then
-                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
+                        local fruitKey = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
+                        remoteComm:InvokeServer("StoreFruit", fruitKey, item)
                         sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
@@ -844,11 +825,12 @@ local function autoPickAndStore()
     
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
-            if IsValidFruitObject(obj) then
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local uniqueId = obj:GetDebugId()
                 
                 if not blacklistedFruits[uniqueId] then
-                    local handle = obj:FindFirstChild("Handle") or (obj:IsA("BasePart") and obj)
+                    local handle = obj:FindFirstChild("Handle")
                     local character = player.Character
                     if handle and character and character:FindFirstChild("HumanoidRootPart") then
                         if handle.Position.Y < 0 then
