@@ -258,7 +258,7 @@ if not isKeyValid then
 end
 
 --------------------------------------------------
--- PHẦN SCRIPT CHÍNH (ĐÃ THÊM KHUNG THỜI HẠN KEY Ở DƯỚI 4 KHUNG CHÍNH)
+-- PHẦN SCRIPT CHÍNH
 --------------------------------------------------
 
 local Workspace = game:GetService("Workspace")
@@ -362,7 +362,6 @@ pcall(function()
     end
 end)
 
--- Đã tinh chỉnh lại chiều cao của MainFrame (từ 260 lên 310) để đủ chỗ chứa thêm khung thời hạn bên dưới
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 250, 0, 310)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -538,7 +537,6 @@ local serverLabel = createInfoBox("SERVER", "0/12", Color3.fromRGB(255, 170, 0))
 local teamLabel   = createInfoBox("TEAM", factionDisplayName, Color3.fromRGB(255, 80, 80))
 local moveLabel   = createInfoBox("MOVE", moveType:gsub("^%l", string.upper), Color3.fromRGB(0, 255, 120))
 
--- Khung hiển thị thời hạn key nằm ngay dưới 4 khung chức năng
 local ExpiryBox = Instance.new("Frame")
 ExpiryBox.Size = UDim2.new(0, 230, 0, 32)
 ExpiryBox.Position = UDim2.new(0.5, -115, 0, 256)
@@ -562,7 +560,6 @@ ExpiryLabel.Font = Enum.Font.GothamBold
 ExpiryLabel.ZIndex = 2
 ExpiryLabel.Parent = ExpiryBox
 
--- Vòng lặp cập nhật thời gian đếm ngược của Key
 task.spawn(function()
     while task.wait(1) do
         local timeLeft = sessionExpireTime - os.time()
@@ -616,8 +613,31 @@ EspFolder.Name = "FruitESP_NoWater"
 local ValidFruitPositions = {}
 local totalValidFruits = 0
 
+local function IsValidFruitObject(item)
+    if not (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
+        return false
+    end
+    
+    local name = item.Name
+    -- Strict check: Must match exact fruit format (e.g. ending with "Fruit" or matching AllBloxFruits cleanly, excluding decoration/statue/fruit1)
+    if name:match("1$") then
+        return false
+    end
+    
+    local rawName = name:gsub(" Fruit", "")
+    if AllBloxFruits[rawName] or name:match("Fruit$") then
+        -- Exclude non-fruit objects or static map decorations/statues
+        if name:lower():find("statue") or name:lower():find("model") or name:lower():find("island") then
+            return false
+        end
+        return true
+    end
+    
+    return false
+end
+
 local function CreateNoWaterESP(fruit)
-    if not fruit:FindFirstChild("Fruit_ESP") then
+    if not fruit:FindFirstChild("Fruit_ESP") and IsValidFruitObject(fruit) then
         local targetPart = fruit:IsA("BasePart") and fruit or fruit:FindFirstChildWhichIsA("BasePart")
         if not targetPart then return end
         
@@ -672,8 +692,7 @@ end
 
 local function ScanMap()
     for _, item in pairs(Workspace:GetChildren()) do
-        local rawName = item.Name:gsub(" Fruit", "")
-        if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
+        if IsValidFruitObject(item) then
             CreateNoWaterESP(item)
         end
     end
@@ -682,8 +701,7 @@ end
 ScanMap()
 Workspace.ChildAdded:Connect(function(child)
     task.wait(0.1)
-    local rawName = child.Name:gsub(" Fruit", "")
-    if AllBloxFruits[rawName] or string.find(child.Name, "Fruit") then
+    if IsValidFruitObject(child) then
         CreateNoWaterESP(child)
     end
 end)
@@ -788,7 +806,7 @@ local function storeFruit(item)
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             local rawName = item.Name:gsub(" Fruit", "")
             
-            if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
+            if IsValidFruitObject(item) then
                 local uniqueId = item:GetDebugId()
                 if not storedFruitsCache[uniqueId] then
                     if item.Parent == player.Backpack and humanoid then
@@ -826,12 +844,11 @@ local function autoPickAndStore()
     
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
-            local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+            if IsValidFruitObject(obj) then
                 local uniqueId = obj:GetDebugId()
                 
                 if not blacklistedFruits[uniqueId] then
-                    local handle = obj:FindFirstChild("Handle")
+                    local handle = obj:FindFirstChild("Handle") or (obj:IsA("BasePart") and obj)
                     local character = player.Character
                     if handle and character and character:FindFirstChild("HumanoidRootPart") then
                         if handle.Position.Y < 0 then
