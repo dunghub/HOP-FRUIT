@@ -159,7 +159,7 @@ local function sendDiscordWebhook(fruitName, uniqueId)
             ["fields"] = {
                 {
                     ["name"] = "Main Status",
-                    ["value"] = "Username : " ,
+                    ["value"] = "Username : " .. maskedName,
                     ["inline"] = false
                 },
                 {
@@ -461,11 +461,9 @@ RunService.RenderStepped:Connect(function()
     ESPFolder:ClearAllChildren()
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
-            local objName = obj.Name
-            local lowerName = objName:lower()
-            -- Quét linh hoạt mọi đối tượng Tool, Model, Part có chứa từ "fruit" hoặc nằm trong bảng
-            if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("Part")) and (string.find(lowerName, "fruit") or AllBloxFruits[objName:gsub(" Fruit", "")]) then
-                local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle")
                 if handle then
                     local vector, onScreen = Camera:WorldToViewportPoint(handle.Position)
                     if onScreen then
@@ -481,7 +479,7 @@ RunService.RenderStepped:Connect(function()
                         ESPText.TextColor3 = Color3.fromRGB(0, 255, 0)
                         ESPText.TextSize = 13
                         ESPText.Font = Enum.Font.GothamBold
-                        ESPText.Text = objName .. " (" .. distance .. "m)"
+                        ESPText.Text = obj.Name .. " (" .. distance .. "m)"
                         
                         local corner = Instance.new("UICorner", ESPText)
                         corner.CornerRadius = UDim.new(0, 4)
@@ -546,25 +544,21 @@ end
 
 local function storeFruit(item)
     pcall(function()
-        if item and (item:IsA("Tool") or item:IsA("Model") or item:IsA("Part")) then
+        if item and item:IsA("Tool") then
             local character = player.Character
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            local objName = item.Name
-            local rawName = objName:gsub(" Fruit", "")
-            local lowerName = objName:lower()
+            local rawName = item.Name:gsub(" Fruit", "")
             
-            -- Tự động xác định tên trái cây để gửi yêu cầu Store lên server dù là tên mới hay tên lạ
-            if string.find(lowerName, "fruit") or AllBloxFruits[rawName] then
+            if AllBloxFruits[rawName] or string.find(item.Name, "Fruit") then
                 local uniqueId = item:GetDebugId()
                 if not storedFruitsCache[uniqueId] then
-                    if item:IsA("Tool") and item.Parent == player.Backpack and humanoid then
+                    if item.Parent == player.Backpack and humanoid then
                         humanoid:EquipTool(item)
                         task.wait(0.2)
                     end
                     if remoteComm then
-                        local payloadName = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
-                        remoteComm:InvokeServer("StoreFruit", payloadName, item)
-                        sendDiscordWebhook(objName, uniqueId)
+                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
+                        sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
             end
@@ -592,17 +586,15 @@ local function autoPickAndStore()
     local found = false
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
-            local objName = obj.Name
-            local lowerName = objName:lower()
-            -- Quét toàn bộ đối tượng chứa từ "fruit" hoặc khớp danh sách chuẩn
-            if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("Part")) and (string.find(lowerName, "fruit") or AllBloxFruits[objName:gsub(" Fruit", "")]) then
-                local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+            local rawName = obj.Name:gsub(" Fruit", "")
+            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+                local handle = obj:FindFirstChild("Handle")
                 local character = player.Character
                 if handle and character and character:FindFirstChild("HumanoidRootPart") then
                     local targetCFrame = handle.CFrame + Vector3.new(0, 3, 0)
                     
                     if moveType == "tween" then
-                        StatusLabel.Text = "Tween: " .. objName
+                        StatusLabel.Text = "Tween: " .. obj.Name
                         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         
                         local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -647,7 +639,7 @@ local function autoPickAndStore()
                             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         end
                     else
-                        StatusLabel.Text = "Fast TP: " .. objName
+                        StatusLabel.Text = "Fast TP: " .. obj.Name
                         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         character.HumanoidRootPart.CFrame = targetCFrame
                         task.wait(0.15)
