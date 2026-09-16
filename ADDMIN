@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Camera = Workspace.CurrentCamera
 
 local player = Players.LocalPlayer
 
@@ -359,12 +360,21 @@ local function CreateNoWaterESP(fruit)
         tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         tl.Parent = bgu
 
+        -- Tạo ESP Line (Drawing API) nối từ màn hình đến trái cây
+        local espLine = Drawing.new("Line")
+        espLine.Visible = false
+        espLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) -- Xuất phát từ giữa đáy màn hình
+        espLine.Color = Color3.fromRGB(255, 165, 0)
+        espLine.Thickness = 1.5
+        espLine.Transparency = 0.8
+
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
             if not isRunning or not fruit or not fruit.Parent then
                 ValidFruitPositions[fruitId] = nil
                 if renderConnection then renderConnection:Disconnect() end
                 if bgu then bgu:Destroy() end
+                if espLine then espLine:Remove() end
                 totalValidFruits = math.max(0, totalValidFruits - 1)
                 return
             end
@@ -376,6 +386,18 @@ local function CreateNoWaterESP(fruit)
             if hrp and savedPos then
                 local distance = math.floor((hrp.Position - savedPos).Magnitude)
                 tl.Text = rawName .. " [" .. tostring(distance) .. "m]"
+
+                -- Cập nhật vẽ đường Line ESP
+                local vector, onScreen = Camera:WorldToViewportPoint(savedPos)
+                if onScreen then
+                    espLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    espLine.To = Vector2.new(vector.X, vector.Y)
+                    espLine.Visible = true
+                else
+                    espLine.Visible = false
+                end
+            else
+                espLine.Visible = false
             end
         end)
     end
@@ -668,12 +690,10 @@ task.spawn(function()
             if fruitFound then
                 loopStartTick = tick()
             else
-                -- Hiển thị Not Found màu đỏ đúng 0.5 giây sau Scanning...
                 StatusLabel.Text = "Not Found"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
                 task.wait(0.5)
                 
-                -- Sau đó mới chuyển sang Connecting... rồi đổi server
                 ServerHop()
                 break
             end
