@@ -608,9 +608,6 @@ task.spawn(function()
     end
 end)
 
-local EspFolder = Instance.new("Folder", CoreGui)
-EspFolder.Name = "FruitESP_NoWater"
-
 local ValidFruitPositions = {}
 local totalValidFruits = 0
 
@@ -671,7 +668,7 @@ end
 local function ScanMap()
     for _, item in pairs(Workspace:GetChildren()) do
         local rawName = item.Name:gsub(" Fruit", "")
-        if (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) and (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) then
+        if (item:IsA("Tool") or item:IsA("Model") or item:IsA("BasePart")) and (AllBloxFruits[rawName] or string.find(item.Name, "Fruit")) then
             CreateNoWaterESP(item)
         end
     end
@@ -794,7 +791,8 @@ local function storeFruit(item)
                         task.wait(0.2)
                     end
                     if remoteComm then
-                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
+                        local fruitParam = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
+                        remoteComm:InvokeServer("StoreFruit", fruitParam, item)
                         sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
@@ -825,11 +823,11 @@ local function autoPickAndStore()
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do
             local rawName = obj.Name:gsub(" Fruit", "")
-            if obj:IsA("Tool") and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
+            if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("BasePart")) and (AllBloxFruits[rawName] or string.find(obj.Name, "Fruit")) then
                 local uniqueId = obj:GetDebugId()
                 
                 if not blacklistedFruits[uniqueId] then
-                    local handle = obj:FindFirstChild("Handle")
+                    local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
                     local character = player.Character
                     if handle and character and character:FindFirstChild("HumanoidRootPart") then
                         if handle.Position.Y < 0 then
