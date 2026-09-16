@@ -296,6 +296,7 @@ end
 local factionDisplayName = (chosenFaction == "Pirates") and "Pirates" or "Marines"
 
 local AllBloxFruits = {
+    ["Fruit"] = "Fruit-Fruit",
     ["Rocket"] = "Rocket-Rocket", ["Spin"] = "Spin-Spin", ["Blade"] = "Blade-Blade",
     ["Spring"] = "Spring-Spring", ["Bomb"] = "Bomb-Bomb", ["Smoke"] = "Smoke-Smoke",
     ["Spike"] = "Spike-Spike", ["Flame"] = "Flame-Flame", ["Falcon"] = "Falcon-Falcon",
@@ -778,7 +779,6 @@ local function sendDiscordWebhook(fruitName, uniqueId)
     end)
 end
 
--- ĐÃ KHÔI PHỤC HOÀN TOÀN LOGIC STORE CŨ CỦA ÔNG Ở ĐÂY
 local function storeFruit(item)
     pcall(function()
         if item and item:IsA("Tool") then
@@ -794,8 +794,7 @@ local function storeFruit(item)
                         task.wait(0.2)
                     end
                     if remoteComm then
-                        local fruitKey = AllBloxFruits[rawName] or (rawName .. "-" .. rawName)
-                        remoteComm:InvokeServer("StoreFruit", fruitKey, item)
+                        remoteComm:InvokeServer("StoreFruit", AllBloxFruits[rawName] or (rawName .. "-" .. rawName), item)
                         sendDiscordWebhook(item.Name, uniqueId)
                     end
                 end
