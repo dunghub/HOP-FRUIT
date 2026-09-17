@@ -536,11 +536,26 @@ end
 local timeLabel   = createInfoBox("TIME", "00:00", Color3.fromRGB(0, 200, 255))
 local serverLabel = createInfoBox("SERVER", "0/12", Color3.fromRGB(255, 170, 0))
 local teamLabel   = createInfoBox("TEAM", factionDisplayName, Color3.fromRGB(255, 80, 80))
-local moveLabel   = createInfoBox("MOVE", moveType:gsub("^%l", string.upper), Color3.fromRGB(0, 255, 120))
+local moveLabel   = createInfoBox("MOVE", moveType == "teleport" and "Teleport" or moveType:gsub("^%l", string.upper), Color3.fromRGB(0, 255, 120))
+
+-- Thêm dòng cảnh báo màu đỏ phía dưới khung MOVE nếu moveType là teleport hoặc fast tp
+local TeleportWarningLabel = Instance.new("TextLabel")
+TeleportWarningLabel.Size = UDim2.new(0, 230, 0, 28)
+TeleportWarningLabel.Position = UDim2.new(0.5, -115, 0, 252)
+TeleportWarningLabel.BackgroundTransparency = 1
+TeleportWarningLabel.Text = "Warning, Teleport can't help you pick spawn fruit due to bloxfruit's anti cheat"
+TeleportWarningLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+TeleportWarningLabel.TextSize = 8
+TeleportWarningLabel.Font = Enum.Font.GothamBold
+TeleportWarningLabel.TextWrapped = true
+TeleportWarningLabel.TextXAlignment = Enum.TextXAlignment.Center
+TeleportWarningLabel.ZIndex = 2
+TeleportWarningLabel.Visible = (moveType == "teleport" or moveType == "fasttp")
+TeleportWarningLabel.Parent = MainFrame
 
 local ExpiryBox = Instance.new("Frame")
 ExpiryBox.Size = UDim2.new(0, 230, 0, 32)
-ExpiryBox.Position = UDim2.new(0.5, -115, 0, 256)
+ExpiryBox.Position = UDim2.new(0.5, -115, 0, 282)
 ExpiryBox.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
 ExpiryBox.BorderSizePixel = 0
 ExpiryBox.ZIndex = 2
@@ -835,11 +850,18 @@ local function autoPickAndStore()
                             continue
                         end
 
+                        -- Logic ngăn chặn teleport đụng tới trái không phải trái spawn chuẩn của server chống anti-cheat nếu cần
+                        if moveType == "teleport" or moveType == "fasttp" then
+                            if not AllBloxFruits[rawName] then
+                                continue
+                            end
+                        end
+
                         local targetCFrame = handle.CFrame
                         foundValidFruit = true
                         
                         if moveType == "tween" then
-                            StatusLabel.Text = "TP & Wait 10s: " .. obj.Name
+                            StatusLabel.Text = "Tween: " .. obj.Name
                             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                             
                             local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -847,33 +869,54 @@ local function autoPickAndStore()
                             
                             if hrp and humanoid then
                                 humanoid.PlatformStand = true
+                                local startCFrame = hrp.CFrame
+                                local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+                                local speed = 300
+                                local duration = distance / speed
+                                local startTime = tick()
                                 
-                                -- Teleport đúng duy nhất 1 lần cạnh trái cây
-                                local directionToFruit = (targetCFrame.Position - hrp.Position).Unit
-                                local preTeleportPos = targetCFrame - (directionToFruit * 3)
-                                hrp.CFrame = CFrame.new(preTeleportPos.Position, targetCFrame.Position)
+                                local diedDuringTween = false
+                                local charDeathConn
+                                charDeathConn = humanoid.Died:Connect(function()
+                                    diedDuringTween = true
+                                    blacklistedFruits[uniqueId] = true
+                                end)
                                 
-                                -- Đợi đúng 10 giây đồng thời tween nhẹ nhàng lao vô Fruit để lách luật server
-                                local waitStart = tick()
-                                while tick() - waitStart < 10 do
-                                    if not isRunning or not obj.Parent or humanoid.Health <= 0 then break end
+                                local conn
+                                conn = RunService.Stepped:Connect(function()
+                                    if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not obj.Parent or humanoid.Health <= 0 then
+                                        if conn then conn:Disconnect() end
+                                        return
+                                    end
                                     
                                     for _, part in ipairs(character:GetDescendants()) do
                                         if part:IsA("BasePart") then part.CanCollide = false end
                                     end
                                     
-                                    hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, 0.05)
+                                    local elapsed = tick() - startTime
+                                    local alpha = math.clamp(elapsed / duration, 0, 1)
+                                    hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
                                     hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                                    task.wait(0.1)
-                                end
+                                    
+                                    if alpha >= 1 or diedDuringTween then
+                                        if conn then conn:Disconnect() end
+                                    end
+                                end)
                                 
+                                task.wait(duration)
+                                if conn then conn:Disconnect() end
+                                if charDeathConn then charDeathConn:Disconnect() end
                                 humanoid.PlatformStand = false
+                                
+                                if diedDuringTween or humanoid.Health <= 0 then
+                                    return 
+                                end
                             end
                         else
                             StatusLabel.Text = "Fast TP: " .. obj.Name
                             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                             character.HumanoidRootPart.CFrame = targetCFrame
-                            task.wait(10) -- Fast TP cũng đợi 10s cho server kịp nhận diện
+                            task.wait(0.15)
                         end
                         
                         storeAllOwnedFruits()
