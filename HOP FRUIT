@@ -893,8 +893,19 @@ local function autoPickAndStore()
                         else
                             StatusLabel.Text = "Fast TP: " .. obj.Name
                             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            character.HumanoidRootPart.CFrame = targetCFrame
-                            task.wait(0.15)
+                            
+                            local hrp = character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                -- Teleport 1 nhịp duy nhất ngay trên đầu trái cây một xíu để tránh kẹt tâm
+                                hrp.CFrame = targetCFrame + Vector3.new(0, 0.4, 0)
+                                storeAllOwnedFruits()
+                                
+                                -- Chờ một nhịp ngắn, nếu trái chưa nhặt được thì đánh dấu blacklist để tiếp tục đi tìm hoặc chuyển hướng
+                                task.wait(0.15)
+                                if obj.Parent and handle.Parent then
+                                    blacklistedFruits[uniqueId] = true
+                                end
+                            end
                         end
                         
                         storeAllOwnedFruits()
