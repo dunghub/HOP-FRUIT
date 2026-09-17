@@ -839,7 +839,7 @@ local function autoPickAndStore()
                         foundValidFruit = true
                         
                         if moveType == "tween" then
-                            StatusLabel.Text = "Tween: " .. obj.Name
+                            StatusLabel.Text = "Teleport & Tween: " .. obj.Name
                             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                             
                             local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -847,10 +847,18 @@ local function autoPickAndStore()
                             
                             if hrp and humanoid then
                                 humanoid.PlatformStand = true
+                                
+                                -- Teleport 1 lần ngay bên cạnh trái (cách 1m) để tránh anti-cheat
+                                local directionToFruit = (targetCFrame.Position - hrp.Position).Unit
+                                local preTeleportPos = targetCFrame - (directionToFruit * 1)
+                                hrp.CFrame = CFrame.new(preTeleportPos.Position, targetCFrame.Position)
+                                task.wait(0.15)
+                                
+                                -- Tween quãng đường ngắn còn lại (1m) cho mượt
                                 local startCFrame = hrp.CFrame
                                 local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
                                 local speed = 300
-                                local duration = distance / speed
+                                local duration = math.max(distance / speed, 0.05)
                                 local startTime = tick()
                                 
                                 local diedDuringTween = false
@@ -893,19 +901,8 @@ local function autoPickAndStore()
                         else
                             StatusLabel.Text = "Fast TP: " .. obj.Name
                             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            
-                            local hrp = character:FindFirstChild("HumanoidRootPart")
-                            if hrp then
-                                -- Teleport 1 nhịp duy nhất ngay trên đầu trái cây một xíu để tránh kẹt tâm
-                                hrp.CFrame = targetCFrame + Vector3.new(0, 0.4, 0)
-                                storeAllOwnedFruits()
-                                
-                                -- Chờ một nhịp ngắn, nếu trái chưa nhặt được thì đánh dấu blacklist để tiếp tục đi tìm hoặc chuyển hướng
-                                task.wait(0.15)
-                                if obj.Parent and handle.Parent then
-                                    blacklistedFruits[uniqueId] = true
-                                end
-                            end
+                            character.HumanoidRootPart.CFrame = targetCFrame
+                            task.wait(0.15)
                         end
                         
                         storeAllOwnedFruits()
