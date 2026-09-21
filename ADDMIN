@@ -218,7 +218,7 @@ local function autoTeleportChest()
             found = true
             local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
             
-            -- Trạng thái UI chuẩn chỉnh theo yêu cầu:
+            -- Trạng thái UI chuẩn chỉnh:
             if isSwitching then
                 StatusLabel.Text = "🔄 Island transfer\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0) -- Màu cam khi chuyển đảo
@@ -230,7 +230,7 @@ local function autoTeleportChest()
             humanoid.PlatformStand = true
             local startCFrame = hrp.CFrame
             local actualDist = (startCFrame.Position - targetCFrame.Position).Magnitude
-            local speed = 300 -- Tốc độ bay chuẩn yêu cầu
+            local speed = 300 -- Tốc độ bay chuẩn
             local duration = actualDist / speed
             local startTime = tick()
 
@@ -248,8 +248,11 @@ local function autoTeleportChest()
                     return
                 end
 
+                -- KÍCH HOẠT NOCLIP LIÊN TỤC TRONG SUỐT QUÁ TRÌNH BAY
                 for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
+                    if part:IsA("BasePart") then 
+                        part.CanCollide = false 
+                    end
                 end
 
                 local elapsed = tick() - startTime
