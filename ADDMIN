@@ -100,32 +100,20 @@ local function getChestInfo(objName)
     end
 end
 
--- Hệ thống ESP hiển thị tên rương không có icon
+-- Hệ thống ESP hiển thị tên rương
 local function updateGlobalESP()
     local activeIds = {}
 
     for _, obj in ipairs(Workspace:GetDescendants()) do
         local nameLower = obj.Name:lower()
         if string.find(nameLower, "chest") then
-            local handle = nil
-            if obj:IsA("BasePart") then
-                handle = obj
-            elseif obj:IsA("Model") then
-                handle = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-            end
+            local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
 
             if handle then
                 local uniqueId = obj:GetDebugId()
                 activeIds[uniqueId] = true
 
-                if collectedChestsFlag[uniqueId] then
-                    if espCache[uniqueId] then
-                        if espCache[uniqueId].billboard then
-                            espCache[uniqueId].billboard:Destroy()
-                        end
-                        espCache[uniqueId] = nil
-                    end
-                else
+                if not collectedChestsFlag[uniqueId] then
                     local chestName, chestColor = getChestInfo(obj.Name)
 
                     if not espCache[uniqueId] then
@@ -147,10 +135,7 @@ local function updateGlobalESP()
                         textLabel.TextColor3 = chestColor
                         textLabel.Parent = billboard
 
-                        espCache[uniqueId] = {
-                            billboard = billboard,
-                            part = handle
-                        }
+                        espCache[uniqueId] = { billboard = billboard }
                     end
                 end
             end
@@ -159,19 +144,19 @@ local function updateGlobalESP()
 
     for id, data in pairs(espCache) do
         if not activeIds[id] then
-            if data and data.billboard then 
-                data.billboard:Destroy() 
-            end
+            if data and data.billboard then data.billboard:Destroy() end
             espCache[id] = nil
         end
     end
 end
 
--- Lấy rương gần nhất và chuyển đảo tự động khi hết rương gần
+-- Lấy rương gần nhất chưa nhặt
 local function getTargetChest()
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, false end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil end
     local hrp = character.HumanoidRootPart
+
+    updateGlobalESP()
 
     local chests = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -187,107 +172,68 @@ local function getTargetChest()
         end
     end
 
-    if #chests == 0 then return nil, nil, false end
+    if #chests == 0 then return nil, nil end
 
     table.sort(chests, function(a, b)
         return a.dist < b.dist
     end)
 
-    local closestDist = chests[1].dist
-    local currentIslandChests = {}
-
-    for _, c in ipairs(chests) do
-        if math.abs(c.dist - closestDist) < 400 or c.dist < 300 then
-            table.insert(currentIslandChests, c)
-        end
-    end
-
-    if #currentIslandChests > 0 then
-        table.sort(currentIslandChests, function(a, b)
-            return a.dist < b.dist
-        end)
-        return currentIslandChests[1].obj, currentIslandChests[1].id, false
-    end
-
-    return chests[1].obj, chests[1].id, true
+    return chests[1].obj, chests[1].id
 end
 
--- Hàm bay Tween, đến nơi đóng băng đứng bất động 0.5s để cộng điểm rồi mới bay tiếp
-local function autoTeleportChest()
-    local found = false
-    pcall(function()
-        local character = player.Character
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        local hrp = character.HumanoidRootPart
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
-
-        updateGlobalESP()
-
-        local targetChest, uniqueId, isSwitching = getTargetChest()
-
-        if targetChest and uniqueId then
-            found = true
-            local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
-            
-            StatusLabel.Text = "Auto Chest"
-            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-
-            local distance = (hrp.Position - targetCFrame.Position).Magnitude
-            local speed = 200
-            local duration = distance / speed
-            if duration < 0.05 then duration = 0.05 end
-
-            humanoid.PlatformStand = true
-
-            -- Chạy tween bay mượt tới rương
-            local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-            
-            tween:Play()
-            tween.Completed:Wait()
-
-            -- Đến nơi: Đóng băng bất động hoàn toàn, khóa vị trí không cho nhúc nhích
-            hrp.CFrame = targetCFrame
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            hrp.Anchored = true
-
-            -- Đứng im chờ 0.5 giây để đếm rương
-            task.wait(0.5)
-
-            if targetChest.Parent then
-                collectedChestsCount = collectedChestsCount + 1
-                countLabel.Text = "Chests Collected: " + collectedChestsCount -- sửa lại cho an toàn hoặc dùng chuỗi
-                countLabel.Text = "Chests Collected: " .. collectedChestsCount
-                
-                collectedChestsFlag[uniqueId] = true
-                if espCache[uniqueId] then
-                    if espCache[uniqueId].billboard then
-                        espCache[uniqueId].billboard:Destroy()
-                    end
-                    espCache[uniqueId] = nil
-                end
-            end
-
-            -- Mở khóa băng để chuẩn bị bay sang rương tiếp theo
-            hrp.Anchored = false
-            humanoid.PlatformStand = false
-        end
-    end)
-    return found
-end
-
--- Vòng lặp chạy script chính
+-- Vòng lặp chính: Bay đến -> Dừng đóng băng 0.5s -> Cộng +1 -> Tiếp tục
 task.spawn(function()
     isRunning = true
     while isRunning do
-        local success = autoTeleportChest()
-        if not success then
-            StatusLabel.Text = "Not Found"
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            task.wait(1)
-        else
-            task.wait(0.05)
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+        if hrp and humanoid and humanoid.Health > 0 then
+            local targetChest, uniqueId = getTargetChest()
+
+            if targetChest and uniqueId then
+                StatusLabel.Text = "Auto Chest"
+                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+
+                local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
+                local distance = (hrp.Position - targetCFrame.Position).Magnitude
+                local duration = math.clamp(distance / 200, 0.05, 3)
+
+                humanoid.PlatformStand = true
+
+                -- Bay Tween tới rương
+                local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+                tween:Play()
+                tween.Completed:Wait()
+
+                -- Đã đến điểm: Cố định vị trí, đóng băng đứng im
+                hrp.CFrame = targetCFrame
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                hrp.Anchored = true
+
+                -- Chờ đúng 0.5s tại chỗ
+                task.wait(0.5)
+
+                -- CHẮC CHẮN CỘNG +1 LUÔN
+                collectedChestsCount = collectedChestsCount + 1
+                countLabel.Text = "Chests Collected: " .. collectedChestsCount
+                
+                collectedChestsFlag[uniqueId] = true
+                if espCache[uniqueId] and espCache[uniqueId].billboard then
+                    espCache[uniqueId].billboard:Destroy()
+                    espCache[uniqueId] = nil
+                end
+
+                -- Mở khóa cho phép bay sang rương tiếp theo
+                hrp.Anchored = false
+                humanoid.PlatformStand = false
+            else
+                StatusLabel.Text = "Not Found"
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                task.wait(1)
+            end
         end
+        task.wait(0.05)
     end
 end)
