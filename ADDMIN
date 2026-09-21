@@ -18,9 +18,9 @@ ScreenGui.Name = "ChestAutoIslandSwitch"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Giao diện UI chính
+-- Giao diện UI chính có tên DUBO và bộ đếm rương
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 90)
+MainFrame.Size = UDim2.new(0, 220, 0, 130)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -41,9 +41,20 @@ task.spawn(function()
     end
 end)
 
+-- Tiêu đề DUBO HUB
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ DUBO HUB"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.TextSize = 13
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+-- Khung trạng thái Auto Chest
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 190, 0, 45)
-StatusBox.Position = UDim2.new(0.5, -95, 0.5, -22)
+StatusBox.Size = UDim2.new(0, 190, 0, 35)
+StatusBox.Position = UDim2.new(0.5, -95, 0, 35)
 StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 StatusBox.BorderSizePixel = 0
 StatusBox.Parent = MainFrame
@@ -54,16 +65,43 @@ StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "Auto Chest"
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-StatusLabel.TextSize = 13
+StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextWrapped = true
 StatusLabel.Parent = StatusBox
 
+-- Bộ đếm rương dựa trên tiền tăng lên
+local countLabel = Instance.new("TextLabel")
+countLabel.Size = UDim2.new(1, 0, 0, 35)
+countLabel.Position = UDim2.new(0, 0, 0, 80)
+countLabel.BackgroundTransparency = 1
+countLabel.Text = "Chests Collected: 0"
+countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+countLabel.TextSize = 12
+countLabel.Font = Enum.Font.GothamBold
+countLabel.Parent = MainFrame
+
+local collectedChestsCount = 0
 local collectedChestsFlag = {}
 local isRunning = true
 local espCache = {}
 
--- Chuẩn hóa tên tiếng Anh và màu sắc các loại rương
+-- Theo dõi tiền (Money/Beli) để đếm rương chính xác 100%
+local leaderstats = player:WaitForChild("leaderstats", 5)
+local moneyStat = leaderstats and (leaderstats:FindFirstChild("Beli") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash"))
+local lastMoney = moneyStat and moneyStat.Value or 0
+
+if moneyStat then
+    moneyStat.Changed:Connect(function(newValue)
+        if newValue > lastMoney then
+            collectedChestsCount = collectedChestsCount + 1
+            countLabel.Text = "Chests Collected: " .. collectedChestsCount
+        end
+        lastMoney = newValue
+    end)
+end
+
+-- Chuẩn hóa tên loại rương
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
@@ -118,7 +156,7 @@ local function updateGlobalESP()
                         local textLabel = Instance.new("TextLabel")
                         textLabel.Size = UDim2.new(1, 0, 1, 0)
                         textLabel.BackgroundTransparency = 1
-                        textLabel.Text = chestName -- Chỉ ghi tên rương, không icon
+                        textLabel.Text = chestName -- Chỉ hiện tên rương thuần túy
                         textLabel.TextSize = 12
                         textLabel.Font = Enum.Font.GothamBold
                         textLabel.TextStrokeTransparency = 0.3
