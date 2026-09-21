@@ -18,9 +18,9 @@ ScreenGui.Name = "DuboAutoChest"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Giao diện UI chính
+-- Giao diện UI chính (Đã lược bỏ phần đếm rương, thu gọn lại)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 130)
+MainFrame.Size = UDim2.new(0, 220, 0, 85)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -54,7 +54,7 @@ Title.Parent = MainFrame
 -- Khung trạng thái
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 190, 0, 35)
-StatusBox.Position = UDim2.new(0.5, -95, 0, 35)
+StatusBox.Position = UDim2.new(0.5, -95, 0, 38)
 StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 StatusBox.BorderSizePixel = 0
 StatusBox.Parent = MainFrame
@@ -70,19 +70,7 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextWrapped = true
 StatusLabel.Parent = StatusBox
 
--- Bộ đếm rương
-local countLabel = Instance.new("TextLabel")
-countLabel.Size = UDim2.new(1, 0, 0, 35)
-countLabel.Position = UDim2.new(0, 0, 0, 80)
-countLabel.BackgroundTransparency = 1
-countLabel.Text = "Chests Collected: 0"
-countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-countLabel.TextSize = 12
-countLabel.Font = Enum.Font.GothamBold
-countLabel.Parent = MainFrame
-
-local collectedChests0Count = 0
-local visitedPositions = {} -- Lưu các tọa độ đã ghé qua để "quên" rương cũ
+local visitedPositions = {}
 local isRunning = true
 local espCache = {}
 
@@ -151,7 +139,7 @@ local function updateGlobalESP()
     end
 end
 
--- Lấy rương gần nhất dựa theo tọa độ chưa ghé thăm
+-- Lấy tọa độ rương gần nhất chưa ghé thăm
 local function getTargetChestPosition()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil end
@@ -165,7 +153,6 @@ local function getTargetChestPosition()
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
             if handle then
                 local targetPos = handle.Position + Vector3.new(0, 3, 0)
-                -- Tạo khóa tọa độ (làm tròn để so sánh chính xác)
                 local posKey = math.floor(targetPos.X) .. "," .. math.floor(targetPos.Y) .. "," .. math.floor(targetPos.Z)
                 
                 if not visitedPositions[posKey] then
@@ -185,7 +172,7 @@ local function getTargetChestPosition()
     return chests[1].pos, chests[1].key, chests[1].obj
 end
 
--- Vòng lặp chính: Bay đến tọa độ -> +1 ngay -> Đứng im 0.5s -> Nhớ tọa độ cũ & Quên đi để bay tiếp
+-- Vòng lặp chính: Bay đến tọa độ -> Đứng im cố định 0.5s -> Nhớ vị trí cũ & lướt tiếp
 task.spawn(function()
     isRunning = true
     while isRunning do
@@ -205,20 +192,17 @@ task.spawn(function()
 
                 humanoid.PlatformStand = true
 
-                -- Bay Tween đến đúng tọa độ rương
+                -- Bay Tween đến tọa độ rương
                 local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
                 tween:Play()
                 tween.Completed:Wait()
 
-                -- Vừa chạm tọa độ: Khóa cứng vị trí, đóng băng bất động và +1 NGAY LẬP TỨC
+                -- Vừa đến điểm: Khóa cứng vị trí, đóng băng bất động
                 hrp.CFrame = CFrame.new(targetPos)
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 hrp.Anchored = true
 
-                collectedChests0Count = collectedChests0Count + 1
-                countLabel.Text = "Chests Collected: " .. collectedChests0Count
-                
-                -- Ghi nhớ tọa độ đã qua để không quay lại, dọn ESP của rương đó
+                -- Ghi nhớ tọa độ đã qua và dọn ESP
                 visitedPositions[posKey] = true
                 if targetObj then
                     local uniqueId = targetObj:GetDebugId()
@@ -228,10 +212,10 @@ task.spawn(function()
                     end
                 end
 
-                -- Đứng im đúng 0.5 giây tại chỗ
+                -- Đứng im chờ đúng 0.5 giây tại chỗ
                 task.wait(0.5)
 
-                -- Mở khóa chuẩn bị bay sang tọa độ rương mới
+                -- Mở khóa chuẩn bị bay sang tọa độ mới
                 hrp.Anchored = false
                 humanoid.PlatformStand = false
             else
