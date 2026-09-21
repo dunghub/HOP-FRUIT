@@ -3,7 +3,7 @@ repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
@@ -212,7 +212,7 @@ local function getTargetChest()
     return chests[1].obj, chests[1].id, true
 end
 
--- Hàm thực thi bay đến rương và cộng đếm chuẩn xác tại điểm dừng
+-- Hàm bay Tween, đến nơi đóng băng đứng bất động 0.5s để cộng điểm rồi mới bay tiếp
 local function autoTeleportChest()
     local found = false
     pcall(function()
@@ -233,48 +233,31 @@ local function autoTeleportChest()
             StatusLabel.Text = "Auto Chest"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 
-            humanoid.PlatformStand = true
-            local startCFrame = hrp.CFrame
-            local actualDist = (startCFrame.Position - targetCFrame.Position).Magnitude
+            local distance = (hrp.Position - targetCFrame.Position).Magnitude
             local speed = 200
-            local duration = actualDist / speed
-            local startTime = tick()
+            local duration = distance / speed
+            if duration < 0.05 then duration = 0.05 end
 
-            local diedDuringTween = false
-            local charDeathConn
-            charDeathConn = humanoid.Died:Connect(function()
-                diedDuringTween = true
-                collectedChestsFlag[uniqueId] = true
-            end)
+            humanoid.PlatformStand = true
 
-            local conn
-            conn = RunService.Stepped:Connect(function()
-                if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not targetChest.Parent or humanoid.Health <= 0 then
-                    if conn then conn:Disconnect() end
-                    return
-                end
+            -- Chạy tween bay mượt tới rương
+            local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+            
+            tween:Play()
+            tween.Completed:Wait()
 
-                local elapsed = tick() - startTime
-                local alpha = math.clamp(elapsed / duration, 0, 1)
-                hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            -- Đến nơi: Đóng băng bất động hoàn toàn, khóa vị trí không cho nhúc nhích
+            hrp.CFrame = targetCFrame
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.Anchored = true
 
-                if alpha >= 1 or diedDuringTween then
-                    if conn then conn:Disconnect() end
-                end
-            end)
+            -- Đứng im chờ 0.5 giây để đếm rương
+            task.wait(0.5)
 
-            task.wait(duration)
-            if conn then conn:Disconnect() end
-            if charDeathConn then charDeathConn:Disconnect() end
-
-            if not diedDuringTween and humanoid.Health > 0 and targetChest.Parent then
-                hrp.CFrame = targetCFrame
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                
-                -- Đứng lại chờ 0.5s tại điểm rương rồi cộng thẳng vào bộ đếm
-                task.wait(0.5)
+            if targetChest.Parent then
                 collectedChestsCount = collectedChestsCount + 1
+                countLabel.Text = "Chests Collected: " + collectedChestsCount -- sửa lại cho an toàn hoặc dùng chuỗi
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
                 
                 collectedChestsFlag[uniqueId] = true
@@ -286,6 +269,8 @@ local function autoTeleportChest()
                 end
             end
 
+            -- Mở khóa băng để chuẩn bị bay sang rương tiếp theo
+            hrp.Anchored = false
             humanoid.PlatformStand = false
         end
     end)
@@ -302,7 +287,7 @@ task.spawn(function()
             StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
             task.wait(1)
         else
-            task.wait(0.1)
+            task.wait(0.05)
         end
     end
 end)
