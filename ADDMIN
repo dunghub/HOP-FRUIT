@@ -79,11 +79,10 @@ countLabel.Font = Enum.Font.Gotham
 countLabel.Parent = MainFrame
 
 local collectedChestsCount = 0
-local collectedChestsFlag = {} -- Cờ đánh dấu rương đã nhặt vĩnh viễn
+local collectedChestsFlag = {}
 local isRunning = true
 local espCache = {}
 
--- Chuẩn hóa tên tiếng Anh và màu sắc các loại rương trong Blox Fruits
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
@@ -97,13 +96,11 @@ local function getChestInfo(objName)
     end
 end
 
--- Hệ thống quét và ép hiển thị ESP TOÀN MAP (Khắc phục triệt để lỗi ở xa không hiện tên)
 local function updateGlobalESP()
     local activeIds = {}
     local character = player.Character
     local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
-    -- Quét toàn bộ Workspace và các thư mục ẩn/con
     for _, obj in ipairs(Workspace:GetDescendants()) do
         local nameLower = obj.Name:lower()
         if string.find(nameLower, "chest") then
@@ -134,7 +131,7 @@ local function updateGlobalESP()
                         billboard.Size = UDim2.new(0, 160, 0, 45)
                         billboard.StudsOffset = Vector3.new(0, 3, 0)
                         billboard.AlwaysOnTop = true
-                        billboard.MaxDistance = math.huge -- Cho phép hiện diện ở mọi khoảng cách vô cực trên map
+                        billboard.MaxDistance = math.huge
                         billboard.Parent = handle
 
                         local textLabel = Instance.new("TextLabel")
@@ -154,7 +151,6 @@ local function updateGlobalESP()
                         }
                     end
 
-                    -- Cập nhật khoảng cách real-time liên tục bất kể xa hay gần
                     if espCache[uniqueId] and espCache[uniqueId].textLabel then
                         local distText = ""
                         if hrp then
@@ -168,7 +164,6 @@ local function updateGlobalESP()
         end
     end
 
-    -- Dọn dẹp ESP cũ không còn tồn tại
     for id, data in pairs(espCache) do
         if not activeIds[id] then
             if data and data.billboard then 
@@ -289,9 +284,13 @@ local function autoTeleportChest()
             task.wait(duration)
             if conn then conn:Disconnect() end
             if charDeathConn then charDeathConn:Disconnect() end
-            humanoid.PlatformStand = false
 
-            if not diedDuringTween and humanoid.Health > 0 then
+            -- Cố định vị trí chuẩn ngay tại rương và đứng lại 0.5 giây để nhận rương mượt mà, chống giật cục
+            if not diedDuringTween and humanoid.Health > 0 and targetChest.Parent then
+                hrp.CFrame = targetCFrame
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                task.wait(0.5) -- Đứng lại 0.5s tại chỗ rương
+                
                 collectedChestsCount = collectedChestsCount + 1
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
                 
@@ -303,6 +302,8 @@ local function autoTeleportChest()
                     espCache[uniqueId] = nil
                 end
             end
+
+            humanoid.PlatformStand = false
         end
     end)
     return found
@@ -317,6 +318,6 @@ task.spawn(function()
             StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
             task.wait(2)
         end
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end)
