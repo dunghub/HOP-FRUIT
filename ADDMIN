@@ -86,32 +86,6 @@ local collectedChestsFlag = {}
 local isRunning = true
 local espCache = {}
 
--- Bắt sự kiện tiền tăng lên để đếm rương chuẩn 100%
-task.spawn(function()
-    local leaderstats = player:WaitForChild("leaderstats", 10)
-    if leaderstats then
-        local moneyStat = nil
-        for _, stat in ipairs(leaderstats:GetChildren()) do
-            local name = stat.Name:lower()
-            if name:find("beli") or name:find("money") or name:find("cash") then
-                moneyStat = stat
-                break
-            end
-        end
-        
-        if moneyStat then
-            local lastMoney = moneyStat.Value
-            moneyStat.Changed:Connect(function(newValue)
-                if newValue > lastMoney then
-                    collectedChestsCount = collectedChestsCount + 1
-                    countLabel.Text = "Chests Collected: " .. collectedChestsCount
-                end
-                lastMoney = newValue
-            end)
-        end
-    end
-end)
-
 -- Phân loại tên rương và màu sắc cho ESP
 local function getChestInfo(objName)
     local lowerName = objName:lower()
@@ -238,7 +212,7 @@ local function getTargetChest()
     return chests[1].obj, chests[1].id, true
 end
 
--- Hàm thực thi bay đến rương
+-- Hàm thực thi bay đến rương và cộng đếm chuẩn xác tại điểm dừng
 local function autoTeleportChest()
     local found = false
     pcall(function()
@@ -297,7 +271,11 @@ local function autoTeleportChest()
             if not diedDuringTween and humanoid.Health > 0 and targetChest.Parent then
                 hrp.CFrame = targetCFrame
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                
+                -- Đứng lại chờ 0.5s tại điểm rương rồi cộng thẳng vào bộ đếm
                 task.wait(0.5)
+                collectedChestsCount = collectedChestsCount + 1
+                countLabel.Text = "Chests Collected: " .. collectedChestsCount
                 
                 collectedChestsFlag[uniqueId] = true
                 if espCache[uniqueId] then
