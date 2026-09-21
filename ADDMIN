@@ -97,7 +97,6 @@ local function updateGlobalESP()
         if string.find(nameLower, "chest") then
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
 
-            -- Kiểm tra rương có đang xuất hiện thực sự không (Transparency < 1 và không bị ẩn)
             if handle and handle.Transparency < 1 and handle.Parent then
                 local uniqueId = obj:GetDebugId()
                 local posKey = math.floor(handle.Position.X) .. "," .. math.floor(handle.Position.Y) .. "," .. math.floor(handle.Position.Z)
@@ -153,7 +152,6 @@ local function getTargetChestPosition()
         if string.find(obj.Name:lower(), "chest") then
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
             
-            -- Chỉ lấy rương đang xuất hiện (Transparency < 1, có Parent tồn tại)
             if handle and handle.Transparency < 1 and handle.Parent then
                 local targetPos = handle.Position + Vector3.new(0, 3, 0)
                 local posKey = math.floor(targetPos.X) .. "," .. math.floor(targetPos.Y) .. "," .. math.floor(targetPos.Z)
@@ -175,7 +173,7 @@ local function getTargetChestPosition()
     return chests[1].pos, chests[1].key, chests[1].obj
 end
 
--- Vòng lặp chính: Bay từ từ (tốc độ chậm) -> Đứng im 0.5s -> Bỏ qua rương không có
+-- Vòng lặp chính: Tốc độ bay 200 chuyển đảo nhanh vù vù
 task.spawn(function()
     isRunning = true
     while isRunning do
@@ -191,18 +189,17 @@ task.spawn(function()
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 
                 local distance = (hrp.Position - targetPos).Magnitude
-                -- Đã giảm tốc độ xuống 60 studs/s để bay chậm, mượt, không bị vụt quá đà
-                local speed = 60 
-                local duration = math.clamp(distance / speed, 0.1, 5)
+                local speed = 200 -- Tốc độ bay nhanh giữa các đảo như yêu cầu
+                local duration = math.clamp(distance / speed, 0.05, 3)
 
                 humanoid.PlatformStand = true
 
-                -- Bay Tween từ từ tới rương
+                -- Bay Tween tốc độ 200 tới rương
                 local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
                 tween:Play()
                 tween.Completed:Wait()
 
-                -- Vừa đến điểm: Khóa cứng vị trí, đóng băng đứng im
+                -- Đến điểm: Khóa cứng vị trí, đóng băng đứng im
                 hrp.CFrame = CFrame.new(targetPos)
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 hrp.Anchored = true
@@ -217,10 +214,10 @@ task.spawn(function()
                     end
                 end
 
-                -- Đứng im chờ đúng 0.5 giây tại chỗ
+                -- Dừng lại đúng 0.5 giây
                 task.wait(0.5)
 
-                -- Mở khóa chuẩn bị bay sang rương tiếp theo
+                -- Mở khóa bay tiếp sang đảo khác
                 hrp.Anchored = false
                 humanoid.PlatformStand = false
             else
