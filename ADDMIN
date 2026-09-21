@@ -81,8 +81,8 @@ countLabel.TextSize = 12
 countLabel.Font = Enum.Font.GothamBold
 countLabel.Parent = MainFrame
 
-local collectedChestsCount = 0
-local collectedChestsFlag = {}
+local collectedChests0Count = 0
+local visitedPositions = {} -- Lưu các tọa độ đã ghé qua để "quên" rương cũ
 local isRunning = true
 local espCache = {}
 
@@ -111,9 +111,10 @@ local function updateGlobalESP()
 
             if handle then
                 local uniqueId = obj:GetDebugId()
+                local posKey = math.floor(handle.Position.X) .. "," .. math.floor(handle.Position.Y) .. "," .. math.floor(handle.Position.Z)
                 activeIds[uniqueId] = true
 
-                if not collectedChestsFlag[uniqueId] then
+                if not visitedPositions[posKey] then
                     local chestName, chestColor = getChestInfo(obj.Name)
 
                     if not espCache[uniqueId] then
@@ -150,8 +151,8 @@ local function updateGlobalESP()
     end
 end
 
--- Lấy rương gần nhất chưa nhặt
-local function getTargetChest()
+-- Lấy rương gần nhất dựa theo tọa độ chưa ghé thăm
+local function getTargetChestPosition()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil end
     local hrp = character.HumanoidRootPart
@@ -161,12 +162,15 @@ local function getTargetChest()
     local chests = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if string.find(obj.Name:lower(), "chest") then
-            local uniqueId = obj:GetDebugId()
-            if not collectedChestsFlag[uniqueId] then
-                local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                if handle then
-                    local dist = (hrp.Position - handle.Position).Magnitude
-                    table.insert(chests, {obj = handle, id = uniqueId, dist = dist})
+            local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+            if handle then
+                local targetPos = handle.Position + Vector3.new(0, 3, 0)
+                -- Tạo khóa tọa độ (làm tròn để so sánh chính xác)
+                local posKey = math.floor(targetPos.X) .. "," .. math.floor(targetPos.Y) .. "," .. math.floor(targetPos.Z)
+                
+                if not visitedPositions[posKey] then
+                    local dist = (hrp.Position - targetPos).Magnitude
+                    table.insert(chests, {pos = targetPos, key = posKey, dist = dist, obj = obj})
                 end
             end
         end
@@ -178,10 +182,10 @@ local function getTargetChest()
         return a.dist < b.dist
     end)
 
-    return chests[1].obj, chests[1].id
+    return chests[1].pos, chests[1].key, chests[1].obj
 end
 
--- Vòng lặp chính: Bay đến điểm -> +1 ngay -> Đứng im 0.5s -> Tiếp tục bay rương tiếp theo
+-- Vòng lặp chính: Bay đến tọa độ -> +1 ngay -> Đứng im 0.5s -> Nhớ tọa độ cũ & Quên đi để bay tiếp
 task.spawn(function()
     isRunning = true
     while isRunning do
@@ -190,40 +194,44 @@ task.spawn(function()
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
         if hrp and humanoid and humanoid.Health > 0 then
-            local targetChest, uniqueId = getTargetChest()
+            local targetPos, posKey, targetObj = getTargetChestPosition()
 
-            if targetChest and uniqueId then
+            if targetPos and posKey then
                 StatusLabel.Text = "Auto Chest"
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 
-                local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
-                local distance = (hrp.Position - targetCFrame.Position).Magnitude
+                local distance = (hrp.Position - targetPos).Magnitude
                 local duration = math.clamp(distance / 200, 0.05, 3)
 
                 humanoid.PlatformStand = true
 
-                -- Bay Tween tới rương
-                local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+                -- Bay Tween đến đúng tọa độ rương
+                local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
                 tween:Play()
                 tween.Completed:Wait()
 
-                -- Vừa đến nơi: Đóng băng bất động và CỘNG +1 NGAY LẬP TỨC
-                hrp.CFrame = targetCFrame
+                -- Vừa chạm tọa độ: Khóa cứng vị trí, đóng băng bất động và +1 NGAY LẬP TỨC
+                hrp.CFrame = CFrame.new(targetPos)
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 hrp.Anchored = true
 
-                collectedChestsCount = collectedChestsCount + 1
-                countLabel.Text = "Chests Collected: " .. collectedChestsCount
+                collectedChests0Count = collectedChests0Count + 1
+                countLabel.Text = "Chests Collected: " .. collectedChests0Count
                 
-                collectedChestsFlag[uniqueId] = true
-                if espCache[uniqueId] and espCache[uniqueId].billboard then
-                    espCache[uniqueId].billboard:Destroy()
-                    espCache[uniqueId] = nil
+                -- Ghi nhớ tọa độ đã qua để không quay lại, dọn ESP của rương đó
+                visitedPositions[posKey] = true
+                if targetObj then
+                    local uniqueId = targetObj:GetDebugId()
+                    if espCache[uniqueId] and espCache[uniqueId].billboard then
+                        espCache[uniqueId].billboard:Destroy()
+                        espCache[uniqueId] = nil
+                    end
                 end
 
-                -- Đứng im chờ đủ 0.5 giây tại chỗ rồi mới mở khóa bay tiếp
+                -- Đứng im đúng 0.5 giây tại chỗ
                 task.wait(0.5)
 
+                -- Mở khóa chuẩn bị bay sang tọa độ rương mới
                 hrp.Anchored = false
                 humanoid.PlatformStand = false
             else
