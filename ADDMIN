@@ -8,17 +8,17 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 pcall(function()
-    if CoreGui:FindFirstChild("ChestAutoIslandSwitch") then
-        CoreGui.ChestAutoIslandSwitch:Destroy()
+    if CoreGui:FindFirstChild("DuboAutoChest") then
+        CoreGui.DuboAutoChest:Destroy()
     end
 end)
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ChestAutoIslandSwitch"
+ScreenGui.Name = "DuboAutoChest"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Giao diện UI chính có tên DUBO và bộ đếm rương
+-- Giao diện UI chính
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 220, 0, 130)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -51,7 +51,7 @@ Title.TextSize = 13
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
--- Khung trạng thái Auto Chest
+-- Khung trạng thái
 local StatusBox = Instance.new("Frame")
 StatusBox.Size = UDim2.new(0, 190, 0, 35)
 StatusBox.Position = UDim2.new(0.5, -95, 0, 35)
@@ -70,7 +70,7 @@ StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextWrapped = true
 StatusLabel.Parent = StatusBox
 
--- Bộ đếm rương dựa trên tiền tăng lên
+-- Bộ đếm rương
 local countLabel = Instance.new("TextLabel")
 countLabel.Size = UDim2.new(1, 0, 0, 35)
 countLabel.Position = UDim2.new(0, 0, 0, 80)
@@ -86,22 +86,33 @@ local collectedChestsFlag = {}
 local isRunning = true
 local espCache = {}
 
--- Theo dõi tiền (Money/Beli) để đếm rương chính xác 100%
-local leaderstats = player:WaitForChild("leaderstats", 5)
-local moneyStat = leaderstats and (leaderstats:FindFirstChild("Beli") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash"))
-local lastMoney = moneyStat and moneyStat.Value or 0
-
-if moneyStat then
-    moneyStat.Changed:Connect(function(newValue)
-        if newValue > lastMoney then
-            collectedChestsCount = collectedChestsCount + 1
-            countLabel.Text = "Chests Collected: " .. collectedChestsCount
+-- Bắt sự kiện tiền tăng lên để đếm rương chuẩn 100%
+task.spawn(function()
+    local leaderstats = player:WaitForChild("leaderstats", 10)
+    if leaderstats then
+        local moneyStat = nil
+        for _, stat in ipairs(leaderstats:GetChildren()) do
+            local name = stat.Name:lower()
+            if name:find("beli") or name:find("money") or name:find("cash") then
+                moneyStat = stat
+                break
+            end
         end
-        lastMoney = newValue
-    end)
-end
+        
+        if moneyStat then
+            local lastMoney = moneyStat.Value
+            moneyStat.Changed:Connect(function(newValue)
+                if newValue > lastMoney then
+                    collectedChestsCount = collectedChestsCount + 1
+                    countLabel.Text = "Chests Collected: " .. collectedChestsCount
+                end
+                lastMoney = newValue
+            end)
+        end
+    end
+end)
 
--- Chuẩn hóa tên loại rương
+-- Phân loại tên rương và màu sắc cho ESP
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
@@ -115,10 +126,9 @@ local function getChestInfo(objName)
     end
 end
 
+-- Hệ thống ESP hiển thị tên rương không có icon
 local function updateGlobalESP()
     local activeIds = {}
-    local character = player.Character
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
     for _, obj in ipairs(Workspace:GetDescendants()) do
         local nameLower = obj.Name:lower()
@@ -156,7 +166,7 @@ local function updateGlobalESP()
                         local textLabel = Instance.new("TextLabel")
                         textLabel.Size = UDim2.new(1, 0, 1, 0)
                         textLabel.BackgroundTransparency = 1
-                        textLabel.Text = chestName -- Chỉ hiện tên rương thuần túy
+                        textLabel.Text = chestName
                         textLabel.TextSize = 12
                         textLabel.Font = Enum.Font.GothamBold
                         textLabel.TextStrokeTransparency = 0.3
@@ -183,9 +193,10 @@ local function updateGlobalESP()
     end
 end
 
+-- Lấy rương gần nhất và chuyển đảo tự động khi hết rương gần
 local function getTargetChest()
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, 0, false end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, false end
     local hrp = character.HumanoidRootPart
 
     local chests = {}
@@ -202,7 +213,7 @@ local function getTargetChest()
         end
     end
 
-    if #chests == 0 then return nil, nil, 0, false end
+    if #chests == 0 then return nil, nil, false end
 
     table.sort(chests, function(a, b)
         return a.dist < b.dist
@@ -221,12 +232,13 @@ local function getTargetChest()
         table.sort(currentIslandChests, function(a, b)
             return a.dist < b.dist
         end)
-        return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, false
+        return currentIslandChests[1].obj, currentIslandChests[1].id, false
     end
 
-    return chests[1].obj, chests[1].id, chests[1].dist, true
+    return chests[1].obj, chests[1].id, true
 end
 
+-- Hàm thực thi bay đến rương
 local function autoTeleportChest()
     local found = false
     pcall(function()
@@ -238,7 +250,7 @@ local function autoTeleportChest()
 
         updateGlobalESP()
 
-        local targetChest, uniqueId, distance, isSwitching = getTargetChest()
+        local targetChest, uniqueId, isSwitching = getTargetChest()
 
         if targetChest and uniqueId then
             found = true
@@ -302,6 +314,7 @@ local function autoTeleportChest()
     return found
 end
 
+-- Vòng lặp chạy script chính
 task.spawn(function()
     isRunning = true
     while isRunning do
