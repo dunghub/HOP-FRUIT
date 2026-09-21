@@ -79,63 +79,89 @@ countLabel.Font = Enum.Font.Gotham
 countLabel.Parent = MainFrame
 
 local collectedChestsCount = 0
-local blacklistedChests = {}
+local collectedChestsFlag = {} -- Gắn cờ lưu giữ các rương đã nhặt vĩnh viễn trong phiên
 local isRunning = true
-local activeESPs = {}
+local espCache = {}
 
--- Hàm nhận diện tên tiếng Anh và màu sắc của rương
+-- Nhận diện tên tiếng Anh và màu sắc chuẩn của rương
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
-        return "Diamond Chest", Color3.fromRGB(0, 243, 255) -- Xanh ngọc / Kim cương
+        return "Diamond Chest", Color3.fromRGB(0, 243, 255)
     elseif string.find(lowerName, "gold") or string.find(lowerName, "golden") then
-        return "Gold Chest", Color3.fromRGB(255, 215, 0) -- Vàng
+        return "Gold Chest", Color3.fromRGB(255, 215, 0)
     elseif string.find(lowerName, "silver") then
-        return "Silver Chest", Color3.fromRGB(192, 192, 192) -- Bạc
+        return "Silver Chest", Color3.fromRGB(192, 192, 192)
     else
-        return "Chest", Color3.fromRGB(255, 255, 255) -- Mặc định
+        return "Chest", Color3.fromRGB(255, 255, 255)
     end
 end
 
--- Hệ thống ESP hiển thị trực quan theo tên và màu rương
-local function updateESP(targetObj, chestName, chestColor)
-    for _, esp in pairs(activeESPs) do
-        if esp then esp:Destroy() end
+-- Hệ thống ESP hiển thị TOÀN BỘ rương trên bản đồ (có tên chuẩn & màu sắc riêng biệt)
+local function manageGlobalESP()
+    local currentChestIds = {}
+
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if string.find(obj.Name:lower(), "chest") then
+            local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+            if handle then
+                local uniqueId = obj:GetDebugId()
+                currentChestIds[uniqueId] = true
+
+                -- Nếu rương đã bị gắn cờ nhặt rồi thì ẩn/xóa ESP của nó đi
+                if collectedChestsFlag[uniqueId] then
+                    if espCache[uniqueId] then
+                        espCache[uniqueId]:Destroy()
+                        espCache[uniqueId] = nil
+                    end
+                else
+                    -- Chưa nhặt thì tạo ESP hiển thị
+                    local cName, cColor = getChestInfo(obj.Name)
+                    if not espCache[uniqueId] then
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = "GlobalChestESP"
+                        billboard.Size = UDim2.new(0, 100, 0, 30)
+                        billboard.StudsOffset = Vector3.new(0, 2, 0)
+                        billboard.AlwaysOnTop = true
+                        billboard.Parent = handle
+
+                        local textLabel = Instance.new("TextLabel")
+                        textLabel.Size = UDim2.new(1, 0, 1, 0)
+                        textLabel.BackgroundTransparency = 1
+                        textLabel.Text = cName
+                        textLabel.TextColor3 = cColor
+                        textLabel.TextSize = 11
+                        textLabel.Font = Enum.Font.GothamBold
+                        textLabel.TextStrokeTransparency = 0.4
+                        textLabel.Parent = billboard
+
+                        espCache[uniqueId] = billboard
+                    end
+                end
+            end
+        end
     end
-    activeESPs = {}
 
-    if targetObj and targetObj.Parent then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "ChestESP"
-        billboard.Size = UDim2.new(0, 120, 0, 40)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = targetObj
-
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Text = "📍 " .. chestName
-        textLabel.TextColor3 = chestColor
-        textLabel.TextSize = 13
-        textLabel.Font = Enum.Font.GothamBold
-        textLabel.TextStrokeTransparency = 0.5
-        textLabel.Parent = billboard
-
-        table.insert(activeESPs, billboard)
+    -- Dọn dẹp ESP của những rương không còn tồn tại trên map
+    for id, esp in pairs(espCache) do
+        if not currentChestIds[id] then
+            if esp then esp:Destroy() end
+            espCache[id] = nil
+        end
     end
 end
 
 local function getTargetChest()
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, 0, "", Color3.new(1,1,1) end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, 0, "", false end
     local hrp = character.HumanoidRootPart
 
     local chests = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if string.find(obj.Name:lower(), "chest") then
             local uniqueId = obj:GetDebugId()
-            if not blacklistedChests[uniqueId] then
+            -- Lọc bỏ hoàn toàn các rương đã gắn cờ đã nhặt
+            if not collectedChestsFlag[uniqueId] then
                 local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
                 if handle then
                     local dist = (hrp.Position - handle.Position).Magnitude
@@ -146,14 +172,14 @@ local function getTargetChest()
         end
     end
 
-    if #chests == 0 then return nil, nil, 0, "", Color3.new(1,1,1) end
+    if #chests == 0 then return nil, nil, 0, "", false end
 
-    -- Sắp xếp theo khoảng cách gần nhất
+    -- Sắp xếp khoảng cách gần nhất
     table.sort(chests, function(a, b)
         return a.dist < b.dist
     end)
 
-    -- Gom các rương thuộc cùng một hòn đảo hiện tại (khoảng cách dưới 400 studs so với rương gần nhất)
+    -- Gom các rương thuộc đảo hiện tại (cách rương gần nhất dưới 400 studs)
     local closestDist = chests[1].dist
     local currentIslandChests = {}
 
@@ -163,16 +189,16 @@ local function getTargetChest()
         end
     end
 
-    -- Nếu vẫn còn rương trên đảo hiện tại -> vét sạch trước
+    -- Nếu còn rương ở đảo hiện tại -> nhặt tiếp trên đảo này (isSwitching = false)
     if #currentIslandChests > 0 then
         table.sort(currentIslandChests, function(a, b)
             return a.dist < b.dist
         end)
-        return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, currentIslandChests[1].name, currentIslandChests[1].color
+        return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, currentIslandChests[1].name, false
     end
 
-    -- Hết rương đảo hiện tại -> Tiến hành quy trình chuyển đảo mới
-    return chests[1].obj, chests[1].id, chests[1].dist, chests[1].name, chests[1].color
+    -- Hết sạch rương trên đảo hiện tại -> Bắt đầu tiến hành chuyển đảo mới (isSwitching = true)
+    return chests[1].obj, chests[1].id, chests[1].dist, chests[1].name, true
 end
 
 local function autoTeleportChest()
@@ -184,23 +210,23 @@ local function autoTeleportChest()
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
 
-        local targetChest, uniqueId, distance, chestName, chestColor = getTargetChest()
+        -- Cập nhật hệ thống ESP toàn bộ map liên tục
+        manageGlobalESP()
+
+        local targetChest, uniqueId, distance, chestName, isSwitching = getTargetChest()
 
         if targetChest and uniqueId then
             found = true
             local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
             
-            -- Quy trình định vị & hiển thị trạng thái chuyển đảo
-            if distance > 400 then
-                StatusLabel.Text = "🔄 Switching Island...\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0) -- Màu cam báo hiệu chuyển đảo
+            -- Quy trình hiển thị trạng thái chuẩn yêu cầu:
+            if isSwitching then
+                StatusLabel.Text = "🔄 Island transfer...\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0) -- Màu cam khi chuyển đảo
             else
-                StatusLabel.Text = "💎 Clearing Chest\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
-                StatusLabel.TextColor3 = chestColor -- Đổi màu chữ theo độ hiếm của rương
+                StatusLabel.Text = "✅ Target: " .. chestName .. "\nDistance: " .. math.floor(distance) .. "m"
+                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120) -- Màu xanh lá khi chuẩn bị đến rương
             end
-
-            -- Kích hoạt ESP định vị rương hiện tại
-            updateESP(targetChest, chestName, chestColor)
 
             humanoid.PlatformStand = true
             local startCFrame = hrp.CFrame
@@ -213,7 +239,7 @@ local function autoTeleportChest()
             local charDeathConn
             charDeathConn = humanoid.Died:Connect(function()
                 diedDuringTween = true
-                blacklistedChests[uniqueId] = true
+                collectedChestsFlag[uniqueId] = true
             end)
 
             local conn
@@ -245,7 +271,13 @@ local function autoTeleportChest()
             if not diedDuringTween and humanoid.Health > 0 then
                 collectedChestsCount = collectedChestsCount + 1
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
-                blacklistedChests[uniqueId] = true
+                
+                -- Gắn cờ đánh dấu rương này đã nhặt, ẩn ESP và KHÔNG BAO GIỜ nhặt lại
+                collectedChestsFlag[uniqueId] = true
+                if espCache[uniqueId] then
+                    espCache[uniqueId]:Destroy()
+                    espCache[uniqueId] = nil
+                end
             end
         end
     end)
