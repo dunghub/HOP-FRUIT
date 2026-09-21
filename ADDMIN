@@ -247,7 +247,7 @@ local function autoTeleportChest()
             humanoid.PlatformStand = true
             local startCFrame = hrp.CFrame
             local actualDist = (startCFrame.Position - targetCFrame.Position).Magnitude
-            local speed = 300
+            local speed = 200 -- Đã giảm tốc độ bay xuống 200 theo yêu cầu
             local duration = actualDist / speed
             local startTime = tick()
 
@@ -285,11 +285,10 @@ local function autoTeleportChest()
             if conn then conn:Disconnect() end
             if charDeathConn then charDeathConn:Disconnect() end
 
-            -- Cố định vị trí chuẩn ngay tại rương và đứng lại 0.5 giây để nhận rương mượt mà, chống giật cục
             if not diedDuringTween and humanoid.Health > 0 and targetChest.Parent then
                 hrp.CFrame = targetCFrame
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                task.wait(0.5) -- Đứng lại 0.5s tại chỗ rương
+                task.wait(0.5) -- Đứng lại 0.5s tại chỗ rương để nhận mượt mà
                 
                 collectedChestsCount = collectedChestsCount + 1
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
