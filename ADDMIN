@@ -18,7 +18,7 @@ ScreenGui.Name = "DuboAutoChest"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Giao diện UI chính (Đã lược bỏ phần đếm rương, thu gọn lại)
+-- Giao diện UI chính
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 220, 0, 85)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -97,7 +97,8 @@ local function updateGlobalESP()
         if string.find(nameLower, "chest") then
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
 
-            if handle then
+            -- Kiểm tra rương có đang xuất hiện thực sự không (Transparency < 1 và không bị ẩn)
+            if handle and handle.Transparency < 1 and handle.Parent then
                 local uniqueId = obj:GetDebugId()
                 local posKey = math.floor(handle.Position.X) .. "," .. math.floor(handle.Position.Y) .. "," .. math.floor(handle.Position.Z)
                 activeIds[uniqueId] = true
@@ -139,10 +140,10 @@ local function updateGlobalESP()
     end
 end
 
--- Lấy tọa độ rương gần nhất chưa ghé thăm
+-- Lấy tọa độ rương thực sự xuất hiện và chưa ghé thăm
 local function getTargetChestPosition()
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, nil end
     local hrp = character.HumanoidRootPart
 
     updateGlobalESP()
@@ -151,7 +152,9 @@ local function getTargetChestPosition()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if string.find(obj.Name:lower(), "chest") then
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-            if handle then
+            
+            -- Chỉ lấy rương đang xuất hiện (Transparency < 1, có Parent tồn tại)
+            if handle and handle.Transparency < 1 and handle.Parent then
                 local targetPos = handle.Position + Vector3.new(0, 3, 0)
                 local posKey = math.floor(targetPos.X) .. "," .. math.floor(targetPos.Y) .. "," .. math.floor(targetPos.Z)
                 
@@ -163,7 +166,7 @@ local function getTargetChestPosition()
         end
     end
 
-    if #chests == 0 then return nil, nil end
+    if #chests == 0 then return nil, nil, nil end
 
     table.sort(chests, function(a, b)
         return a.dist < b.dist
@@ -172,7 +175,7 @@ local function getTargetChestPosition()
     return chests[1].pos, chests[1].key, chests[1].obj
 end
 
--- Vòng lặp chính: Bay đến tọa độ -> Đứng im cố định 0.5s -> Nhớ vị trí cũ & lướt tiếp
+-- Vòng lặp chính: Bay từ từ (tốc độ chậm) -> Đứng im 0.5s -> Bỏ qua rương không có
 task.spawn(function()
     isRunning = true
     while isRunning do
@@ -188,21 +191,23 @@ task.spawn(function()
                 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 
                 local distance = (hrp.Position - targetPos).Magnitude
-                local duration = math.clamp(distance / 200, 0.05, 3)
+                -- Đã giảm tốc độ xuống 60 studs/s để bay chậm, mượt, không bị vụt quá đà
+                local speed = 60 
+                local duration = math.clamp(distance / speed, 0.1, 5)
 
                 humanoid.PlatformStand = true
 
-                -- Bay Tween đến tọa độ rương
+                -- Bay Tween từ từ tới rương
                 local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
                 tween:Play()
                 tween.Completed:Wait()
 
-                -- Vừa đến điểm: Khóa cứng vị trí, đóng băng bất động
+                -- Vừa đến điểm: Khóa cứng vị trí, đóng băng đứng im
                 hrp.CFrame = CFrame.new(targetPos)
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 hrp.Anchored = true
 
-                -- Ghi nhớ tọa độ đã qua và dọn ESP
+                -- Ghi nhớ tọa độ đã qua và dọn ESP rương đó
                 visitedPositions[posKey] = true
                 if targetObj then
                     local uniqueId = targetObj:GetDebugId()
@@ -215,7 +220,7 @@ task.spawn(function()
                 -- Đứng im chờ đúng 0.5 giây tại chỗ
                 task.wait(0.5)
 
-                -- Mở khóa chuẩn bị bay sang tọa độ mới
+                -- Mở khóa chuẩn bị bay sang rương tiếp theo
                 hrp.Anchored = false
                 humanoid.PlatformStand = false
             else
