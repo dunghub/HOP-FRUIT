@@ -20,7 +20,7 @@ ScreenGui.ResetOnSpawn = false
 
 -- Giao diện UI chính
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 170)
+MainFrame.Size = UDim2.new(0, 220, 0, 90)
 MainFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 MainFrame.BorderSizePixel = 0
@@ -28,7 +28,7 @@ MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 local RainbowStroke = Instance.new("UIStroke", MainFrame)
 RainbowStroke.Thickness = 2
 
@@ -41,18 +41,9 @@ task.spawn(function()
     end
 end)
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "⚡ DUBO HUB - AUTO CHEST"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 13
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
 local StatusBox = Instance.new("Frame")
-StatusBox.Size = UDim2.new(0, 230, 0, 50)
-StatusBox.Position = UDim2.new(0.5, -115, 0, 35)
+StatusBox.Size = UDim2.new(0, 190, 0, 45)
+StatusBox.Position = UDim2.new(0.5, -95, 0.5, -22)
 StatusBox.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
 StatusBox.BorderSizePixel = 0
 StatusBox.Parent = MainFrame
@@ -61,28 +52,18 @@ Instance.new("UICorner", StatusBox).CornerRadius = UDim.new(0, 6)
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 1, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Initializing..."
+StatusLabel.Text = "Auto Chest"
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-StatusLabel.TextSize = 12
+StatusLabel.TextSize = 13
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextWrapped = true
 StatusLabel.Parent = StatusBox
 
-local countLabel = Instance.new("TextLabel")
-countLabel.Size = UDim2.new(1, 0, 0, 30)
-countLabel.Position = UDim2.new(0, 0, 0, 115)
-countLabel.BackgroundTransparency = 1
-countLabel.Text = "Chests Collected: 0"
-countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-countLabel.TextSize = 12
-countLabel.Font = Enum.Font.Gotham
-countLabel.Parent = MainFrame
-
-local collectedChestsCount = 0
 local collectedChestsFlag = {}
 local isRunning = true
 local espCache = {}
 
+-- Chuẩn hóa tên tiếng Anh và màu sắc các loại rương
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
@@ -124,12 +105,12 @@ local function updateGlobalESP()
                     end
                 else
                     local chestName, chestColor = getChestInfo(obj.Name)
-                    
+
                     if not espCache[uniqueId] then
                         local billboard = Instance.new("BillboardGui")
                         billboard.Name = "GlobalChestESP"
-                        billboard.Size = UDim2.new(0, 160, 0, 45)
-                        billboard.StudsOffset = Vector3.new(0, 3, 0)
+                        billboard.Size = UDim2.new(0, 120, 0, 30)
+                        billboard.StudsOffset = Vector3.new(0, 2, 0)
                         billboard.AlwaysOnTop = true
                         billboard.MaxDistance = math.huge
                         billboard.Parent = handle
@@ -137,6 +118,7 @@ local function updateGlobalESP()
                         local textLabel = Instance.new("TextLabel")
                         textLabel.Size = UDim2.new(1, 0, 1, 0)
                         textLabel.BackgroundTransparency = 1
+                        textLabel.Text = chestName -- Chỉ ghi tên rương, không icon
                         textLabel.TextSize = 12
                         textLabel.Font = Enum.Font.GothamBold
                         textLabel.TextStrokeTransparency = 0.3
@@ -145,19 +127,8 @@ local function updateGlobalESP()
 
                         espCache[uniqueId] = {
                             billboard = billboard,
-                            textLabel = textLabel,
-                            part = handle,
-                            name = chestName
+                            part = handle
                         }
-                    end
-
-                    if espCache[uniqueId] and espCache[uniqueId].textLabel then
-                        local distText = ""
-                        if hrp then
-                            local dist = (hrp.Position - handle.Position).Magnitude
-                            distText = " (" .. math.floor(dist) .. "m)"
-                        end
-                        espCache[uniqueId].textLabel.Text = "📍 " .. chestName .. distText
                     end
                 end
             end
@@ -176,7 +147,7 @@ end
 
 local function getTargetChest()
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, 0, "", false end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil, nil, 0, false end
     local hrp = character.HumanoidRootPart
 
     local chests = {}
@@ -187,14 +158,13 @@ local function getTargetChest()
                 local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
                 if handle then
                     local dist = (hrp.Position - handle.Position).Magnitude
-                    local cName, cColor = getChestInfo(obj.Name)
-                    table.insert(chests, {obj = handle, id = uniqueId, dist = dist, name = cName})
+                    table.insert(chests, {obj = handle, id = uniqueId, dist = dist})
                 end
             end
         end
     end
 
-    if #chests == 0 then return nil, nil, 0, "", false end
+    if #chests == 0 then return nil, nil, 0, false end
 
     table.sort(chests, function(a, b)
         return a.dist < b.dist
@@ -213,10 +183,10 @@ local function getTargetChest()
         table.sort(currentIslandChests, function(a, b)
             return a.dist < b.dist
         end)
-        return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, currentIslandChests[1].name, false
+        return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, false
     end
 
-    return chests[1].obj, chests[1].id, chests[1].dist, chests[1].name, true
+    return chests[1].obj, chests[1].id, chests[1].dist, true
 end
 
 local function autoTeleportChest()
@@ -230,24 +200,19 @@ local function autoTeleportChest()
 
         updateGlobalESP()
 
-        local targetChest, uniqueId, distance, chestName, isSwitching = getTargetChest()
+        local targetChest, uniqueId, distance, isSwitching = getTargetChest()
 
         if targetChest and uniqueId then
             found = true
             local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
             
-            if isSwitching then
-                StatusLabel.Text = "🔄 Island transfer\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
-            else
-                StatusLabel.Text = "✅ Target: " .. chestName .. "\nDistance: " .. math.floor(distance) .. "m"
-                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
-            end
+            StatusLabel.Text = "Auto Chest"
+            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
 
             humanoid.PlatformStand = true
             local startCFrame = hrp.CFrame
             local actualDist = (startCFrame.Position - targetCFrame.Position).Magnitude
-            local speed = 200 -- Đã giảm tốc độ bay xuống 200 theo yêu cầu
+            local speed = 200
             local duration = actualDist / speed
             local startTime = tick()
 
@@ -263,12 +228,6 @@ local function autoTeleportChest()
                 if not isRunning or not character:FindFirstChild("HumanoidRootPart") or not targetChest.Parent or humanoid.Health <= 0 then
                     if conn then conn:Disconnect() end
                     return
-                end
-
-                for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then 
-                        part.CanCollide = false 
-                    end
                 end
 
                 local elapsed = tick() - startTime
@@ -288,10 +247,7 @@ local function autoTeleportChest()
             if not diedDuringTween and humanoid.Health > 0 and targetChest.Parent then
                 hrp.CFrame = targetCFrame
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                task.wait(0.5) -- Đứng lại 0.5s tại chỗ rương để nhận mượt mà
-                
-                collectedChestsCount = collectedChestsCount + 1
-                countLabel.Text = "Chests Collected: " .. collectedChestsCount
+                task.wait(0.5)
                 
                 collectedChestsFlag[uniqueId] = true
                 if espCache[uniqueId] then
@@ -313,10 +269,11 @@ task.spawn(function()
     while isRunning do
         local success = autoTeleportChest()
         if not success then
-            StatusLabel.Text = "No Chests Found on Map!"
+            StatusLabel.Text = "Not Found"
             StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            task.wait(2)
+            task.wait(1)
+        else
+            task.wait(0.1)
         end
-        task.wait(0.1)
     end
 end)
