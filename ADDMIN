@@ -79,57 +79,57 @@ countLabel.Font = Enum.Font.Gotham
 countLabel.Parent = MainFrame
 
 local collectedChestsCount = 0
-local collectedChestsFlag = {} -- Gắn cờ lưu giữ các rương đã nhặt vĩnh viễn trong phiên
+local collectedChestsFlag = {} -- Cờ đánh dấu rương đã nhặt vĩnh viễn
 local isRunning = true
 local espCache = {}
 
--- Nhận diện tên tiếng Anh và màu sắc chuẩn của rương
+-- Chuẩn hóa tên tiếng Anh và màu sắc các loại rương trong Blox Fruits
 local function getChestInfo(objName)
     local lowerName = objName:lower()
     if string.find(lowerName, "diamond") then
-        return "Diamond Chest", Color3.fromRGB(0, 243, 255)
+        return "Diamond Chest", Color3.fromRGB(0, 243, 255) -- Xanh ngọc kim cương
     elseif string.find(lowerName, "gold") or string.find(lowerName, "golden") then
-        return "Gold Chest", Color3.fromRGB(255, 215, 0)
+        return "Gold Chest", Color3.fromRGB(255, 215, 0) -- Vàng óng
     elseif string.find(lowerName, "silver") then
-        return "Silver Chest", Color3.fromRGB(192, 192, 192)
+        return "Silver Chest", Color3.fromRGB(192, 192, 192) -- Bạc sáng
     else
-        return "Chest", Color3.fromRGB(255, 255, 255)
+        return "Chest", Color3.fromRGB(255, 255, 255) -- Mặc định
     end
 end
 
--- Hệ thống ESP hiển thị TOÀN BỘ rương trên bản đồ (có tên chuẩn & màu sắc riêng biệt)
-local function manageGlobalESP()
-    local currentChestIds = {}
+-- Hệ thống ESP định vị TOÀN BỘ rương khắp nơi trên map
+local function updateGlobalESP()
+    local activeIds = {}
 
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if string.find(obj.Name:lower(), "chest") then
             local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if handle then
                 local uniqueId = obj:GetDebugId()
-                currentChestIds[uniqueId] = true
+                activeIds[uniqueId] = true
 
-                -- Nếu rương đã bị gắn cờ nhặt rồi thì ẩn/xóa ESP của nó đi
+                -- Nếu rương đã nhặt rồi thì xóa ESP và bỏ qua
                 if collectedChestsFlag[uniqueId] then
                     if espCache[uniqueId] then
                         espCache[uniqueId]:Destroy()
                         espCache[uniqueId] = nil
                     end
                 else
-                    -- Chưa nhặt thì tạo ESP hiển thị
-                    local cName, cColor = getChestInfo(obj.Name)
+                    -- Chưa nhặt -> Tạo hoặc giữ nguyên ESP trên rương đó
+                    local chestName, chestColor = getChestInfo(obj.Name)
                     if not espCache[uniqueId] then
                         local billboard = Instance.new("BillboardGui")
                         billboard.Name = "GlobalChestESP"
-                        billboard.Size = UDim2.new(0, 100, 0, 30)
-                        billboard.StudsOffset = Vector3.new(0, 2, 0)
+                        billboard.Size = UDim2.new(0, 120, 0, 35)
+                        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
                         billboard.AlwaysOnTop = true
                         billboard.Parent = handle
 
                         local textLabel = Instance.new("TextLabel")
                         textLabel.Size = UDim2.new(1, 0, 1, 0)
                         textLabel.BackgroundTransparency = 1
-                        textLabel.Text = cName
-                        textLabel.TextColor3 = cColor
+                        textLabel.Text = "📍 " .. chestName
+                        textLabel.TextColor3 = chestColor
                         textLabel.TextSize = 11
                         textLabel.Font = Enum.Font.GothamBold
                         textLabel.TextStrokeTransparency = 0.4
@@ -142,9 +142,9 @@ local function manageGlobalESP()
         end
     end
 
-    -- Dọn dẹp ESP của những rương không còn tồn tại trên map
+    -- Xóa các ESP của rương không còn tồn tại trên map
     for id, esp in pairs(espCache) do
-        if not currentChestIds[id] then
+        if not activeIds[id] then
             if esp then esp:Destroy() end
             espCache[id] = nil
         end
@@ -160,13 +160,12 @@ local function getTargetChest()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if string.find(obj.Name:lower(), "chest") then
             local uniqueId = obj:GetDebugId()
-            -- Lọc bỏ hoàn toàn các rương đã gắn cờ đã nhặt
             if not collectedChestsFlag[uniqueId] then
                 local handle = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
                 if handle then
                     local dist = (hrp.Position - handle.Position).Magnitude
                     local cName, cColor = getChestInfo(obj.Name)
-                    table.insert(chests, {obj = handle, id = uniqueId, dist = dist, name = cName, color = cColor})
+                    table.insert(chests, {obj = handle, id = uniqueId, dist = dist, name = cName})
                 end
             end
         end
@@ -174,12 +173,12 @@ local function getTargetChest()
 
     if #chests == 0 then return nil, nil, 0, "", false end
 
-    -- Sắp xếp khoảng cách gần nhất
+    -- Sắp xếp rương theo khoảng cách gần nhất
     table.sort(chests, function(a, b)
         return a.dist < b.dist
     end)
 
-    -- Gom các rương thuộc đảo hiện tại (cách rương gần nhất dưới 400 studs)
+    -- Gom các rương thuộc đảo hiện tại (khoảng cách dưới 400 studs)
     local closestDist = chests[1].dist
     local currentIslandChests = {}
 
@@ -189,7 +188,7 @@ local function getTargetChest()
         end
     end
 
-    -- Nếu còn rương ở đảo hiện tại -> nhặt tiếp trên đảo này (isSwitching = false)
+    -- Nếu còn rương trên đảo hiện tại -> Vét tiếp (isSwitching = false)
     if #currentIslandChests > 0 then
         table.sort(currentIslandChests, function(a, b)
             return a.dist < b.dist
@@ -197,7 +196,7 @@ local function getTargetChest()
         return currentIslandChests[1].obj, currentIslandChests[1].id, currentIslandChests[1].dist, currentIslandChests[1].name, false
     end
 
-    -- Hết sạch rương trên đảo hiện tại -> Bắt đầu tiến hành chuyển đảo mới (isSwitching = true)
+    -- Hết rương đảo hiện tại -> Tiến hành chuyển đảo (isSwitching = true)
     return chests[1].obj, chests[1].id, chests[1].dist, chests[1].name, true
 end
 
@@ -210,8 +209,8 @@ local function autoTeleportChest()
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid or humanoid.Health <= 0 then return end
 
-        -- Cập nhật hệ thống ESP toàn bộ map liên tục
-        manageGlobalESP()
+        -- Cập nhật hệ thống ESP toàn bộ rương khắp map liên tục
+        updateGlobalESP()
 
         local targetChest, uniqueId, distance, chestName, isSwitching = getTargetChest()
 
@@ -219,19 +218,19 @@ local function autoTeleportChest()
             found = true
             local targetCFrame = targetChest.CFrame + Vector3.new(0, 3, 0)
             
-            -- Quy trình hiển thị trạng thái chuẩn yêu cầu:
+            -- Trạng thái UI chuẩn chỉnh theo yêu cầu:
             if isSwitching then
-                StatusLabel.Text = "🔄 Island transfer...\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
+                StatusLabel.Text = "🔄 Island transfer\nTarget: " .. chestName .. " (" .. math.floor(distance) .. "m)"
                 StatusLabel.TextColor3 = Color3.fromRGB(255, 140, 0) -- Màu cam khi chuyển đảo
             else
                 StatusLabel.Text = "✅ Target: " .. chestName .. "\nDistance: " .. math.floor(distance) .. "m"
-                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120) -- Màu xanh lá khi chuẩn bị đến rương
+                StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 120) -- Màu xanh lá khi chuẩn bị đến rương trên đảo
             end
 
             humanoid.PlatformStand = true
             local startCFrame = hrp.CFrame
             local actualDist = (startCFrame.Position - targetCFrame.Position).Magnitude
-            local speed = 300 -- Tốc độ bay chuẩn
+            local speed = 300 -- Tốc độ bay chuẩn yêu cầu
             local duration = actualDist / speed
             local startTime = tick()
 
@@ -272,7 +271,7 @@ local function autoTeleportChest()
                 collectedChestsCount = collectedChestsCount + 1
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
                 
-                -- Gắn cờ đánh dấu rương này đã nhặt, ẩn ESP và KHÔNG BAO GIỜ nhặt lại
+                -- Gắn cờ ẩn và xóa vĩnh viễn ESP của rương đã nhặt
                 collectedChestsFlag[uniqueId] = true
                 if espCache[uniqueId] then
                     espCache[uniqueId]:Destroy()
