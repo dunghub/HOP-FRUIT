@@ -181,7 +181,7 @@ local function getTargetChest()
     return chests[1].obj, chests[1].id
 end
 
--- Vòng lặp chính: Bay đến -> Dừng đóng băng 0.5s -> Cộng +1 -> Tiếp tục
+-- Vòng lặp chính: Bay đến điểm -> +1 ngay -> Đứng im 0.5s -> Tiếp tục bay rương tiếp theo
 task.spawn(function()
     isRunning = true
     while isRunning do
@@ -207,15 +207,11 @@ task.spawn(function()
                 tween:Play()
                 tween.Completed:Wait()
 
-                -- Đã đến điểm: Cố định vị trí, đóng băng đứng im
+                -- Vừa đến nơi: Đóng băng bất động và CỘNG +1 NGAY LẬP TỨC
                 hrp.CFrame = targetCFrame
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 hrp.Anchored = true
 
-                -- Chờ đúng 0.5s tại chỗ
-                task.wait(0.5)
-
-                -- CHẮC CHẮN CỘNG +1 LUÔN
                 collectedChestsCount = collectedChestsCount + 1
                 countLabel.Text = "Chests Collected: " .. collectedChestsCount
                 
@@ -225,7 +221,9 @@ task.spawn(function()
                     espCache[uniqueId] = nil
                 end
 
-                -- Mở khóa cho phép bay sang rương tiếp theo
+                -- Đứng im chờ đủ 0.5 giây tại chỗ rồi mới mở khóa bay tiếp
+                task.wait(0.5)
+
                 hrp.Anchored = false
                 humanoid.PlatformStand = false
             else
